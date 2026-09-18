@@ -8,7 +8,14 @@
 //
 // Page-derived strings are only ever written with textContent (PRD 17.3).
 
-import type { AssetReading, ColorValue, ElementSnapshot, Rect, Sides } from '../contracts';
+import type {
+  AssetReading,
+  ColorValue,
+  ElementSnapshot,
+  Rect,
+  Sides,
+  SourceContext,
+} from '../contracts';
 import type { InspectorMode, MockupState, OutlineMode } from '../messages';
 import type { StyleCategory } from '../exports';
 import { formatNumber, formatPx, parsePx, roundTo } from '../readings/units';
@@ -54,6 +61,9 @@ export const HOST_TAG = 'design-inspector-host';
 const CARD_GAP = 10;
 const EDGE = 8;
 const MAX_HIGHLIGHTS = 20;
+/** Ancestor chips kept either side of the collapsed middle of a breadcrumb. */
+const CRUMBS_HEAD = 1;
+const CRUMBS_TAIL = 2;
 const COPY_FEEDBACK_MS = 1000;
 /** Picked pixels kept for the page session (PRD 17.1: nothing is persisted). */
 const MAX_PICKED_HISTORY = 8;
@@ -488,13 +498,23 @@ const STYLES = `
   all: initial;
   font: 12px/1.4 ui-sans-serif, system-ui, sans-serif;
   color-scheme: light dark;
-  --di-accent: oklch(0.62 0.17 255);
-  --di-accent-quiet: oklch(0.62 0.17 255 / 0.14);
+  /* The accent carries white text on the one filled button, which is normal
+     sized text and so owes 4.5:1: at 0.62 that was 3.58:1. Its text colour is
+     its own token, because in dark mode the accent is light and the text on it
+     has to be dark. Accent coloured *text* is a third token, mixed toward the
+     foreground, because the fill that carries white is too light to be read on
+     a white surface. Measured in both schemes; see the report for V4. */
+  --di-accent: oklch(0.55 0.19 255);
+  --di-accent-foreground: oklch(0.99 0 0);
+  --di-accent-text: color-mix(in oklab, var(--di-accent) 80%, var(--di-text));
+  --di-accent-quiet: oklch(0.55 0.19 255 / 0.14);
   --di-surface-1: oklch(0.995 0 0);
   --di-surface-2: oklch(0.965 0.002 255);
   --di-surface-3: oklch(0.925 0.004 255);
   --di-text: oklch(0.24 0.012 260);
-  --di-text-muted: oklch(0.52 0.012 260);
+  /* Muted text sits on surface-3 in every section head: 0.52 measured 4.41:1
+     there, which is a fail. */
+  --di-text-muted: oklch(0.50 0.012 260);
   --di-shadow: 0 18px 48px -14px oklch(0.25 0.04 260 / 0.3);
   --di-check: oklch(0.85 0 0);
   --di-tint-content: oklch(0.62 0.17 255 / 0.3);
@@ -506,6 +526,7 @@ const STYLES = `
 @media (prefers-color-scheme: dark) {
   :host {
     --di-accent: oklch(0.73 0.15 255);
+    --di-accent-foreground: oklch(0.16 0 0);
     --di-accent-quiet: oklch(0.73 0.15 255 / 0.2);
     --di-surface-1: oklch(0.215 0.012 262);
     --di-surface-2: oklch(0.265 0.014 262);
@@ -539,7 +560,7 @@ const STYLES = `
   white-space: nowrap;
   box-shadow: 0 2px 8px -4px oklch(0.2 0.02 260 / 0.5);
 }
-.edge-label.negative { color: var(--di-accent); }
+.edge-label.negative { color: var(--di-accent-text); }
 
 .outline {
   position: absolute;
@@ -682,7 +703,7 @@ const STYLES = `
 }
 .panel-head[data-dragging="true"] { cursor: grabbing; }
 .panel-title { font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.panel-hidden-note { color: var(--di-accent); padding: 3px 0; }
+.panel-hidden-note { color: var(--di-accent-text); padding: 3px 0; }
 #panel[data-hidden-element="true"] .panel-scroll { opacity: 0.55; }
 .tip { color: var(--di-text-muted); padding: 2px 0 4px; }
 
@@ -714,17 +735,35 @@ button:focus-visible { outline: 2px solid var(--di-accent); outline-offset: 2px;
 button.quiet { background: transparent; color: var(--di-text-muted); padding: 2px 5px; }
 button.quiet:hover { background: var(--di-surface-2); color: var(--di-text); }
 button.crumb { background: var(--di-surface-2); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-button.primary { background: var(--di-accent); color: oklch(0.99 0 0); }
+/* The pinned element's own chip is a label too, and a long selector should not
+   set the panel's width. */
+.chip.crumb-current { max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+button.crumb-more { background: var(--di-surface-2); font-variant-numeric: tabular-nums; }
+button.primary { background: var(--di-accent); color: var(--di-accent-foreground); }
 
 .section { margin-top: 8px; border-radius: 8px; background: var(--di-surface-2); overflow: hidden; }
 .section[hidden] { display: none; }
-.section-head { display: flex; align-items: center; gap: 4px; padding: 6px 8px; background: var(--di-surface-3); }
-.section-name { flex: 1; font-weight: 600; }
+/* One line at any panel width: the name takes what is left and truncates, the
+   copy control keeps its size. */
+.section-head { display: flex; align-items: center; gap: 6px; padding: 6px 8px; background: var(--di-surface-3); }
+.section-name { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.section-head .copy-toggle { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 3px; }
+.section-head .copy-toggle .chevron { line-height: 1; }
 .section-body { padding: 4px 8px 7px; }
+
+/* The section's copy menu. It opens under the head, inside the section, so it
+   is never clipped by the card and never covers the reading below it. */
+.copy-menu { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 0 2px; }
+.copy-menu[hidden] { display: none; }
+.copy-menu button { background: var(--di-surface-3); }
+.copy-menu button:hover { background: var(--di-surface-1); }
 
 .row { display: flex; align-items: center; gap: 6px; padding: 2px 0; min-height: 20px; }
 .row-key { color: var(--di-text-muted); flex: 0 0 104px; }
-.row-value { flex: 1; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.row-value { flex: 1; min-width: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+/* A URL reads as one line with the rest behind a tooltip and the Copy button;
+   wrapped, it is six lines of hash in a 340px panel. */
+.row-value.one-line { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row .row-copy { opacity: 0; }
 .row:hover .row-copy, .row:focus-within .row-copy { opacity: 1; }
 
@@ -747,6 +786,11 @@ button.primary { background: var(--di-accent); color: oklch(0.99 0 0); }
 .note { color: var(--di-text-muted); padding: 3px 0; }
 .limitations { margin-top: 8px; color: var(--di-text-muted); }
 .limitations li { margin-left: 14px; }
+
+/* The four panel actions: two rows of two, equal widths, nothing wrapping
+   unevenly, and one accent button among three tonal ones. */
+.panel-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+.panel-actions button { width: 100%; padding: 5px 7px; text-align: center; }
 
 .save-form { display: none; flex-direction: column; gap: 6px; margin-top: 8px; }
 .save-form[data-open="true"] { display: flex; }
@@ -810,9 +854,15 @@ label.check { display: flex; align-items: center; gap: 6px; color: var(--di-text
 #badge-escape { color: var(--di-text-muted); font-variant-numeric: tabular-nums; }
 
 .stack { display: flex; flex-direction: column; gap: 2px; }
+/* A stack inside a section is a column of readings, so a button in it keeps its
+   own width and its left edge rather than stretching across and centring. */
+.section-body .stack { align-items: flex-start; }
 .hover-title { font-weight: 600; margin-bottom: 3px; }
-.hover-row { display: flex; gap: 6px; }
+.hover-row { display: flex; gap: 6px; align-items: baseline; }
 .hover-row span:first-child { color: var(--di-text-muted); flex: 0 0 82px; }
+/* A font stack or a URL is longer than the card: it wraps inside its column
+   instead of pushing the card wider or spilling out of it. */
+.hover-row span:last-child { min-width: 0; flex: 1; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
@@ -917,11 +967,68 @@ function safeName(label: string): string {
   return label.replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'asset';
 }
 
+// ---------------------------------------------------------------------------
+// Size readings.
+//
+// The overlay writes readings code-style, with the unit against the number
+// ("16.12px", "1.125rem"), which is how they would be typed into CSS. Which
+// value leads depends on the page: a root font size that scales with the
+// viewport makes every px reading true only at this width, so the rem value
+// goes first and the px value follows it as the reading at this width.
+
+function remText(value: number, rootFontSize: number): string | null {
+  if (!Number.isFinite(rootFontSize) || rootFontSize <= 0) return null;
+  return `${formatNumber(roundTo(value / rootFontSize, 3), 3)}rem`;
+}
+
+function sizeText(value: number, source: SourceContext): string {
+  const rem = remText(value, source.rootFontSize);
+  if (!rem) return formatPx(value);
+  return source.rootFontSizeFluid
+    ? `${rem} · ${formatPx(value)} at this width`
+    : `${formatPx(value)} · ${rem}`;
+}
+
+/** The same reading without the trailing clause, for the small hover card. */
+function sizeTextCompact(value: number, source: SourceContext): string {
+  const rem = remText(value, source.rootFontSize);
+  if (!rem) return formatPx(value);
+  return source.rootFontSizeFluid
+    ? `${rem} · ${formatPx(value)}`
+    : `${formatPx(value)} · ${rem}`;
+}
+
+/** What Copy puts on the clipboard for a size row: the stable value. */
+function sizeCopyText(value: number, source: SourceContext): string {
+  const rem = remText(value, source.rootFontSize);
+  return source.rootFontSizeFluid && rem ? rem : `${value}px`;
+}
+
+/**
+ * A width by height reading. Both numbers carry the unit: one trailing "px"
+ * reads as though only the second value had one, and a Rendered row in px
+ * beside an Intrinsic row without one reads as an oversight.
+ */
+function sizePair(width: number, height: number): string {
+  return `${formatPx(width)} x ${formatPx(height)}`;
+}
+
+function fluidRootNote(source: SourceContext): string {
+  return (
+    `Root font size is ${formatPx(source.rootFontSize)} and scales with the viewport, ` +
+    'so px values change with the window; rem is the stable reading.'
+  );
+}
+
 function sidesText(values: Sides<number>): string {
   const parts = [values.top, values.right, values.bottom, values.left].map((value) =>
     formatNumber(roundTo(value, 2), 2),
   );
-  return parts.every((part) => part === parts[0]) ? `${parts[0]}px` : `${parts.join(' ')}px`;
+  // Every side carries its own unit. One trailing "px" on a four value row read
+  // as though only the last value had a unit ("0 0 12 0px").
+  return parts.every((part) => part === parts[0])
+    ? `${parts[0]}px`
+    : parts.map((part) => `${part}px`).join(' ');
 }
 
 // ---------------------------------------------------------------------------
@@ -1264,6 +1371,11 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
   let highlighted: Element[] = [];
   let lastCopyAt = 0;
   let saveOpen = false;
+  /**
+   * The one open section copy menu, if any. One at a time, and Escape closes it
+   * before it touches anything else the user is holding (Z2).
+   */
+  let openCopyMenu: { menu: HTMLElement; toggle: HTMLButtonElement } | null = null;
   let hostVisible = true;
   /** The pinned element is connected but renders nothing at the moment. */
   let pinnedHidden = false;
@@ -1602,11 +1714,25 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
   function row(
     key: string,
     value: string,
-    options: { color?: ColorValue; copy?: string; allowPick?: boolean } = {},
+    options: {
+      color?: ColorValue;
+      copy?: string;
+      allowPick?: boolean;
+      /**
+       * Keep the value on one line, with the whole of it in a tooltip and on
+       * the Copy button. A CDN font URL is 180 characters: wrapped, it buries
+       * the rest of the section under six lines of hash.
+       */
+      oneLine?: boolean;
+    } = {},
   ): HTMLElement {
     const line = h('div', 'row');
     line.append(h('span', 'row-key', key));
     const valueNode = h('span', 'row-value');
+    if (options.oneLine) {
+      valueNode.classList.add('one-line');
+      valueNode.title = value;
+    }
     if (options.color) valueNode.appendChild(swatchFor(options.color));
     valueNode.appendChild(document.createTextNode(value));
     line.append(valueNode, copyButton(key, () => options.copy ?? value));
@@ -1661,6 +1787,15 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     return node;
   }
 
+  /** Closes whichever section's copy menu is open. True when one was. */
+  function closeCopyMenu(): boolean {
+    if (!openCopyMenu) return false;
+    openCopyMenu.menu.hidden = true;
+    openCopyMenu.toggle.setAttribute('aria-expanded', 'false');
+    openCopyMenu = null;
+    return true;
+  }
+
   function section(
     name: string,
     category: StyleCategory | null,
@@ -1668,11 +1803,39 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     const wrapper = h('div', 'section');
     const head = h('div', 'section-head');
     head.append(h('span', 'section-name', name));
+    const body = h('div', 'section-body');
 
     if (category) {
-      head.append(
-        exportButton('Copy CSS', `Copy ${name} as CSS`, () => callbacks.cssFor(category)),
-        exportButton('Copy Tailwind', `Copy ${name} as Tailwind classes`, () =>
+      // Three labelled copy buttons wrapped onto two lines and misaligned the
+      // head at panel width, so the head carries one control and the three
+      // exporters live in a menu under it. It opens downward inside the
+      // section rather than floating, which keeps it inside the scroll area
+      // and out of the clipped corners, and Escape closes it first (Z2).
+      const menu = h('div', 'copy-menu');
+      menu.setAttribute('role', 'group');
+      menu.setAttribute('aria-label', `Copy ${name} as`);
+      menu.hidden = true;
+
+      const toggle = button('Copy', 'quiet copy-toggle', `Copy ${name}`);
+      toggle.append(h('span', 'chevron', '▾'));
+      toggle.setAttribute('aria-haspopup', 'true');
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const open = menu.hidden;
+        closeCopyMenu();
+        if (open) {
+          menu.hidden = false;
+          toggle.setAttribute('aria-expanded', 'true');
+          openCopyMenu = { menu, toggle };
+        }
+        applyEscapeHint();
+      });
+
+      menu.append(
+        exportButton('CSS', `Copy ${name} as CSS`, () => callbacks.cssFor(category)),
+        exportButton('Tailwind', `Copy ${name} as Tailwind classes`, () =>
           callbacks.tailwindFor(category),
         ),
         // Mode 2 of PRD EXP-02: standard utilities only, with the deviations
@@ -1684,9 +1847,11 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
           () => callbacks.tailwindClosestFor(category),
         ),
       );
+
+      head.append(toggle);
+      body.append(menu);
     }
 
-    const body = h('div', 'section-body');
     wrapper.append(head, body);
     return { wrapper, body };
   }
@@ -1713,7 +1878,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
    */
   function applyEscapeHint(): void {
     badgeEscape.textContent = escapeHintFor({
-      menuOpen: saveOpen,
+      menuOpen: saveOpen || openCopyMenu !== null,
       edgesLocked: edgeLockedFlag && edgePoint !== null,
       measureLocked: measureLockedFlag && measureElement !== null,
       pinned: pinnedElement !== null,
@@ -2681,7 +2846,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     if (type) {
       line('Family', `${type.familyReading} (${type.familyConfidence})`);
       line('Weight', String(type.weight));
-      line('Size', `${formatPx(type.sizePx)} / ${formatNumber(roundTo(type.sizeRem, 3), 3)}rem`);
+      line('Size', sizeTextCompact(type.sizePx, snapshot.source));
       line('Line height', type.lineHeightPx === null ? type.lineHeightRaw : formatPx(type.lineHeightPx));
       line('Tracking', type.letterSpacingRaw === 'normal' ? 'normal' : formatPx(type.letterSpacingPx));
       const colorRow = h('div', 'hover-row');
@@ -2692,20 +2857,14 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
       stack.appendChild(colorRow);
     } else if (asset) {
       line('Asset', assetSummary(asset));
-      line(
-        'Rendered',
-        `${formatNumber(roundTo(asset.renderedWidth, 1), 1)} x ${formatNumber(roundTo(asset.renderedHeight, 1), 1)}`,
-      );
+      line('Rendered', sizePair(asset.renderedWidth, asset.renderedHeight));
       if (asset.intrinsicWidth && asset.intrinsicHeight) {
-        line('Intrinsic', `${asset.intrinsicWidth} x ${asset.intrinsicHeight}`);
+        line('Intrinsic', sizePair(asset.intrinsicWidth, asset.intrinsicHeight));
       }
       if (asset.url) line('Source', asset.url);
     } else {
       const layout = snapshot.layout;
-      line(
-        'Size',
-        `${formatNumber(roundTo(layout.layoutSize.width, 1), 1)} x ${formatNumber(roundTo(layout.layoutSize.height, 1), 1)}`,
-      );
+      line('Size', sizePair(layout.layoutSize.width, layout.layoutSize.height));
       line('Display', layout.display);
       line('Padding', sidesText(layout.padding));
       if (layout.flex) line('Gap', `${formatPx(layout.flex.rowGap)} / ${formatPx(layout.flex.columnGap)}`);
@@ -2727,15 +2886,12 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
 
     snapshot.assets.forEach((asset, index) => {
       body.appendChild(row('Type', assetSummary(asset)));
-      if (asset.url) body.appendChild(row('URL', asset.url));
-      body.appendChild(
-        row(
-          'Rendered',
-          `${formatNumber(roundTo(asset.renderedWidth, 1), 1)} x ${formatNumber(roundTo(asset.renderedHeight, 1), 1)}`,
-        ),
-      );
+      if (asset.url) body.appendChild(row('URL', asset.url, { oneLine: true }));
+      body.appendChild(row('Rendered', sizePair(asset.renderedWidth, asset.renderedHeight)));
       if (asset.intrinsicWidth !== null && asset.intrinsicHeight !== null) {
-        body.appendChild(row('Intrinsic', `${asset.intrinsicWidth} x ${asset.intrinsicHeight}`));
+        body.appendChild(
+          row('Intrinsic', sizePair(asset.intrinsicWidth, asset.intrinsicHeight)),
+        );
       }
       if (asset.alt) body.appendChild(row('Alt text', asset.alt));
       asset.candidates.forEach((candidate, candidateIndex) => {
@@ -2743,7 +2899,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
           row(
             `Candidate ${candidateIndex + 1}`,
             candidate.descriptor ? `${candidate.url} (${candidate.descriptor})` : candidate.url,
-            { copy: candidate.url },
+            { copy: candidate.url, oneLine: true },
           ),
         );
       });
@@ -2816,7 +2972,13 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     parent.appendChild(wrapper);
   }
 
-  function renderSaveForm(snapshot: ElementSnapshot, parent: HTMLElement): void {
+  function renderSaveForm(
+    snapshot: ElementSnapshot,
+    /** The action grid the toggle joins, so all four actions share a shape. */
+    actions: HTMLElement,
+    /** Where the form itself goes: under the grid, full width. */
+    parent: HTMLElement,
+  ): void {
     const form = h('div', 'save-form');
     form.dataset.open = saveOpen ? 'true' : 'false';
 
@@ -2835,10 +2997,10 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     checkbox.checked = true;
     checkLabel.append(checkbox, document.createTextNode('Include screenshot'));
 
-    const actions = h('div', 'form-actions');
+    const formActions = h('div', 'form-actions');
     const submit = button('Save', 'primary', 'Save this reference');
     const status = h('span', 'note');
-    actions.append(submit, status);
+    formActions.append(submit, status);
 
     submit.addEventListener('click', () => {
       submit.disabled = true;
@@ -2855,17 +3017,20 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
         });
     });
 
-    form.append(titleInput, noteInput, checkLabel, actions);
+    form.append(titleInput, noteInput, checkLabel, formActions);
 
-    const toggle = button('Save reference', '', 'Save reference');
+    const toggle = button('Save reference', 'primary', 'Save reference');
+    toggle.setAttribute('aria-expanded', saveOpen ? 'true' : 'false');
     toggle.addEventListener('click', () => {
       saveOpen = !saveOpen;
       form.dataset.open = saveOpen ? 'true' : 'false';
+      toggle.setAttribute('aria-expanded', saveOpen ? 'true' : 'false');
       applyEscapeHint();
       if (saveOpen) titleInput.focus();
     });
 
-    parent.append(toggle, form);
+    actions.append(toggle);
+    parent.append(form);
   }
 
   /**
@@ -2885,6 +3050,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     panel.textContent = '';
     // The panel is rebuilt on every live re-read, so the pieces that are
     // repainted on their own have to forget the nodes that just went away.
+    openCopyMenu = null;
     measureBlock = null;
     measureBody = null;
     measureTitle = null;
@@ -2904,6 +3070,9 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     const head = h('div', 'panel-head');
     makeDraggable(head);
     const title = h('div', 'panel-title', snapshot.element.label);
+    // The label is a selector and can be far longer than the head: it
+    // truncates, and the whole of it is one hover away.
+    title.title = snapshot.element.label;
     head.appendChild(title);
     if (pinnedHidden) head.appendChild(h('span', 'chip', 'Not rendered'));
     if (snapshot.element.role) head.appendChild(h('span', 'chip', snapshot.element.role));
@@ -2942,26 +3111,69 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     }
 
     // Breadcrumb: outermost ancestor first, then the element itself.
+    //
+    // A deeply nested element on a real page has eight or more ancestors, which
+    // wrapped to four lines of chips and pushed the reading off the panel. The
+    // middle of the chain is the part nobody reads, so it collapses behind a
+    // count that expands in place.
     const crumbs = h('div', 'crumbs');
     crumbs.setAttribute('role', 'group');
     crumbs.setAttribute('aria-label', 'Ancestors');
-    [...snapshot.ancestors].reverse().forEach((ancestor, reversedIndex) => {
+    const chain = [...snapshot.ancestors].reverse();
+
+    const crumbFor = (ancestor: (typeof chain)[number], reversedIndex: number): HTMLElement => {
       const index = snapshot.ancestors.length - 1 - reversedIndex;
       const crumb = button(ancestor.label, 'crumb', `Select ${ancestor.label}`);
+      crumb.title = ancestor.label;
       crumb.addEventListener('click', () => callbacks.onSelectAncestor(index));
-      crumbs.appendChild(crumb);
-    });
-    crumbs.appendChild(h('span', 'chip accent', snapshot.element.label));
-    // A click promoted to a semantic parent still shows the wrapper it came
-    // from, as a child rather than an ancestor, so nothing is hidden by the
-    // preference (competitive tester note).
-    if (pinnedChild && pinnedChild.isConnected) {
-      const childLabel = describeElement(pinnedChild).label;
-      const childCrumb = button(childLabel, 'crumb', `Select ${childLabel}`);
-      childCrumb.dataset.role = 'child-crumb';
-      childCrumb.addEventListener('click', () => callbacks.onSelectChild());
-      crumbs.appendChild(childCrumb);
-    }
+      return crumb;
+    };
+
+    const paintCrumbs = (expanded: boolean): void => {
+      crumbs.textContent = '';
+      const hidden = chain.length - (CRUMBS_HEAD + CRUMBS_TAIL);
+      if (expanded || hidden <= 1) {
+        chain.forEach((ancestor, reversedIndex) => {
+          crumbs.appendChild(crumbFor(ancestor, reversedIndex));
+        });
+      } else {
+        chain.slice(0, CRUMBS_HEAD).forEach((ancestor, reversedIndex) => {
+          crumbs.appendChild(crumbFor(ancestor, reversedIndex));
+        });
+        const more = button(
+          `+${hidden}`,
+          'quiet crumb-more',
+          `Show ${hidden} more ancestors`,
+        );
+        more.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          paintCrumbs(true);
+        });
+        crumbs.appendChild(more);
+        chain.slice(chain.length - CRUMBS_TAIL).forEach((ancestor, offset) => {
+          crumbs.appendChild(crumbFor(ancestor, chain.length - CRUMBS_TAIL + offset));
+        });
+      }
+
+      const currentCrumb = h('span', 'chip accent crumb-current', snapshot.element.label);
+      currentCrumb.title = snapshot.element.label;
+      crumbs.appendChild(currentCrumb);
+
+      // A click promoted to a semantic parent still shows the wrapper it came
+      // from, as a child rather than an ancestor, so nothing is hidden by the
+      // preference (competitive tester note).
+      if (pinnedChild && pinnedChild.isConnected) {
+        const childLabel = describeElement(pinnedChild).label;
+        const childCrumb = button(childLabel, 'crumb', `Select ${childLabel}`);
+        childCrumb.title = childLabel;
+        childCrumb.dataset.role = 'child-crumb';
+        childCrumb.addEventListener('click', () => callbacks.onSelectChild());
+        crumbs.appendChild(childCrumb);
+      }
+    };
+
+    paintCrumbs(false);
     scroll.appendChild(crumbs);
 
     // One tip per selection, in order, and not lost to a live re-read of the
@@ -3000,8 +3212,12 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     scroll.appendChild(pickedSection);
 
     const type = snapshot.typography;
+    const fluidRoot = snapshot.source.rootFontSizeFluid === true;
     if (type) {
       const { wrapper, body } = section('Typography', 'typography');
+      // Why the px readings below move when the window does. One line, at the
+      // top of the section, because it governs every size in it.
+      if (fluidRoot) body.appendChild(h('div', 'note', fluidRootNote(snapshot.source)));
       body.appendChild(
         row('Family', `${type.familyReading} (${type.familyConfidence})`, { copy: type.familyReading }),
       );
@@ -3012,7 +3228,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
         row(
           'Source',
           type.source.url ? `${type.source.kind}: ${type.source.url}` : type.source.kind,
-          { copy: type.source.url ?? type.source.kind },
+          { copy: type.source.url ?? type.source.kind, oneLine: !!type.source.url },
         ),
       );
       if (type.source.format) body.appendChild(row('Format', type.source.format));
@@ -3056,27 +3272,40 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
       body.appendChild(row('Weight', String(type.weight)));
       body.appendChild(row('Style', type.style));
       if (type.variationSettings) body.appendChild(row('Variations', type.variationSettings));
-      body.appendChild(row('Size', `${formatPx(type.sizePx)}`, { copy: `${type.sizePx}px` }));
+      // One Size row rather than a px row and a rem row: the two are one
+      // reading, and on a fluid root only their order says which one is stable.
       body.appendChild(
-        row('Size (rem)', `${formatNumber(roundTo(type.sizeRem, 4), 4)}rem`, {
-          copy: `${roundTo(type.sizeRem, 4)}rem`,
+        row('Size', sizeText(type.sizePx, snapshot.source), {
+          copy: sizeCopyText(type.sizePx, snapshot.source),
         }),
       );
+      const lineRatio =
+        type.lineHeightRatio === null
+          ? null
+          : formatNumber(roundTo(type.lineHeightRatio, 3), 3);
       body.appendChild(
         row(
           'Line height',
           type.lineHeightPx === null
             ? type.lineHeightRaw
-            : `${formatPx(type.lineHeightPx)}${type.lineHeightRatio ? ` (${formatNumber(roundTo(type.lineHeightRatio, 3), 3)})` : ''}`,
+            : fluidRoot && lineRatio
+              ? `${lineRatio} ratio · ${formatPx(type.lineHeightPx)} at this width`
+              : `${formatPx(type.lineHeightPx)}${lineRatio ? ` (${lineRatio})` : ''}`,
           { copy: type.lineHeightRaw },
         ),
       );
+      const trackingEm =
+        type.letterSpacingEm === null
+          ? null
+          : `${formatNumber(roundTo(type.letterSpacingEm, 4), 4)}em`;
       body.appendChild(
         row(
           'Letter spacing',
           type.letterSpacingRaw === 'normal'
             ? 'normal'
-            : `${formatPx(type.letterSpacingPx)}${type.letterSpacingEm === null ? '' : ` (${formatNumber(roundTo(type.letterSpacingEm, 4), 4)}em)`}`,
+            : fluidRoot && trackingEm
+              ? `${trackingEm} · ${formatPx(type.letterSpacingPx)} at this width`
+              : `${formatPx(type.letterSpacingPx)}${trackingEm ? ` (${trackingEm})` : ''}`,
           { copy: type.letterSpacingRaw },
         ),
       );
@@ -3169,16 +3398,10 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     layoutSection.body.appendChild(row('Display', layout.display));
     layoutSection.body.appendChild(row('Box sizing', layout.boxSizing));
     layoutSection.body.appendChild(
-      row(
-        'Layout size',
-        `${formatNumber(roundTo(layout.layoutSize.width, 2), 2)} x ${formatNumber(roundTo(layout.layoutSize.height, 2), 2)}`,
-      ),
+      row('Layout size', sizePair(layout.layoutSize.width, layout.layoutSize.height)),
     );
     layoutSection.body.appendChild(
-      row(
-        'Visual bounds',
-        `${formatNumber(roundTo(layout.visualRect.width, 2), 2)} x ${formatNumber(roundTo(layout.visualRect.height, 2), 2)}`,
-      ),
+      row('Visual bounds', sizePair(layout.visualRect.width, layout.visualRect.height)),
     );
     if (layout.transformed) {
       layoutSection.body.appendChild(
@@ -3244,7 +3467,10 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
       scroll.appendChild(list);
     }
 
-    const actions = h('div', 'form-actions');
+    // Four actions of very different label lengths wrapped into an uneven row,
+    // so they sit on a two column grid: equal widths, two tidy lines, and the
+    // one accent button in the last cell where the eye ends up.
+    const actions = h('div', 'panel-actions');
     const reread = button('Re-read', '', 'Read this element again');
     reread.addEventListener('click', () => callbacks.onReread());
     const parent = button('Select parent', '', 'Select the parent element');
@@ -3254,7 +3480,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     actions.append(reread, parent, child);
     scroll.appendChild(actions);
 
-    renderSaveForm(snapshot, scroll);
+    renderSaveForm(snapshot, actions, scroll);
 
     panel.hidden = false;
   }
@@ -3542,6 +3768,12 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     },
 
     closeMenu() {
+      // A copy menu is the shallowest thing Escape can be holding, so it goes
+      // first, and one press never closes both it and the save form.
+      if (closeCopyMenu()) {
+        applyEscapeHint();
+        return true;
+      }
       if (!saveOpen) return false;
       saveOpen = false;
       const form = panel.querySelector('.save-form') as HTMLElement | null;
@@ -3551,7 +3783,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     },
 
     hasOpenMenu() {
-      return saveOpen;
+      return saveOpen || openCopyMenu !== null;
     },
 
     owns(node) {

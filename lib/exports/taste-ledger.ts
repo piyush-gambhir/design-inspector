@@ -5,8 +5,14 @@
 // measured value lives under Observed, no em dash is ever emitted, and the
 // output is a fragment that starts at its own `##` heading so it can be
 // appended to the ledger.
-import type { ElementSnapshot, PageSummary, SavedReference } from '@/lib/contracts';
+import type {
+  ElementSnapshot,
+  PageSummary,
+  SavedReference,
+  SourceContext,
+} from '@/lib/contracts';
 import { num, px, scrubEmDashes } from './format';
+import { isViewportDependentLength } from '@/lib/readings/units';
 
 /** Spacing values listed as the page's rhythm. */
 const MAX_RHYTHM_VALUES = 6;
@@ -52,7 +58,7 @@ function entryFor(url: string, references: SavedReference[], date: string): stri
     '### Avoid',
     '- ',
     '### Scope',
-    scopeBlock(viewport, source.rootFontSize, summaries),
+    scopeBlock(viewport, source, summaries),
   ];
 
   return blocks.join('\n\n');
@@ -171,6 +177,22 @@ function stackLine(summary: PageSummary): string | null {
   return `- Stack: ${parts.join(', ')}.`;
 }
 
+/** The root font size, and whether it moves with the viewport (workstream V1). */
+function rootText(source: SourceContext): string {
+  if (!source.rootFontSizeFluid) return px(source.rootFontSize);
+  const authored = (source.rootFontSizeAuthored ?? '').trim();
+  const from = isViewportDependentLength(authored) ? `, from ${authored}` : '';
+  return `${px(source.rootFontSize)} (fluid${from}, so px sizes are readings at this width)`;
+}
+
+/** "1.125rem (18px at 1440 wide)" on a fluid root, "18px / 1.125rem" otherwise. */
+function sizeText(sizePx: number, sizeRem: number, source: SourceContext): string {
+  if (!source.rootFontSizeFluid || !Number.isFinite(sizeRem) || sizeRem <= 0) {
+    return `${px(sizePx)} / ${num(sizeRem)}rem`;
+  }
+  return `${num(sizeRem)}rem (${px(sizePx)} at ${num(source.viewport.width)} wide)`;
+}
+
 function elementLine(snapshot: ElementSnapshot): string {
   const label = scrubEmDashes(snapshot.element.label);
   const typography = snapshot.typography;
@@ -180,7 +202,7 @@ function elementLine(snapshot: ElementSnapshot): string {
   }
 
   const parts = [
-    `${typography.familyReading} (${typography.familyConfidence}) ${px(typography.sizePx)} / ${num(typography.sizeRem)}rem`,
+    `${typography.familyReading} (${typography.familyConfidence}) ${sizeText(typography.sizePx, typography.sizeRem, snapshot.source)}`,
     String(typography.weight),
     `lh ${typography.lineHeightRatio === null ? typography.lineHeightRaw : num(typography.lineHeightRatio)}`,
     `tracking ${typography.letterSpacingEm === null ? px(typography.letterSpacingPx) : `${num(typography.letterSpacingEm)}em`}`,
@@ -189,9 +211,9 @@ function elementLine(snapshot: ElementSnapshot): string {
   return `- ${label}: ${parts.join(', ')}.`;
 }
 
-function scopeBlock(viewport: string, rootFontSize: number, summaries: PageSummary[]): string {
+function scopeBlock(viewport: string, source: SourceContext, summaries: PageSummary[]): string {
   const sentences = [
-    `Captured at ${viewport}, root ${px(rootFontSize)}.`,
+    `Captured at ${viewport}, root ${rootText(source)}.`,
     'Responsive rules and interaction states were not captured.',
   ];
   for (const summary of summaries) {

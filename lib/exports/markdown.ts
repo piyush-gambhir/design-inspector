@@ -17,6 +17,7 @@ import type {
 } from '@/lib/contracts';
 import { cmp, collapseWhitespace, escapeCell, isZeroLength, num, px, round2, scrubEmDashes } from './format';
 import { sidesShorthand } from './css';
+import { isViewportDependentLength } from '@/lib/readings/units';
 
 const SCOPE_LINES = [
   'Values describe the captured element at this viewport and time.',
@@ -107,7 +108,9 @@ function typographyBullets(snapshot: ElementSnapshot): string[] {
 
   bullets.push(`- Font stack: ${typography.familyStack.join(', ')}`);
   bullets.push(
-    `- Size: ${px(typography.sizePx)}; equivalent ${num(typography.sizeRem)}rem at a ${num(snapshot.source.rootFontSize)}px root`,
+    snapshot.source.rootFontSizeFluid
+      ? `- Size: ${sizeText(typography.sizePx, typography.sizeRem, snapshot.source)}`
+      : `- Size: ${px(typography.sizePx)}; equivalent ${num(typography.sizeRem)}rem at a ${num(snapshot.source.rootFontSize)}px root`,
   );
   bullets.push(`- Weight: ${typography.weight}`);
   if (typography.style !== 'normal') bullets.push(`- Style: ${typography.style}`);
@@ -439,8 +442,32 @@ function sourceBullets(source: SourceContext): string[] {
     `- Source: ${source.url}`,
     `- Captured: ${source.capturedAt}`,
     `- Viewport: ${num(source.viewport.width)} x ${num(source.viewport.height)} CSS px`,
-    `- Root font size: ${px(source.rootFontSize)}`,
+    `- Root font size: ${rootFontSizeText(source)}`,
   ];
+}
+
+/**
+ * The root font size, and whether it moves. A fluid root is stated once here,
+ * because it is the reason every px size in the document is written as a
+ * reading at one viewport width (workstream V1).
+ */
+function rootFontSizeText(source: SourceContext): string {
+  if (!source.rootFontSizeFluid) return px(source.rootFontSize);
+  const authored = (source.rootFontSizeAuthored ?? '').trim();
+  // Only a value that moves is named as the cause.
+  const from = isViewportDependentLength(authored) ? `, from ${authored}` : '';
+  return (
+    `${px(source.rootFontSize)} (fluid${from}). It scales with the viewport, ` +
+    'so px sizes below are readings at this width and rem is the stable value.'
+  );
+}
+
+/** "1.125rem (16.12px at 1440 wide)" on a fluid root, "16.12px" otherwise. */
+function sizeText(sizePx: number, sizeRem: number, source: SourceContext): string {
+  if (!source.rootFontSizeFluid || !Number.isFinite(sizeRem) || sizeRem <= 0) {
+    return px(sizePx);
+  }
+  return `${num(sizeRem)}rem (${px(sizePx)} at ${num(source.viewport.width)} wide)`;
 }
 
 function noteBlock(note: string): string {

@@ -11,6 +11,7 @@ import {
   GroupHeading,
   StatusLine,
 } from '@/lib/ui/shared/components';
+import { formatCapturedAt } from '@/lib/ui/shared/format';
 
 const CATEGORY_LABELS: Record<StackCategory, string> = {
   framework: 'Frameworks',
@@ -47,7 +48,7 @@ function EvidenceList({ evidence }: { evidence: StackEvidence[] }) {
       {evidence.map((item, index) => (
         <li key={`${item.kind}-${index}`} className="text-[12px]">
           <span className="text-muted-foreground">{EVIDENCE_LABELS[item.kind]}: </span>
-          <span className="font-mono break-all">{item.detail}</span>
+          <span className="font-mono value-cell">{item.detail}</span>
         </li>
       ))}
     </ul>
@@ -121,7 +122,9 @@ export function StackReportView({ report }: { report: StackReport | null }) {
       ) : null}
 
       <StatusLine>
-        Scope: {report.scope}. Observed at {report.observedAt}.
+        {/* The readable local stamp, like every other time in the panel. The
+            ISO string is what the exports carry. */}
+        Scope: {report.scope}. Observed at {formatCapturedAt(report.observedAt)}.
       </StatusLine>
     </div>
   );

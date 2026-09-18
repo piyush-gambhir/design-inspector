@@ -11,9 +11,14 @@
   --surface-2: oklch(0.93 0.004 90);
   --surface-3: oklch(0.90 0.005 90);
   --foreground: oklch(0.19 0.006 285);
-  --muted-foreground: oklch(0.50 0.01 285);
-  --accent: oklch(0.58 0.19 255);
-  --accent-quiet: oklch(0.58 0.19 255 / 0.12);
+  /* Muted text has to clear 4.5:1 on every surface it can land on, and the
+     deepest of them is --surface-3: at 0.50 it measured 4.45:1 there, which is
+     a fail that only shows up on a chip. e2e/a11y.spec.ts measures it. */
+  --muted-foreground: oklch(0.48 0.01 285);
+  /* The accent carries white text on a filled button, which is normal-size
+     text and so needs 4.5:1: at 0.58 that was 4.34:1. */
+  --accent: oklch(0.55 0.19 255);
+  --accent-quiet: oklch(0.55 0.19 255 / 0.12);
   --accent-foreground: oklch(1 0 0);
   /* Accent text on a tonal surface, derived from --accent so the accent is
      still the one knob that rethemes everything. The fill value is tuned to
@@ -156,6 +161,15 @@
     background-size: 8px 8px;
     background-color: var(--checker-base);
   }
+  /* The stepper inside a traceability row. Declared here, not as utilities, so
+     the narrow-pane rule below can hide it (see the note there). */
+  .example-step {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 4px;
+  }
+
   /* Sample text in the typography table must not inherit the panel font. */
   .type-sample {
     /* Wrap, never nowrap: a nowrap sample's max-content width sizes the grid
@@ -213,6 +227,18 @@
     }
     .field-row > .field-value {
       text-align: left;
+    }
+    /* Under 360px the traceability row cannot hold "Show on page", the stepper
+       and the example's own label on one line, and the label is the one that
+       loses: it truncated to a single character. The stepper goes instead,
+       because "Show on page" already highlights every example.
+
+       Its layout lives here rather than in Tailwind utilities on the element:
+       the utilities layer comes after this one, so a `flex` utility on the
+       span would win over this `display: none` and the rule would silently do
+       nothing. */
+    .example-step {
+      display: none;
     }
   }
 }

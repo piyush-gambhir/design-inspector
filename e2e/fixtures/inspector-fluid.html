@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Design Inspector fixture: fluid root</title>
+    <!--
+      A root font size that scales with the viewport, which is what a modern
+      marketing page does. Every px reading on this page is only true at one
+      window width, so the panel has to read rem first and say why
+      (workstream V1). Ids are part of the test contract.
+    -->
+    <style>
+      html {
+        font-size: clamp(14px, 1vw, 18px);
+      }
+
+      body {
+        margin: 0;
+        background: #ffffff;
+        color: #101828;
+        font-family: 'Nonexistent Display', Georgia, serif;
+      }
+
+      main {
+        padding: 2rem 1.5rem;
+      }
+
+      #hero-heading {
+        margin: 0 0 0.75rem;
+        font-family: 'Nonexistent Display', 'Helvetica Neue', Arial, sans-serif;
+        font-size: 3.75rem;
+        font-weight: 700;
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+      }
+
+      #body-copy {
+        margin: 0;
+        font-size: 1rem;
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1 id="hero-heading">Three and three quarter rem, whatever the window</h1>
+      <p id="body-copy">
+        This paragraph is one rem, and its pixel size changes with the viewport.
+      </p>
+    </main>
+  </body>
+</html>

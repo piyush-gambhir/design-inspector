@@ -107,7 +107,8 @@ describe('StackReportView', () => {
     const container = await render(<StackReportView report={report} />);
     expect(container.textContent).toContain('No confident evidence found');
     expect(container.textContent).toContain('does not prove a technology is absent');
-    expect(container.textContent).toContain('2026-09-18T10:00:00.000Z');
+    // The readable local stamp; the ISO string belongs to the exports.
+    expect(container.textContent).toMatch(/Observed at \d{1,2} \w{3} 2026, \d{2}:\d{2}/);
   });
 
   it('groups detections by category with a confidence label and collapsed evidence', async () => {

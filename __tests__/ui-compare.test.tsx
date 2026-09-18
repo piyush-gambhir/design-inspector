@@ -229,7 +229,8 @@ describe('CompareView', () => {
     expect(container.textContent).toContain('1440 x 900 CSS px');
     expect(container.textContent).toContain('390 x 900 CSS px');
     expect(container.textContent).toContain('https://example.com/');
-    expect(container.textContent).toContain('Captured 2026-09-18T10:30:00.000Z');
+    // The local, readable stamp, not the ISO string: that one is for exports.
+    expect(container.textContent).toMatch(/Captured \d{1,2} \w{3} 2026, \d{2}:\d{2}/);
     // The same URL twice is the responsive case, and the view says so.
     expect(container.textContent).toContain('The same URL at two captures');
   });

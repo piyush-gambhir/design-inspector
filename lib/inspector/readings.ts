@@ -37,7 +37,15 @@ import {
   labelOf,
   type AncestorEntry,
 } from '../readings/locator';
-import { extractUrls, isDeclared, parsePx, pxToRem, splitCssList } from '../readings/units';
+import {
+  extractUrls,
+  isDeclared,
+  isViewportDependentLength,
+  parsePx,
+  pxToRem,
+  splitCssList,
+  splitTopLevel,
+} from '../readings/units';
 import { serializeInlineSvg } from './svg-export';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -75,8 +83,167 @@ export function rootFontSizeOf(doc: Document = document): number {
   }
 }
 
+/** How far a computed root may sit from a whole pixel before it reads as fluid. */
+const INTEGER_TOLERANCE_PX = 0.01;
+
+/**
+ * Rules walked looking for a root font-size, which is its own budget rather
+ * than the per-element one.
+ *
+ * A real page puts its root rule wherever its build ordered it: on
+ * superpower.com the `html { font-size: calc(...) }` that makes the whole page
+ * fluid is rule 17,626 of 17,820, so a 4,000 rule budget read the page as
+ * having a fixed root and every px reading in the panel silently claimed to be
+ * stable. The walk is a selector test per rule and it runs once per document,
+ * not once per reading, so it can afford to finish.
+ */
+const MAX_ROOT_RULES_SCANNED = 60000;
+
+/**
+ * The authored values are a property of the document's stylesheets, not of the
+ * viewport, so they are read once and kept until the sheet list changes. The
+ * source context is rebuilt on every resize, and rewalking a 17,000 rule page
+ * on each of those would be a frame budget spent on an answer that cannot have
+ * changed.
+ */
+let authoredRootCache: {
+  doc: Document;
+  sheets: number;
+  values: string[];
+  readAt: number;
+} | null = null;
+
+/** How long a cached walk is trusted. A page can swap a stylesheet for one with
+ *  the same sheet count, so the cache also ages out. */
+const AUTHORED_ROOT_TTL_MS = 2000;
+
+export function resetRootFontSizeCache(): void {
+  authoredRootCache = null;
+}
+
+/** True for a selector that styles the root element itself. */
+function selectsRoot(selectorText: string): boolean {
+  return splitTopLevel(selectorText, ',').some((part) => {
+    const trimmed = part.trim().toLowerCase();
+    return (
+      trimmed === 'html' ||
+      trimmed === ':root' ||
+      trimmed === 'html:root' ||
+      trimmed === ':root:root'
+    );
+  });
+}
+
+/**
+ * Every authored root font-size the document declares, in source order: the
+ * inline style first, then each `html` or `:root` rule in the same-origin
+ * stylesheets. A cross-origin sheet throws on `cssRules` and is skipped, so an
+ * unreadable page returns an empty list rather than a guess (PRD LAY-01's rule
+ * applied to the root: authored values are reported, never reconstructed).
+ *
+ * All of them are collected rather than only the winner, because a real page
+ * declares the root several times: superpower.com ships
+ * `html { font-size: calc(0.747899rem + 0.210084vw) }` and a plain
+ * `html { font-size: 1rem }` in a later sheet, and it is the first that
+ * explains why its px readings move.
+ */
+export function readAuthoredRootFontSizes(doc: Document = document): string[] {
+  const out: string[] = [];
+  const element = doc.documentElement as HTMLElement | null;
+  const inline = element?.style?.fontSize?.trim();
+  if (inline) out.push(inline);
+
+  let sheets: StyleSheet[];
+  try {
+    sheets = Array.from(doc.styleSheets);
+  } catch {
+    return out;
+  }
+
+  const cached = authoredRootCache;
+  if (
+    cached &&
+    cached.doc === doc &&
+    cached.sheets === sheets.length &&
+    Date.now() - cached.readAt < AUTHORED_ROOT_TTL_MS
+  ) {
+    return inline ? [inline, ...cached.values.filter((value) => value !== inline)] : cached.values;
+  }
+
+  let examined = 0;
+
+  const visit = (rules: CSSRuleList): void => {
+    for (const rule of Array.from(rules)) {
+      if (examined > MAX_ROOT_RULES_SCANNED) return;
+      examined += 1;
+
+      const styleRule = rule as CSSStyleRule;
+      if (styleRule.selectorText && styleRule.style && selectsRoot(styleRule.selectorText)) {
+        const value = styleRule.style.getPropertyValue('font-size');
+        if (value && value.trim()) out.push(value.trim());
+      }
+
+      const grouping = (rule as CSSGroupingRule).cssRules;
+      if (grouping && grouping.length > 0) visit(grouping);
+    }
+  };
+
+  for (const sheet of sheets) {
+    let rules: CSSRuleList | null = null;
+    try {
+      rules = (sheet as CSSStyleSheet).cssRules;
+    } catch {
+      continue;
+    }
+    if (rules) visit(rules);
+  }
+
+  authoredRootCache = { doc, sheets: sheets.length, values: out, readAt: Date.now() };
+  return out;
+}
+
+/**
+ * The authored value worth showing: the declaration that explains the movement
+ * when there is one, otherwise the last one the cascade would have seen.
+ */
+export function chooseAuthoredRootFontSize(values: string[]): string | null {
+  const fluid = values.find((value) => isViewportDependentLength(value));
+  if (fluid) return fluid;
+  return values.length > 0 ? (values[values.length - 1] as string) : null;
+}
+
+/** The authored root font-size, or null when no rule could be read. */
+export function readAuthoredRootFontSize(doc: Document = document): string | null {
+  return chooseAuthoredRootFontSize(readAuthoredRootFontSizes(doc));
+}
+
+/**
+ * True when the root font size moves with the viewport, so every px reading on
+ * the page is a reading at this width and only the rem value is stable.
+ *
+ * Any viewport-dependent root declaration settles it, even when another rule
+ * wins at this particular width: the claim is that px readings change with the
+ * window, and a rule that only applies at some widths still makes that true.
+ * Failing that, a computed root that is not a whole pixel is the tell: 14.99px
+ * is not a value anyone types, so something viewport-dependent produced it,
+ * whether or not the stylesheet that says so could be read.
+ */
+export function isFluidRootFontSize(
+  authored: string | string[] | null,
+  computed: number,
+): boolean {
+  const values = authored === null ? [] : Array.isArray(authored) ? authored : [authored];
+  const readable = values.filter((value) => value.trim().length > 0);
+  if (readable.some((value) => isViewportDependentLength(value))) return true;
+  if (!Number.isFinite(computed) || computed <= 0) return false;
+  return Math.abs(computed - Math.round(computed)) > INTEGER_TOLERANCE_PX;
+}
+
 export function readSourceContext(doc: Document = document): SourceContext {
   const view = doc.defaultView ?? window;
+  const rootFontSize = rootFontSizeOf(doc);
+  const authoredValues = readAuthoredRootFontSizes(doc);
+  const rootFontSizeAuthored = chooseAuthoredRootFontSize(authoredValues);
   return {
     url: doc.location?.href ?? '',
     title: doc.title,
@@ -86,7 +253,9 @@ export function readSourceContext(doc: Document = document): SourceContext {
       height: view.innerHeight,
       devicePixelRatio: view.devicePixelRatio,
     },
-    rootFontSize: rootFontSizeOf(doc),
+    rootFontSize,
+    rootFontSizeAuthored,
+    rootFontSizeFluid: isFluidRootFontSize(authoredValues, rootFontSize),
     scrollX: view.scrollX,
     scrollY: view.scrollY,
   };

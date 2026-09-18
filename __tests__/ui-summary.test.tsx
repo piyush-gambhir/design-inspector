@@ -304,8 +304,37 @@ describe('SummaryTab', () => {
     const sample = container.querySelector<HTMLElement>('.type-sample');
     expect(sample?.style.fontSize).toBe('28px');
     expect(sample?.textContent).toBe('Pricing that scales');
-    expect(container.textContent).toContain('72 px / 4.5 rem');
+    // A whole px size on a plain 16px root needs no rem to be unambiguous.
+    expect(container.textContent).toContain('72 px');
+    expect(container.textContent).not.toContain('4.5 rem');
     expect(container.textContent).toContain('Matched');
+  });
+
+  it('reads rem first, and says why, when the root font size is fluid', async () => {
+    const fluid: PageSummary = {
+      ...summary,
+      source: {
+        ...summary.source,
+        rootFontSize: 14.33,
+        rootFontSizeAuthored: 'clamp(14px, 1vw, 18px)',
+        rootFontSizeFluid: true,
+      },
+    };
+    const container = await render(
+      <SummaryTab
+        tabId={1}
+        pageTitle="Pricing"
+        summary={fluid}
+        loading={false}
+        error={null}
+        progress={null}
+        stale={false}
+        onScan={() => undefined}
+      />,
+    );
+    expect(container.textContent).toContain('14.33 px (fluid, from clamp(14px, 1vw, 18px))');
+    expect(container.textContent).toContain('5.024 rem · 72 px');
+    expect(container.textContent).toContain('rem is the stable reading');
   });
 
   it('labels an inferred accent and keeps the raw color value', async () => {
@@ -605,7 +634,8 @@ describe('AssetsTab', () => {
     );
     expect(container.textContent).toContain('640 x 360 px');
     expect(container.textContent).toContain('1280 x 720 px');
-    expect(container.textContent).toContain('200.0 KB');
+    // Two decimals at most, trailing zeros stripped, like every other number.
+    expect(container.textContent).toContain('200 KB');
     expect(container.textContent).toContain('image/png');
     expect(container.textContent).toContain('Not loaded yet');
     expect(container.textContent).toContain('2 candidates');

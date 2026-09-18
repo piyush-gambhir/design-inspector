@@ -142,27 +142,40 @@ export function ExampleControls({
     <div className="mt-1.5">
       <div
         className={cn(
-          'flex flex-wrap items-center gap-1',
+          // One line, never two: with `reveal` the row keeps this block's
+          // height while it is transparent, and a block that wrapped left a
+          // 56px hole in every palette, radius and shadow row.
+          'flex items-center gap-1',
           reveal &&
             'opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100 focus-within:opacity-100',
         )}
       >
-        <Button type="button" size="sm" variant="text" onClick={highlightAll}>
+        <Button
+          type="button"
+          size="sm"
+          variant="text"
+          className="shrink-0"
+          onClick={highlightAll}
+        >
           <Crosshair aria-hidden />
           Show on page
         </Button>
         {examples.length > 1 ? (
-          <>
+          // Stepping through examples is the first thing to go when the pane is
+          // too narrow to hold the row: "Show on page" highlights all of them
+          // anyway, and the alternative was an example label truncated to "d...".
+          <span className="example-step">
             <Button
               type="button"
               size="sm"
               variant="text"
               aria-label="Previous example"
+              className="shrink-0"
               onClick={() => step(-1)}
             >
               <ChevronLeft aria-hidden />
             </Button>
-            <span className="text-[12px] text-muted-foreground tabular-nums">
+            <span className="shrink-0 text-[12px] text-muted-foreground tabular-nums">
               {Math.min(index, examples.length - 1) + 1} / {examples.length}
             </span>
             <Button
@@ -170,17 +183,18 @@ export function ExampleControls({
               size="sm"
               variant="text"
               aria-label="Next example"
+              className="shrink-0"
               onClick={() => step(1)}
             >
               <ChevronRight aria-hidden />
             </Button>
-          </>
+          </span>
         ) : null}
         {current ? (
           <button
             type="button"
             onClick={() => select(current)}
-            className="max-w-[18ch] truncate rounded-[8px] px-1.5 py-1 font-mono text-[12px] text-muted-foreground hover:bg-surface-3 hover:text-foreground"
+            className="min-w-0 max-w-[18ch] truncate rounded-[8px] px-1.5 py-1 font-mono text-[12px] text-muted-foreground hover:bg-surface-3 hover:text-foreground"
             title={`Select ${current.label}`}
           >
             {current.label}

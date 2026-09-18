@@ -230,13 +230,18 @@ function ReferenceCard({
           </div>
 
           <p className="value-cell mt-0.5 px-1 text-[12px] text-muted-foreground">
-            {formatCapturedAt(reference.createdAt)} · {viewport.width} x {viewport.height}
+            {formatCapturedAt(reference.createdAt)} · {viewport.width} x {viewport.height} px
             {reference.updatedAt !== reference.createdAt
               ? ` · edited ${formatCapturedAt(reference.updatedAt)}`
               : ''}
             {reference.screenshotId && reference.screenshotIsCrop ? ' · Visible crop' : ''}
           </p>
-          <p className="value-cell px-1 text-[12px] text-muted-foreground">
+          {/* One line, with the whole URL in the tooltip: a saved card is a row
+              in a list, and a wrapped URL makes three of them. */}
+          <p
+            className="truncate px-1 text-[12px] text-muted-foreground"
+            title={reference.snapshot.source.url}
+          >
             {reference.snapshot.source.url}
           </p>
 
@@ -560,14 +565,14 @@ export function SavedTab({
         >
           <ul className="grid gap-0.5">
             {manifest.written.map(path => (
-              <li key={`written-${path}`} className="font-mono text-[12px] break-all">
+              <li key={`written-${path}`} className="value-cell font-mono text-[12px]">
                 {path}
               </li>
             ))}
             {manifest.skipped.map(entry => (
               <li
                 key={`skipped-${entry.path}`}
-                className="text-[12px] break-all text-muted-foreground"
+                className="value-cell text-[12px] text-muted-foreground"
               >
                 <span className="font-mono">{entry.path}</span> skipped: {entry.reason}
               </li>
@@ -586,7 +591,7 @@ export function SavedTab({
           body="Pin an element on the page and press Save reference, or scan a page and press Save summary. Only deliberate saves are stored."
         />
       ) : (
-        <div className="grid gap-3">
+        <div className="grid gap-4">
           {groups.map(group => {
             const ids = group.references.map(reference => reference.id);
             const groupSelected = ids.every(id => selected.has(id));

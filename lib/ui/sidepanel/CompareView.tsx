@@ -11,6 +11,7 @@ import { X } from 'lucide-react';
 import type { PageSummary, SavedReference } from '@/lib/contracts';
 import { Button } from '@/components/ui';
 import { CopyButton, Section, StatusLine, Swatch } from '@/lib/ui/shared/components';
+import { formatCapturedAt } from '@/lib/ui/shared/format';
 import {
   compareSummaries,
   comparisonToMarkdown,
@@ -47,8 +48,12 @@ function SourceColumn({
       <p className="truncate text-[12px] font-medium" title={reference.title}>
         {reference.title || 'Untitled reference'}
       </p>
-      <p className="mt-0.5 text-[12px] break-all text-muted-foreground">{summary.source.url}</p>
-      <p className="text-[12px] text-muted-foreground">Captured {summary.source.capturedAt}</p>
+      <p className="mt-0.5 value-cell text-[12px] text-muted-foreground">{summary.source.url}</p>
+      {/* The same local, readable stamp the rest of the panel uses; the ISO
+          string is for exports, not for a 320px column. */}
+      <p className="text-[12px] text-muted-foreground">
+        Captured {formatCapturedAt(summary.source.capturedAt)}
+      </p>
       <p className="text-[12px] text-muted-foreground">{viewportLabel(summary.source)}</p>
     </div>
   );
@@ -82,15 +87,15 @@ function RowTable({
         {rows.map(row => (
           <li
             key={row.key}
-            className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-baseline gap-2 rounded-[8px] px-1.5 py-1 text-[12px] odd:bg-surface-2/40"
+            className="grid grid-cols-[minmax(0,1fr)_2.25rem_2.25rem_auto] items-baseline gap-2 rounded-[8px] px-1.5 py-1 text-[12px] odd:bg-surface-2/40"
           >
             <span className="min-w-0 truncate font-mono" title={row.label}>
               {row.label}
             </span>
-            <span className="tabular-nums" title={`${titles.a}: ${count(row.a)}`}>
+            <span className="text-right tabular-nums" title={`${titles.a}: ${count(row.a)}`}>
               {row.a === null ? '-' : row.a}
             </span>
-            <span className="tabular-nums" title={`${titles.b}: ${count(row.b)}`}>
+            <span className="text-right tabular-nums" title={`${titles.b}: ${count(row.b)}`}>
               {row.b === null ? '-' : row.b}
             </span>
             <span className="text-[12px] text-muted-foreground">
@@ -129,7 +134,7 @@ function PaletteTable({
         {rows.map(row => (
           <li
             key={`${row.side}-${row.key}`}
-            className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto_auto] items-center gap-2 rounded-[8px] px-1.5 py-1 text-[12px] odd:bg-surface-2/40"
+            className="grid grid-cols-[16px_minmax(0,1fr)_2.25rem_2.25rem_auto] items-center gap-2 rounded-[8px] px-1.5 py-1 text-[12px] odd:bg-surface-2/40"
           >
             <Swatch
               color={(row.a ?? row.b)?.representative.color ?? { raw: 'transparent', hex: null, alpha: 0 }}
@@ -138,10 +143,16 @@ function PaletteTable({
             <span className="min-w-0 truncate font-mono" title={row.label}>
               {row.label}
             </span>
-            <span className="tabular-nums" title={`${titles.a}: ${count(row.a?.totalCount ?? null)}`}>
+            <span
+              className="text-right tabular-nums"
+              title={`${titles.a}: ${count(row.a?.totalCount ?? null)}`}
+            >
               {row.a ? row.a.totalCount : '-'}
             </span>
-            <span className="tabular-nums" title={`${titles.b}: ${count(row.b?.totalCount ?? null)}`}>
+            <span
+              className="text-right tabular-nums"
+              title={`${titles.b}: ${count(row.b?.totalCount ?? null)}`}
+            >
               {row.b ? row.b.totalCount : '-'}
             </span>
             <span className="text-[12px] text-muted-foreground">

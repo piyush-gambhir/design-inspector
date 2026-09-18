@@ -124,7 +124,10 @@ describe('overlay host', () => {
     expect(css).toContain('all: initial');
     expect(css).toContain('font: 12px/1.4 ui-sans-serif, system-ui, sans-serif');
     expect(css).toContain('color-scheme: light dark');
-    expect(css).toContain('--di-accent: oklch(0.62 0.17 255)');
+    // The accent is one token, and it is the one that carries white text on
+    // the filled button, so it is tuned for 4.5:1 there (workstream V4).
+    expect(css).toContain('--di-accent: oklch(0.55 0.19 255)');
+    expect(css).toContain('--di-accent-foreground');
     expect(css).toContain('prefers-color-scheme: dark');
     expect(css).toContain('prefers-reduced-motion: reduce');
   });
@@ -212,9 +215,16 @@ describe('pinned panel', () => {
     const panel = overlay.root.getElementById('panel') as HTMLElement;
     expect(panel.hidden).toBe(false);
     expect(panel.querySelector('img')).toBeNull();
+    expect(panel.querySelectorAll('*').length).toBeGreaterThan(0);
     // The label samples the text and truncates it; what it shows is text.
     expect(panel.textContent).toContain('<img src=x');
-    expect(panel.innerHTML).not.toContain('<img src=x');
+    // Nothing page-derived is ever parsed as markup. The head's title tooltip
+    // carries the same label as an attribute value, which is a string and not
+    // markup, so the check is that no element came out of the payload rather
+    // than that the serialized HTML never contains the characters.
+    const title = panel.querySelector('.panel-title') as HTMLElement;
+    expect(title.title).toBe(title.textContent);
+    expect(title.childElementCount).toBe(0);
   });
 
   it('shows the typography reading with px and rem', () => {
@@ -226,8 +236,9 @@ describe('pinned panel', () => {
     const text = (overlay.root.getElementById('panel')?.textContent ?? '').replace(/\s+/g, ' ');
     expect(text).toContain('32px');
     expect(text).toContain('2rem');
-    expect(text).toContain('Copy CSS');
-    expect(text).toContain('Copy Tailwind');
+    // One Copy control per section head, with the three exporters in its menu.
+    expect(text).toContain('Copy');
+    expect(text).toContain('Tailwind');
   });
 
   it('closes the save form first, and reports whether a menu was open', () => {
@@ -1192,17 +1203,21 @@ describe('rulers and guides', () => {
 });
 
 describe('closest-standard Tailwind (PRD EXP-02 mode 2)', () => {
-  it('offers the button beside Copy Tailwind on every category section', () => {
+  it('offers the button beside Tailwind in every category section menu', () => {
     document.body.innerHTML = '<p id="copy">Hello</p>';
     const element = document.getElementById('copy') as Element;
     overlay.setMode('active');
     overlay.setPinned(buildSnapshot(element, { deep: false }), element);
 
-    const labels = Array.from(overlay.root.querySelectorAll('.section-head button')).map(
+    const labels = Array.from(overlay.root.querySelectorAll('.copy-menu button')).map(
       (node) => node.textContent,
     );
-    expect(labels).toContain('Copy Tailwind');
+    expect(labels).toContain('CSS');
+    expect(labels).toContain('Tailwind');
     expect(labels).toContain('Closest standard');
+    // The head itself carries one control, so it stays on one line.
+    const heads = Array.from(overlay.root.querySelectorAll('.section-head'));
+    expect(heads.every((head) => head.querySelectorAll('button').length <= 1)).toBe(true);
   });
 
   it('reports "Copy unavailable" while the adapter is missing, and never throws', () => {
@@ -1245,6 +1260,29 @@ describe('closest-standard Tailwind (PRD EXP-02 mode 2)', () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(copied).toContain('text-lg font-semibold');
+  });
+});
+
+describe('breadcrumb length (V3)', () => {
+  it('collapses the middle of a deep chain behind a count that expands', () => {
+    document.body.innerHTML =
+      '<div id="a1"><div id="a2"><div id="a3"><div id="a4"><div id="a5">' +
+      '<p id="leaf">Deep</p></div></div></div></div></div>';
+    const leaf = document.getElementById('leaf') as Element;
+    overlay.setMode('active');
+    overlay.setPinned(buildSnapshot(leaf, { deep: false }), leaf);
+
+    const crumbs = overlay.root.querySelector('.crumbs') as HTMLElement;
+    const more = crumbs.querySelector('.crumb-more') as HTMLButtonElement;
+    expect(more).not.toBeNull();
+    const collapsed = crumbs.querySelectorAll('button.crumb').length;
+    expect(more.textContent).toMatch(/^\+\d+$/);
+
+    more.click();
+    expect(crumbs.querySelector('.crumb-more')).toBeNull();
+    expect(crumbs.querySelectorAll('button.crumb').length).toBeGreaterThan(collapsed);
+    // The pinned element keeps its own chip at the end either way.
+    expect(crumbs.querySelector('.crumb-current')?.textContent).toContain('p#leaf');
   });
 });
 

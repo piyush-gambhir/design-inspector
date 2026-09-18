@@ -34,6 +34,7 @@ export const BACKGROUND_REQUEST_TYPES: readonly BackgroundRequest['type'][] = [
   'screenshot.capture',
   'summary.request',
   'summary.cancel',
+  'font.identify',
   'assets.request',
   'stack.request',
   'element.highlight',
@@ -110,6 +111,10 @@ export async function handleBackgroundRequest(
 
     case 'summary.request':
       return requestSummary(request.tabId);
+
+    case 'font.identify':
+      // Implemented by workstream FONT (see .claude/specs/FONT-identity.md).
+      return { ok: false, error: 'Font identification is not available yet.' };
 
     case 'summary.cancel':
       return passthrough(await sendToTab(request.tabId, { type: 'content.cancelScan' }));

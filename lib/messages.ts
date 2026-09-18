@@ -11,6 +11,7 @@
 
 import type {
   AssetReading,
+  FontIdentity,
   ElementSnapshot,
   PageSummary,
   Rect,
@@ -99,6 +100,11 @@ export type BackgroundRequest =
   | { type: 'summary.request'; tabId: number }
   /** Cancels a running scan in that tab. */
   | { type: 'summary.cancel'; tabId: number }
+  /**
+   * Fetches a font file and reads its name and fvar tables (opt-in, contacts the
+   * font's host). Cached per URL for the worker's lifetime.
+   */
+  | { type: 'font.identify'; url: string }
   /** `enrich` true also HEAD-fetches file size and MIME from each asset's host. Default false. */
   | { type: 'assets.request'; tabId: number; enrich?: boolean }
   | { type: 'stack.request'; tabId: number }
@@ -129,6 +135,7 @@ export type BackgroundResponse =
   | { ok: true; screenshotDataUrl: string; isCrop: boolean }
   /** `warning` is set when the reference saved but an optional step (screenshot) failed. */
   | { ok: true; reference: SavedReference; warning?: string }
+  | { ok: true; identity: FontIdentity }
   | { ok: true; downloadId: number }
   | { ok: true }
   | { ok: false; error: string };

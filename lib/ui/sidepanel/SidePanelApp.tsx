@@ -226,7 +226,7 @@ export function SidePanelApp() {
   const panelNotice = noticeText(tab?.url, unsupported);
 
   return (
-    <div className="panel-root flex min-h-screen flex-col gap-3 p-3">
+    <div className="panel-root flex min-h-screen flex-col gap-4 p-3">
       {/* One strip, two rows: what page this is and what the inspector is
           doing, then the only two controls that act on the page itself. */}
       <header className="rounded-[10px] bg-surface p-3">
@@ -236,7 +236,7 @@ export function SidePanelApp() {
           </p>
           <StatusPill mode={unsupported ? 'off' : mode} />
         </div>
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <Button
             type="button"
             variant="tonal"
@@ -258,8 +258,11 @@ export function SidePanelApp() {
           </Button>
           {/* The switch keeps its full name at every pane width: the pair moves
               to its own line when the strip runs out of room rather than
-              truncating the label to "Layout out...". */}
-          <div className="ml-auto flex items-center gap-2">
+              truncating the label to "Layout out...". The row is spaced apart
+              rather than pushed right, so when the pair does wrap it starts at
+              the same left edge as everything else instead of floating alone
+              against the right one. */}
+          <div className="flex items-center gap-2">
             <Label htmlFor="panel-outlines" className="whitespace-nowrap font-normal">
               Layout outlines
             </Label>

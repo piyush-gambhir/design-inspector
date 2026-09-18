@@ -44,6 +44,17 @@ export interface SourceContext {
   viewport: Viewport;
   /** Root font size in CSS px, read from the inspected document. */
   rootFontSize: number;
+  /**
+   * The authored root font-size when it could be read (same-origin stylesheet
+   * or inline style), e.g. 'clamp(14px, 1vw, 18px)' or '62.5%'. Null when unknown.
+   */
+  rootFontSizeAuthored?: string | null;
+  /**
+   * True when the root font size depends on the viewport (vw/vh/clamp/calc in the
+   * authored value, or a non-integer computed root with no readable source), so
+   * px readings change with the window while rem readings are stable.
+   */
+  rootFontSizeFluid?: boolean;
   scrollX: number;
   scrollY: number;
 }
@@ -107,6 +118,42 @@ export interface FontSource {
   note?: string;
 }
 
+/**
+ * What the font file itself says (OpenType name and fvar tables), read on
+ * demand from the served woff/woff2/ttf. This is the real identity behind a
+ * site's CSS alias (PRD TYP-01, TYP-03).
+ */
+export interface FontIdentity {
+  /** name id 16 (typographic family) or 1. */
+  family: string;
+  /** name id 17 (typographic subfamily) or 2, e.g. 'Regular', 'Bold Italic'. */
+  subfamily: string | null;
+  /** name id 4. */
+  fullName: string | null;
+  /** name id 6. */
+  postscriptName: string | null;
+  /** name id 9. */
+  designer: string | null;
+  /** name id 8. */
+  manufacturer: string | null;
+  /** name id 5, trimmed to the version number when possible. */
+  version: string | null;
+  /** name id 13 (license description), truncated to 300 chars. */
+  license: string | null;
+  /** name id 14. */
+  licenseUrl: string | null;
+  /** fvar axes for variable fonts; empty for static faces. */
+  axes: { tag: string; name: string | null; min: number; max: number; default: number }[];
+  /** Container format that was parsed. */
+  container: 'woff2' | 'woff' | 'sfnt' | 'ttc';
+  /** File size in bytes. */
+  fileSize: number;
+  /** Where the identity came from. */
+  evidence: 'name-table';
+  /** The URL that was read. */
+  url: string;
+}
+
 export interface FontFaceRecord {
   family: string;
   weight: string;
@@ -162,6 +209,14 @@ export interface TypographyReading {
   fontVariant: string;
   color: ColorValue;
   contrast: ContrastReading;
+  /**
+   * How the family reading was confirmed. 'rendered' means a canvas measurement
+   * showed the family paints differently from its fallback, which is the
+   * evidence behind a 'verified' familyConfidence. Null when not checked.
+   */
+  renderCheck?: 'rendered' | 'fallback' | 'inconclusive' | null;
+  /** Present after the user asked to identify the font file (opt-in fetch). */
+  identity?: FontIdentity | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -375,6 +430,8 @@ export interface FontRecord {
   source: FontSource;
   weights: string[];
   faces: FontFaceRecord[];
+  /** Present after the user asked to identify the font file (opt-in fetch). */
+  identity?: FontIdentity | null;
 }
 
 export interface RadiusGroup {

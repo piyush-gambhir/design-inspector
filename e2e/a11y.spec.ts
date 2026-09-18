@@ -200,9 +200,45 @@ async function installAudit(page: Page, minFontPx: number): Promise<void> {
           node => node.nodeType === 3 && (node.textContent ?? '').trim() !== '',
         );
         if (!ownsText) continue;
-        const size = Number.parseFloat(getComputedStyle(element).fontSize);
+        const style = getComputedStyle(element);
+        const size = Number.parseFloat(style.fontSize);
         if (Number.isFinite(size) && size < floor) {
           out.push({ kind: 'text-too-small', detail: `${size}px ${describe(element)}` });
+        }
+        // Text contrast against what is actually painted behind it. Muted text
+        // is the whole reason this check exists: it is the colour most likely
+        // to be tuned for looks in one scheme and left failing in the other
+        // (workstream V4). A control that is deliberately transparent until it
+        // is hovered is measured when it is visible, not while it is hidden.
+        if (Number.parseFloat(style.opacity) === 0) continue;
+        // A disabled control is exempt from the contrast rule (WCAG 1.4.3),
+        // and this UI dims them to half opacity, so measuring one measures the
+        // dimming rather than the palette.
+        const disabled =
+          (element as HTMLButtonElement).disabled === true ||
+          element.getAttribute('aria-disabled') === 'true' ||
+          !!element.closest('[disabled], [aria-disabled="true"]');
+        if (disabled) continue;
+        const foreground = toRgba(style.color);
+        if (!foreground) continue;
+        // What is painted behind the text is the element's own background
+        // first, then everything under it. A filled button carries its text on
+        // its own fill, not on the card it sits in.
+        const under = backgroundBehind(element);
+        const own = toRgba(style.backgroundColor);
+        const behind = own && own[3] > 0 ? over(own, under) : under;
+        const painted = over(foreground, behind);
+        const ratio = contrast(painted, behind);
+        const weight = Number.parseFloat(style.fontWeight) || 400;
+        const large = size >= 24 || (size >= 18.66 && weight >= 700);
+        const minimum = large ? 3 : 4.5;
+        if (ratio + 0.005 < minimum) {
+          out.push({
+            kind: 'text-contrast',
+            detail: `${ratio.toFixed(2)}:1 (needs ${minimum}) ${style.color} on ${
+              `rgb(${behind.slice(0, 3).map(Math.round).join(', ')})`
+            } ${describe(element)}`,
+          });
         }
       }
       return out;
@@ -419,6 +455,10 @@ test.describe('side panel accessibility', () => {
       const panel = await openPanel(tabId);
       await panel.emulateMedia({ colorScheme: scheme });
       await scan(panel);
+
+      // The same audit in this scheme: a colour that reads in light can fail in
+      // dark, and text contrast is the check most likely to (workstream V4).
+      expect(await runFindings(panel), `${scheme} audit`).toEqual([]);
 
       const stops = await walkTabOrder(panel, 'header p', 16);
       expect(stops.length, 'focus stops walked').toBeGreaterThan(6);

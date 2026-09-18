@@ -7,7 +7,7 @@
 //
 // Clustering is a suggestion about perception, never a claim about the site's
 // tokens. The exact values stay exact.
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import type { ColorGroup, ColorRole } from '@/lib/contracts';
 import {
   clusterPalette,
@@ -75,6 +75,67 @@ function RoleDots({ roles }: { roles: ColorRole[] }) {
   );
 }
 
+/**
+ * One palette row, as a fixed grid rather than a flex line.
+ *
+ * The four columns are a swatch, the hex at a fixed width, the roles (the only
+ * column allowed to shrink, so it truncates instead of pushing anything), and
+ * the count, right aligned on its own column so counts line up down the list.
+ * Annotations such as an alpha value or the inferred accent go on a second line
+ * under the hex: inline they collided with the hex at 320px, which is the bug
+ * from screenshot 1.
+ */
+const ROW_GRID = 'grid grid-cols-[16px_88px_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1';
+
+function AnnotationChip({ children }: { children: ReactNode }) {
+  return (
+    <span className="inline-flex h-5 items-center rounded-full bg-surface-3 px-1.5 text-[12px] text-muted-foreground">
+      {children}
+    </span>
+  );
+}
+
+function PaletteRow({
+  color,
+  roles,
+  count,
+  accent,
+}: {
+  color: ColorGroup['color'];
+  roles: ColorRole[];
+  count: number;
+  accent: boolean;
+}) {
+  const label = color.hex ?? color.raw;
+  const roleNames = roles.map(role => ROLE_LABELS[role]).join(', ');
+  const annotations = color.alpha < 1 || accent;
+  return (
+    <>
+      <Swatch color={color} size={16} />
+      <span className="truncate font-mono text-[12px] tabular-nums" title={label}>
+        {label}
+      </span>
+      <span className="flex min-w-0 items-center gap-1.5" title={roleNames}>
+        <RoleDots roles={roles} />
+        <span className="min-w-0 truncate text-[12px] text-muted-foreground">{roleNames}</span>
+      </span>
+      <span className="justify-self-end text-[12px] text-muted-foreground tabular-nums">
+        x{count}
+      </span>
+      {annotations ? (
+        <span className="col-span-3 col-start-2 flex flex-wrap items-center gap-1">
+          {color.alpha < 1 ? <AnnotationChip>alpha {round(color.alpha)}</AnnotationChip> : null}
+          {accent ? (
+            <span className="inline-flex h-5 items-center rounded-full bg-accent-quiet px-1.5 text-[12px] text-accent-text">
+              accent (inferred)
+            </span>
+          ) : null}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
 function ClusterRow({
   cluster,
   tabId,
@@ -87,7 +148,6 @@ function ClusterRow({
   onToggle: () => void;
 }) {
   const color = cluster.representative.color;
-  const label = color.hex ?? color.raw;
   const roleCounts = clusterRoleCounts(cluster);
 
   return (
@@ -96,25 +156,14 @@ function ClusterRow({
         type="button"
         aria-expanded={expanded}
         onClick={onToggle}
-        className="flex w-full items-center gap-2 rounded-[8px] p-2 text-left hover:bg-surface-2"
+        className={`${ROW_GRID} w-full rounded-[8px] p-2 text-left hover:bg-surface-3`}
       >
-        <Swatch color={color} size={20} />
-        <span className="font-mono text-[12px]">{label}</span>
-        {color.alpha < 1 ? (
-          <span className="text-[12px] text-muted-foreground">alpha {round(color.alpha)}</span>
-        ) : null}
-        <RoleDots roles={cluster.roles} />
-        <span className="min-w-0 truncate text-[12px] text-muted-foreground">
-          {cluster.roles.map(role => ROLE_LABELS[role]).join(', ')}
-        </span>
-        {cluster.inferredRole === 'accent' ? (
-          <span className="shrink-0 rounded-full bg-accent-quiet px-1.5 py-0.5 text-[12px] text-accent-text">
-            accent (inferred)
-          </span>
-        ) : null}
-        <span className="ml-auto shrink-0 text-[12px] text-muted-foreground tabular-nums">
-          x{cluster.totalCount}
-        </span>
+        <PaletteRow
+          color={color}
+          roles={cluster.roles}
+          count={cluster.totalCount}
+          accent={cluster.inferredRole === 'accent'}
+        />
       </button>
 
       {expanded ? (
@@ -128,20 +177,16 @@ function ClusterRow({
           <ul className="mt-1 grid gap-1.5">
             {cluster.members.map(member => (
               <li key={`${member.role}-${member.key}`} className="group/row rounded-[8px] bg-surface p-2">
-                <div className="flex items-center gap-2">
-                  <Swatch color={member.color} size={16} />
-                  <span className="font-mono text-[12px]">
-                    {member.color.hex ?? member.color.raw}
-                  </span>
-                  <span className="text-[12px] text-muted-foreground">
-                    {ROLE_LABELS[member.role]}
-                  </span>
-                  <span className="ml-auto text-[12px] text-muted-foreground tabular-nums">
-                    x{member.count}
-                  </span>
+                <div className={ROW_GRID}>
+                  <PaletteRow
+                    color={member.color}
+                    roles={[member.role]}
+                    count={member.count}
+                    accent={false}
+                  />
                 </div>
                 {member.color.raw !== (member.color.hex ?? member.color.raw) ? (
-                  <p className="mt-1 font-mono text-[12px] break-all text-muted-foreground">
+                  <p className="mt-1 value-cell font-mono text-[12px] text-muted-foreground">
                     raw {member.color.raw}
                   </p>
                 ) : null}
@@ -165,26 +210,16 @@ function FlatList({ colors, tabId }: { colors: ColorGroup[]; tabId: number | nul
       <WindowedList items={colors} className="grid gap-1.5" noun="measured values">
         {group => (
         <li key={`${group.role}-${group.key}`} className="group/row rounded-[8px] bg-surface-2 p-2">
-          <div className="flex items-center gap-2">
-            <Swatch color={group.color} size={20} />
-            <span className="font-mono text-[12px]">{group.color.hex ?? group.color.raw}</span>
-            {group.color.alpha < 1 ? (
-              <span className="text-[12px] text-muted-foreground">
-                alpha {round(group.color.alpha)}
-              </span>
-            ) : null}
-            <span className="text-[12px] text-muted-foreground">{ROLE_LABELS[group.role]}</span>
-            {group.inferredRole === 'accent' ? (
-              <span className="shrink-0 rounded-full bg-accent-quiet px-1.5 py-0.5 text-[12px] text-accent-text">
-                accent (inferred)
-              </span>
-            ) : null}
-            <span className="ml-auto text-[12px] text-muted-foreground tabular-nums">
-              x{group.count}
-            </span>
+          <div className={ROW_GRID}>
+            <PaletteRow
+              color={group.color}
+              roles={[group.role]}
+              count={group.count}
+              accent={group.inferredRole === 'accent'}
+            />
           </div>
           {group.color.raw !== (group.color.hex ?? group.color.raw) ? (
-            <p className="mt-1 font-mono text-[12px] break-all text-muted-foreground">
+            <p className="mt-1 value-cell font-mono text-[12px] text-muted-foreground">
               raw {group.color.raw}
             </p>
           ) : null}

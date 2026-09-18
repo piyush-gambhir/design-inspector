@@ -81,6 +81,23 @@ export function parsePx(value: string | null | undefined): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+/** A number followed by a viewport unit, anywhere in an authored value. */
+const VIEWPORT_UNIT = /\d\s*(?:vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb)\b/i;
+
+/**
+ * True for an authored length whose result moves with the viewport: a viewport
+ * unit, or a `clamp()` whose middle term is almost always one.
+ *
+ * Percentages are not viewport dependent: the root's percentage parent is the
+ * browser's default font size, not the window.
+ */
+export function isViewportDependentLength(value: string | null | undefined): boolean {
+  const text = (value ?? '').trim().toLowerCase();
+  if (!text) return false;
+  if (text.includes('clamp(')) return true;
+  return VIEWPORT_UNIT.test(text);
+}
+
 /** px to rem against the inspected document's root font size (PRD TYP-01). */
 export function pxToRem(px: number, rootFontSize: number): number {
   if (!Number.isFinite(rootFontSize) || rootFontSize <= 0) return 0;

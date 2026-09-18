@@ -27,7 +27,14 @@ import {
   StatusLine,
   WindowedList,
 } from '@/lib/ui/shared/components';
-import { formatCapturedAt, formatViewport } from '@/lib/ui/shared/format';
+import {
+  formatCapturedAt,
+  formatLineHeightLabel,
+  formatRootFontSize,
+  formatSizeLabel,
+  formatTrackingLabel,
+  formatViewport,
+} from '@/lib/ui/shared/format';
 import { ExampleControls } from './ExampleControls';
 import { PaletteView } from './PaletteView';
 import { StackReportView } from './StackReportView';
@@ -122,7 +129,7 @@ function ScopeSection({ summary }: { summary: PageSummary }) {
     <Section title="Scope" subtitle="What this reading covers, and what it does not.">
       <div className="grid gap-0.5">
         <Field label="Viewport">{formatViewport(source.viewport)}</Field>
-        <Field label="Root font size">{round(source.rootFontSize)} px</Field>
+        <Field label="Root font size">{formatRootFontSize(source)}</Field>
         <Field label="Elements">
           {scope.scannedElements} scanned of {scope.eligibleElements} eligible
         </Field>
@@ -187,12 +194,17 @@ function TypeScaleSection({ summary, filtering }: { summary: PageSummary; filter
       </Section>
     );
   }
+  const { rootFontSize, rootFontSizeFluid } = summary.source;
   return (
     <Section
       id={SECTION_IDS.typeScale}
       title="Type scale"
       count={summary.sizeScale.length}
-      subtitle="Distinct text sizes, by usage count."
+      subtitle={
+        rootFontSizeFluid
+          ? 'Distinct text sizes, by usage count. The root font size scales with the viewport, so rem is the stable reading and px is this width only.'
+          : 'Distinct text sizes, by usage count.'
+      }
     >
       <ul className="flex flex-wrap gap-1.5">
         {summary.sizeScale.map(entry => (
@@ -200,7 +212,7 @@ function TypeScaleSection({ summary, filtering }: { summary: PageSummary; filter
             key={entry.sizePx}
             className="inline-flex h-7 items-center gap-1 rounded-full bg-surface-2 px-2.5 text-[12px] tabular-nums"
           >
-            {round(entry.sizePx)} px
+            {formatSizeLabel(entry.sizePx, rootFontSize, rootFontSizeFluid)}
             <span className="ml-1 text-muted-foreground">x{entry.count}</span>
           </li>
         ))}
@@ -212,10 +224,12 @@ function TypeScaleSection({ summary, filtering }: { summary: PageSummary; filter
 function TypographyCombination({
   group,
   rootFontSize,
+  rootFontSizeFluid,
   tabId,
 }: {
   group: TypographyGroup;
   rootFontSize: number;
+  rootFontSizeFluid: boolean | undefined;
   tabId: number | null;
 }) {
   return (
@@ -241,15 +255,18 @@ function TypographyCombination({
       </div>
       <div className="mt-1 grid gap-0.5">
         <Field label="Size">
-          {round(group.sizePx)} px
-          {rootFontSize > 0 ? ` / ${round(group.sizePx / rootFontSize, 3)} rem` : ''}
+          {formatSizeLabel(group.sizePx, rootFontSize, rootFontSizeFluid)}
         </Field>
         <Field label="Weight">
           {group.weight}
           {group.style !== 'normal' ? `, ${group.style}` : ''}
         </Field>
-        <Field label="Line height">{group.lineHeightRaw}</Field>
-        <Field label="Tracking">{group.letterSpacingRaw}</Field>
+        <Field label="Line height">
+          {formatLineHeightLabel(group.lineHeightRaw, group.sizePx, rootFontSizeFluid)}
+        </Field>
+        <Field label="Tracking">
+          {formatTrackingLabel(group.letterSpacingRaw, group.sizePx, rootFontSizeFluid)}
+        </Field>
       </div>
       <ExampleControls examples={group.examples} tabId={tabId} reveal />
     </li>
@@ -305,7 +322,11 @@ function TypographySection({
             summary={
               <span className="flex w-full items-center gap-2">
                 <span className="font-medium text-foreground tabular-nums">
-                  {round(step.sizePx)} px
+                  {formatSizeLabel(
+                    step.sizePx,
+                    summary.source.rootFontSize,
+                    summary.source.rootFontSizeFluid,
+                  )}
                 </span>
                 <span>
                   {step.combinations.length}{' '}
@@ -321,6 +342,7 @@ function TypographySection({
                   key={group.key}
                   group={group}
                   rootFontSize={summary.source.rootFontSize}
+                  rootFontSizeFluid={summary.source.rootFontSizeFluid}
                   tabId={tabId}
                 />
               ))}
@@ -490,7 +512,7 @@ function RadiiSection({
                 className="size-6 shrink-0 bg-accent-quiet"
                 style={{ borderRadius: group.value }}
               />
-              <span className="font-mono text-[12px] break-all">{group.value}</span>
+              <span className="value-cell font-mono text-[12px]">{group.value}</span>
               <span className="ml-auto text-[12px] text-muted-foreground tabular-nums">
                 x{group.count}
               </span>
@@ -536,7 +558,7 @@ function ShadowsSection({
                 className="size-9 shrink-0 rounded-[8px] bg-background"
                 style={{ boxShadow: group.value }}
               />
-              <span className="min-w-0 font-mono text-[12px] break-all">{group.value}</span>
+              <span className="min-w-0 value-cell font-mono text-[12px]">{group.value}</span>
               <span className="ml-auto text-[12px] text-muted-foreground tabular-nums">
                 x{group.count}
               </span>
@@ -634,7 +656,7 @@ function FontsSection({
                         {face.status ?? 'status unknown'}
                       </span>
                       {face.urls.length > 0 ? (
-                        <span className="ml-1 break-all text-muted-foreground">
+                        <span className="value-cell ml-1 text-muted-foreground">
                           {face.urls[0]}
                         </span>
                       ) : null}
@@ -833,7 +855,9 @@ export function SummaryTab({
   const shownSummary = view ?? summary;
 
   return (
-    <div className="grid gap-3">
+    // 16px between cards, 12px inside one, 8px inside a row: the panel's whole
+    // spacing rhythm, stated once here and once on the panel shell.
+    <div className="grid gap-4">
       {stale ? (
         <div className="rounded-[10px] bg-surface p-3">
           {/* A page that moved on is a fact about the page, not a failure of

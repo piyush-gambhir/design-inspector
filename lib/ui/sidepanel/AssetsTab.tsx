@@ -16,6 +16,7 @@ import {
   StatusLine,
   WindowedList,
 } from '@/lib/ui/shared/components';
+import { formatBytesLabel } from '@/lib/ui/shared/format';
 import { downloadAssetBundle, filenameFromUrl, svgDataUrl } from './exports';
 
 const KIND_LABELS: Record<AssetKind, string> = {
@@ -44,10 +45,7 @@ export function matchesFilter(asset: AssetReading, filter: AssetFilter): boolean
 }
 
 function formatBytes(bytes: number | null): string {
-  if (bytes === null) return 'Unknown';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  return formatBytesLabel(bytes);
 }
 
 function Thumbnail({ asset }: { asset: AssetReading }) {
@@ -209,7 +207,7 @@ function AssetRow({
               <ul className="grid gap-0.5">
                 {asset.candidates.map((candidate, index) => (
                   <li key={`${index}-${candidate.url}`} className="text-[12px]">
-                    <span className="font-mono break-all">{candidate.url}</span>
+                    <span className="font-mono value-cell">{candidate.url}</span>
                     {candidate.descriptor ? (
                       <span className="ml-1 text-muted-foreground">{candidate.descriptor}</span>
                     ) : null}

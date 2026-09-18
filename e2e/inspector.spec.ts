@@ -951,6 +951,41 @@ test.describe('inspector on the basic fixture', () => {
     expect(pinned.typography.sizeRem).toBeCloseTo(pinned.typography.sizePx / 20, 3);
     await page.close();
   });
+
+  test('reads rem first and says why when the root font size is fluid (V1)', async () => {
+    const page = await session.context.newPage();
+    await page.setViewportSize({ width: 1200, height: 900 });
+    await page.goto(`${baseUrl}/inspector-fluid.html`);
+    const tabId = await tabIdFor(session.worker, page);
+    await toggleInspector(control, tabId);
+    await page.locator('#hero-heading').hover();
+    await page.locator('#hero-heading').click();
+    await page.waitForTimeout(200);
+
+    const state = await sendBackground<{
+      ok: boolean;
+      state?: {
+        pinned: {
+          source: { rootFontSize: number; rootFontSizeAuthored: string; rootFontSizeFluid: boolean };
+        };
+      };
+    }>(control, { type: 'inspector.getState', tabId });
+    const source = state.state!.pinned.source;
+    expect(source.rootFontSizeFluid).toBe(true);
+    expect(source.rootFontSizeAuthored).toContain('clamp(');
+    // 1vw of a 1200px viewport is 12px, which the clamp lifts to its 14px
+    // floor. The computed root is a whole number here and the reading is still
+    // fluid, because the authored value says so.
+    expect(source.rootFontSize).toBeCloseTo(14, 1);
+
+    const text = await shadowText(page);
+    expect(text).toContain('scales with the viewport');
+    expect(text).toContain('rem is the stable reading');
+    // rem first, px after it, said to be a reading at this width.
+    expect(text).toMatch(/Size\s*3\.75rem · [\d.]+px at this width/);
+    await page.screenshot({ path: `${SHOTS}/di-v-fluid-typography.png` });
+    await page.close();
+  });
 });
 
 test.describe('side panel presence and the page badge (W)', () => {

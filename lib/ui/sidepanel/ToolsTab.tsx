@@ -9,6 +9,7 @@
 // The mockup is remembered per origin, so a reload, a route change, or coming
 // back tomorrow finds the comp exactly where it was left.
 import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react';
+import { formatBytesLabel } from '@/lib/ui/shared/format';
 import { ImageUp, Trash2 } from 'lucide-react';
 import type { MockupState } from '@/lib/messages';
 import { sendToBackground } from '@/lib/messages';
@@ -129,7 +130,7 @@ export function ToolsTab({ tabId, tabUrl, pageMockup }: ToolsTabProps) {
         if (cancelled) return;
         dataUrlRef.current = dataUrl;
         setState(record.state);
-        setName(`${Math.round(record.blob.size / 1024)} KB`);
+        setName(formatBytesLabel(record.blob.size));
         await send({ dataUrl, ...record.state });
       } catch (loadError) {
         if (!cancelled) {

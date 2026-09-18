@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
-import type { FontFaceRecord } from '../lib/contracts';
+import type { FontFaceRecord, FontIdentity } from '../lib/contracts';
 import {
   classifyFontSource,
   formatFromSrcHint,
@@ -14,6 +14,19 @@ import {
   srcUrls,
   weightCovered,
   urlNamesFamily,
+  aliasDiffers,
+  axisChipText,
+  confidenceEvidence,
+  designerLine,
+  displayFamily,
+  firstSentence,
+  fontSourceLine,
+  formatFileSize,
+  identityDescription,
+  providerLink,
+  renderCheck,
+  resetRenderCheckCache,
+  type TextMeasurer,
 } from '../lib/readings/fonts';
 
 function face(overrides: Partial<FontFaceRecord> = {}): FontFaceRecord {
@@ -91,7 +104,10 @@ describe('classifyFontSource', () => {
       pageOrigin: 'https://example.com',
     });
     expect(source.kind).toBe('self-hosted');
-    expect(source.note).toContain('cdn.other.com');
+    // The host itself is named by the source line; the note carries the part
+    // that line cannot say, which is that the CDN is not the page's origin.
+    expect(source.note).toContain("not this page's own origin");
+    expect(fontSourceLine(source)).toContain('cdn.other.com');
   });
 
   it('falls back to system for a generic family with no file', () => {
@@ -226,5 +242,218 @@ describe('identifyFamily', () => {
     const identification = identifyFamily([], 400, []);
     expect(identification.familyReading).toBe('Unknown');
     expect(identification.familyConfidence).toBe('declared');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Verified rendering (PRD TYP-02)
+
+/**
+ * A canvas context that only knows how to measure. Widths are looked up by
+ * whether the font shorthand names the family, which is exactly the signal the
+ * real check reads.
+ */
+function fakeMeasurer(widths: {
+  withFamily: number;
+  mono: number;
+  serif: number;
+}): TextMeasurer & { calls: number } {
+  return {
+    font: '',
+    calls: 0,
+    measureText(): { width: number } {
+      this.calls += 1;
+      if (this.font.includes('Satoshi')) return { width: widths.withFamily };
+      return { width: this.font.includes('monospace') ? widths.mono : widths.serif };
+    },
+  };
+}
+
+function fakeDoc(check: boolean | null): Document {
+  return {
+    fonts: check === null ? undefined : { check: () => check },
+  } as unknown as Document;
+}
+
+describe('renderCheck', () => {
+  beforeEach(() => {
+    resetRenderCheckCache();
+  });
+
+  it('reports rendered when the family measures differently from both fallbacks', () => {
+    const measurer = fakeMeasurer({ withFamily: 420, mono: 500, serif: 480 });
+    expect(renderCheck('Satoshi', 400, 'normal', fakeDoc(true), measurer)).toBe('rendered');
+  });
+
+  it('reports fallback when both widths match and the font set says the face is missing', () => {
+    // Every measurement comes back the same width, so the family added nothing.
+    // The font set is the second witness that it is genuinely absent.
+    const equal = {
+      font: '',
+      measureText(): { width: number } {
+        return { width: 500 };
+      },
+    } as TextMeasurer;
+    expect(renderCheck('Satoshi', 400, 'normal', fakeDoc(false), equal)).toBe('fallback');
+  });
+
+  it('stays inconclusive when the widths match but the font set says the face is there', () => {
+    const equal = {
+      font: '',
+      measureText(): { width: number } {
+        return { width: 500 };
+      },
+    } as TextMeasurer;
+    // A family whose metrics happen to match the fallback is a real case, and
+    // it is never reported as a fallback on that evidence alone.
+    expect(renderCheck('Satoshi', 400, 'normal', fakeDoc(true), equal)).toBe('inconclusive');
+  });
+
+  it('stays inconclusive with no canvas at all', () => {
+    expect(renderCheck('Satoshi', 400, 'normal', fakeDoc(false), null)).toBe('inconclusive');
+  });
+
+  it('treats a generic family as rendered by definition, without measuring', () => {
+    const measurer = fakeMeasurer({ withFamily: 1, mono: 2, serif: 3 });
+    expect(renderCheck('monospace', 400, 'normal', fakeDoc(true), measurer)).toBe('rendered');
+    expect(measurer.calls).toBe(0);
+  });
+
+  it('measures a family, weight, and style combination once per page session', () => {
+    const measurer = fakeMeasurer({ withFamily: 420, mono: 500, serif: 480 });
+    renderCheck('Satoshi', 700, 'italic', fakeDoc(true), measurer);
+    const afterFirst = measurer.calls;
+    renderCheck('Satoshi', 700, 'italic', fakeDoc(true), measurer);
+    expect(measurer.calls).toBe(afterFirst);
+    // A different weight is a different question and is measured again.
+    renderCheck('Satoshi', 400, 'italic', fakeDoc(true), measurer);
+    expect(measurer.calls).toBeGreaterThan(afterFirst);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Presenting an identity
+
+function identity(overrides: Partial<FontIdentity> = {}): FontIdentity {
+  return {
+    family: 'NB International Pro',
+    subfamily: 'Regular',
+    fullName: 'NB International Pro Regular',
+    postscriptName: 'NBInternationalPro-Regular',
+    designer: 'Stefan Gandl',
+    manufacturer: 'Neubau Berlin',
+    version: '1.004',
+    license: 'Licensed for web use. Redistribution is not permitted.',
+    licenseUrl: 'https://example.invalid/eula',
+    axes: [],
+    container: 'woff2',
+    fileSize: 49152,
+    evidence: 'name-table',
+    url: 'https://cdn.prod.website-files.com/abc/nb.woff2',
+    ...overrides,
+  };
+}
+
+describe('formatFileSize', () => {
+  it('reads in whole units', () => {
+    // No font is under a kilobyte, so KB is the smallest unit worth printing.
+    expect(formatFileSize(512)).toBe('1 KB');
+    expect(formatFileSize(49152)).toBe('48 KB');
+    expect(formatFileSize(3 * 1024 * 1024)).toBe('3.0 MB');
+  });
+
+  it('is null rather than zero when the size is unknown', () => {
+    expect(formatFileSize(null)).toBeNull();
+    expect(formatFileSize(undefined)).toBeNull();
+  });
+});
+
+describe('fontSourceLine', () => {
+  it('names the host, the format, and the size, and never the URL', () => {
+    const source = {
+      kind: 'self-hosted' as const,
+      url: 'https://cdn.prod.website-files.com/abc/nb.woff2',
+      format: 'woff2',
+      subset: null,
+    };
+    const line = fontSourceLine(source, 49152);
+    expect(line).toBe('Self-hosted on cdn.prod.website-files.com · woff2 · 48 KB');
+    expect(line).not.toContain('/abc/');
+  });
+
+  it('says a system font was never downloaded', () => {
+    expect(
+      fontSourceLine({ kind: 'system', url: null, format: null, subset: null }),
+    ).toBe('System font, nothing was downloaded');
+  });
+
+  it('omits the size when the file has not been read', () => {
+    expect(
+      fontSourceLine({ kind: 'google', url: 'https://fonts.gstatic.com/s/inter/x.woff2', format: 'woff2', subset: null }),
+    ).toBe('Google Fonts · fonts.gstatic.com · woff2');
+  });
+});
+
+describe('providerLink', () => {
+  it('points at the specimen page for each provider', () => {
+    expect(providerLink('google', 'Playfair Display')?.url).toBe(
+      'https://fonts.google.com/specimen/Playfair+Display',
+    );
+    expect(providerLink('adobe', 'Brandon Grotesque')?.url).toBe(
+      'https://fonts.adobe.com/search?query=Brandon%20Grotesque',
+    );
+    expect(providerLink('fontshare', 'General Sans')?.url).toBe(
+      'https://www.fontshare.com/fonts/general-sans',
+    );
+  });
+
+  it('has nowhere to send a self-hosted or system family', () => {
+    expect(providerLink('self-hosted', 'NB International Pro')).toBeNull();
+    expect(providerLink('system', 'Georgia')).toBeNull();
+  });
+});
+
+describe('identity presentation', () => {
+  it('shows the typeface name over the CSS alias, and keeps the alias', () => {
+    expect(displayFamily('Nb international pro webfont', identity())).toBe('NB International Pro');
+    expect(aliasDiffers('Nb international pro webfont', identity())).toBe(true);
+    // A site that names the family correctly has nothing extra to say.
+    expect(aliasDiffers('NB International Pro', identity())).toBe(false);
+    expect(displayFamily('Nb international pro webfont', null)).toBe('Nb international pro webfont');
+  });
+
+  it('credits the designer and the foundry when they differ', () => {
+    expect(designerLine(identity())).toBe('by Stefan Gandl for Neubau Berlin');
+    expect(designerLine(identity({ designer: null }))).toBe('by Neubau Berlin');
+    expect(designerLine(identity({ designer: null, manufacturer: null }))).toBeNull();
+  });
+
+  it('writes one line for an export', () => {
+    expect(
+      identityDescription('Nb international pro webfont', identity(), 'self-hosted'),
+    ).toBe(
+      "NB International Pro Regular by Stefan Gandl for Neubau Berlin (declared as 'Nb international pro webfont'), self-hosted",
+    );
+    expect(identityDescription('Inter', null, 'google')).toBeNull();
+  });
+
+  it('describes a variable axis as a range', () => {
+    expect(axisChipText({ tag: 'wght', name: 'Weight', min: 100, max: 900, default: 400 })).toBe(
+      'wght 100 to 900',
+    );
+  });
+
+  it('takes the first sentence of a licence description', () => {
+    expect(firstSentence('Licensed for web use. Redistribution is not permitted.')).toBe(
+      'Licensed for web use.',
+    );
+    expect(firstSentence(null)).toBeNull();
+  });
+
+  it('says what each confidence label is claiming', () => {
+    expect(confidenceEvidence('verified')).toContain('Measured');
+    expect(confidenceEvidence('matched')).toContain('Not proof');
+    expect(confidenceEvidence('matched', 'fallback')).toContain('the fallback painted this');
+    expect(confidenceEvidence('declared')).toContain('first family in the CSS stack');
   });
 });

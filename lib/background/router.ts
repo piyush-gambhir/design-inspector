@@ -8,6 +8,7 @@ import type { BackgroundRequest, BackgroundResponse } from '@/lib/messages';
 import { sendToTab } from '@/lib/messages';
 import { requestAssets } from './assets';
 import { startDownload } from './downloads';
+import { identifyFont } from './font-identity';
 import {
   activeTabId,
   getInspectorState,
@@ -113,8 +114,9 @@ export async function handleBackgroundRequest(
       return requestSummary(request.tabId);
 
     case 'font.identify':
-      // Implemented by workstream FONT (see .claude/specs/FONT-identity.md).
-      return { ok: false, error: 'Font identification is not available yet.' };
+      // Opt-in: this is the only request that contacts a host the user did not
+      // already load, and only the file the page itself served (PRD 17.1).
+      return identifyFont(request.url);
 
     case 'summary.cancel':
       return passthrough(await sendToTab(request.tabId, { type: 'content.cancelScan' }));

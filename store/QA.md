@@ -33,6 +33,31 @@ work is always preserved: no failure empties the panel.
 | Failed download | Assets row, Summary font row, Saved tab export | The reason from `chrome.downloads`, or "The download did not start. Copy the URL and open it directly." | **Copy URL** for a single asset; for an export, the Copy Markdown and Copy taste ledger paths do not touch downloads at all. |
 | Interrupted export | Assets tab, after Cancel | "...cancelled. No archive was written. Select fewer assets and run it again." | **Download selected as ZIP** with a smaller selection. A completed archive that skipped some assets instead reports "N skipped; manifest.json lists every reason", so a partial success is still a delivered file. |
 | Stale page data | Side panel header and Summary tab | "Page changed. Refresh for a current reading." | **Refresh** beside the message. A same-document route change marks the readings stale and keeps them; a new document drops them, because they would be readings of a different page. |
+| Font file unreadable | Pinned panel typography rows, Summary Fonts card | The host's own answer as a sentence: "The font host refused the request (403).", "The font file is no longer at that URL (404).", "Not a font file.", "That font file is larger than 20 MB, so it was not read.", "The font host did not answer in time." | **Identify font file** stays enabled and can be pressed again. Every row that did not depend on the file (family alias, weight, size, colour, contrast) is untouched, so a refusal costs nothing that was already read. |
+
+### The one opt-in network path (PRD 17.1)
+
+"Identify font file" on a pinned element, and "Identify" on a Summary font card, are the
+only controls in the product that fetch a resource the user did not already ask for by
+inspecting the page. What that press does, exactly:
+
+- One `fetch` of one font file, from the host the page itself served it from, with
+  `credentials: 'omit'` and a 10 second timeout. No other URL is contacted, and no other
+  file of that family is fetched.
+- The file is parsed in the service worker (`lib/background/font-identity.ts`), capped at
+  20 MB, and only the `name` and `fvar` tables are read. The bytes are discarded; the parsed
+  identity is what is kept.
+- The identity is cached per URL for the worker's lifetime and mirrored (last 50) into
+  `chrome.storage.session`, so a second press, another element in the same family, or a
+  restarted worker costs no further request.
+- The button's own tooltip says "Contacts the font host" before it is pressed, the Fonts
+  section repeats it in its subtitle, and `PRIVACY.md` lists it in the table of what leaves
+  the device.
+- The side panel fetches the same file a second time to build its specimen, from the
+  browser cache, because extension messages are JSON and a font cannot travel through them
+  without being base64'd twice.
+
+Nothing is fetched on hover, on pin, during a scan, or in the background.
 
 ### Notes on two of these
 

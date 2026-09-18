@@ -28,7 +28,11 @@ import type {
 } from '../messages';
 import { broadcast, isMessage, sendToBackground } from '../messages';
 import { toCss, toTailwind, toTailwindClosest, type StyleCategory } from '../exports';
-import { readDocumentFonts, type DocumentFontsResult } from '../readings/fonts';
+import {
+  readDocumentFonts,
+  resetRenderCheckCache,
+  type DocumentFontsResult,
+} from '../readings/fonts';
 import { getSettings, onSettingsChanged } from '../storage/settings';
 import { listAssets } from './assets';
 import { gatherEvidence } from './evidence';
@@ -277,6 +281,9 @@ export function bootInspector(): InspectorApi {
 
   function invalidateFonts(): void {
     fontsCache = null;
+    // A face that finished loading after the first pin changes the answer to
+    // "did this family render", so the verified-rendering cache goes with it.
+    resetRenderCheckCache();
   }
 
   /** Rebuilt when the viewport changes; refreshed per reading where it must be. */
@@ -536,6 +543,19 @@ export function bootInspector(): InspectorApi {
             const match = response.assets.find((asset) => asset.url === url);
             if (!match) return 'This asset is not in the page asset list.';
             return { fileSize: match.fileSize, mimeType: match.mimeType };
+          } catch (error) {
+            return error instanceof Error ? error.message : String(error);
+          }
+        },
+        onIdentifyFont: async (url) => {
+          if (!runtimeOrNull()) return 'The extension background is not available.';
+          try {
+            // The worker does the fetch and the parsing: a page's own CSP has
+            // no say over it, and the decoder stays out of this bundle.
+            const response = await sendToBackground({ type: 'font.identify', url });
+            if (!response.ok) return response.error;
+            if (!('identity' in response)) return 'The font file returned no identity.';
+            return response.identity;
           } catch (error) {
             return error instanceof Error ? error.message : String(error);
           }

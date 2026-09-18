@@ -27,6 +27,7 @@ import { computeContrast } from '../readings/contrast';
 import {
   identifyFamily,
   readDocumentFonts,
+  renderCheck,
   splitFontFamilyStack,
   type DocumentFontsResult,
 } from '../readings/fonts';
@@ -444,14 +445,31 @@ export function readTypography(
   const color = parseColor(style.color);
 
   const variation = (style.fontVariationSettings ?? '').trim();
+  const fontStyle = (style.fontStyle || 'normal').trim();
+
+  // The rendering check is the only evidence that settles which family painted
+  // the characters (PRD TYP-02), and it costs a canvas measurement, so it runs
+  // on a pinned reading and never on hover (PRD 19.1). A family that rendered
+  // and also has a loaded face (or is a system family) is the one case where
+  // `verified` is honest; everything else keeps the confidence it arrived with.
+  const doc = element.ownerDocument;
+  const check =
+    options.deep && doc && identification.familyReading !== 'Unknown'
+      ? renderCheck(identification.familyReading, weight, fontStyle, doc)
+      : null;
+  const confidence =
+    check === 'rendered' && identification.familyConfidence === 'matched'
+      ? 'verified'
+      : identification.familyConfidence;
 
   return {
     familyStack: stack,
     familyReading: identification.familyReading,
-    familyConfidence: identification.familyConfidence,
+    familyConfidence: confidence,
     source: identification.source,
+    renderCheck: check,
     weight,
-    style: (style.fontStyle || 'normal').trim(),
+    style: fontStyle,
     variationSettings: variation && variation !== 'normal' ? variation : null,
     sizePx,
     sizeRem: pxToRem(sizePx, rootFontSize),

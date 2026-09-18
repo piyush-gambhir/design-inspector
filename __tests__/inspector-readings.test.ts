@@ -11,7 +11,7 @@ import {
   resolveUrl,
 } from '../lib/inspector/readings';
 import { buildFontRecords, buildScanRecord } from '../lib/inspector/scan';
-import type { DocumentFontsResult } from '../lib/readings/fonts';
+import { resetRenderCheckCache, type DocumentFontsResult } from '../lib/readings/fonts';
 
 function pick(selector: string): Element {
   const element = document.querySelector(selector);
@@ -97,6 +97,78 @@ describe('buildSnapshot', () => {
     expect(snapshot.layout.display).toBeTypeOf('string');
     expect(snapshot.typography).not.toBeNull();
     expect(snapshot.typography?.familyConfidence).not.toBe('verified');
+  });
+
+  it('upgrades a matched family to verified only when the canvas says it rendered (TYP-02)', () => {
+    // The weight is set explicitly: jsdom's default stylesheet makes an h1
+    // bold, and a 400 face does not cover 700.
+    document.body.innerHTML =
+      '<h1 id="heading" style="font-family: Satoshi, serif; font-weight: 400">Hi</h1>';
+    const fonts: DocumentFontsResult = {
+      faces: [
+        {
+          family: 'Satoshi',
+          weight: '400',
+          style: 'normal',
+          urls: ['https://cdn.example.invalid/satoshi.woff2'],
+          format: 'woff2',
+          unicodeRange: null,
+          status: 'loaded',
+        },
+      ],
+      providerUrls: [],
+      limitations: [],
+    };
+
+    // A canvas that says the family paints at a different width than either
+    // fallback. That measurement is the whole of the evidence for `verified`.
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function stub(this: HTMLCanvasElement) {
+      return {
+        font: '',
+        measureText(this: { font: string }) {
+          return { width: this.font.includes('Satoshi') ? 300 : 500 };
+        },
+      } as unknown as CanvasRenderingContext2D;
+    } as unknown as typeof HTMLCanvasElement.prototype.getContext;
+
+    try {
+      resetRenderCheckCache();
+      const shallow = buildSnapshot(pick('#heading'), { deep: false, fonts });
+      // Hover never pays for the measurement, so it never claims verified.
+      expect(shallow.typography?.renderCheck ?? null).toBeNull();
+      expect(shallow.typography?.familyConfidence).toBe('matched');
+
+      resetRenderCheckCache();
+      const deep = buildSnapshot(pick('#heading'), { deep: true, fonts });
+      expect(deep.typography?.renderCheck).toBe('rendered');
+      expect(deep.typography?.familyConfidence).toBe('verified');
+    } finally {
+      HTMLCanvasElement.prototype.getContext = original;
+      resetRenderCheckCache();
+    }
+  });
+
+  it('never reaches verified for a family with no loaded face, however it measures', () => {
+    document.body.innerHTML = '<h1 id="heading" style="font-family: Ghost, serif">Hi</h1>';
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function stub(this: HTMLCanvasElement) {
+      return {
+        font: '',
+        measureText(this: { font: string }) {
+          return { width: this.font.includes('Ghost') ? 300 : 500 };
+        },
+      } as unknown as CanvasRenderingContext2D;
+    } as unknown as typeof HTMLCanvasElement.prototype.getContext;
+
+    try {
+      resetRenderCheckCache();
+      const deep = buildSnapshot(pick('#heading'), { deep: true });
+      expect(deep.typography?.familyConfidence).toBe('declared');
+    } finally {
+      HTMLCanvasElement.prototype.getContext = original;
+      resetRenderCheckCache();
+    }
   });
 
   it('reads typography for an element whose text sits in a child', () => {

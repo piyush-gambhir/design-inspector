@@ -18,6 +18,7 @@ import type {
 import { cmp, collapseWhitespace, escapeCell, isZeroLength, num, px, round2, scrubEmDashes } from './format';
 import { sidesShorthand } from './css';
 import { isViewportDependentLength } from '@/lib/readings/units';
+import { identityDescription } from '@/lib/readings/fonts';
 
 const SCOPE_LINES = [
   'Values describe the captured element at this viewport and time.',
@@ -78,8 +79,16 @@ function elementHeaderBullets(snapshot: ElementSnapshot): string[] {
   bullets.push(`- Element: ${scrubEmDashes(snapshot.element.label)}`);
   const typography = snapshot.typography;
   if (typography) {
+    // The typeface's own name when the file was read, the CSS alias otherwise
+    // (PRD TYP-01): a reference that says "Nb international pro webfont" six
+    // months later is no use to anybody.
+    const identified = identityDescription(
+      typography.familyReading,
+      typography.identity,
+      typography.source.kind,
+    );
     bullets.push(
-      `- Font reading: ${typography.familyReading} (${fontConfidenceLabel(typography.familyConfidence)})`,
+      `- Font reading: ${scrubEmDashes(identified ?? typography.familyReading)} (${fontConfidenceLabel(typography.familyConfidence)})`,
     );
   }
   return bullets;
@@ -139,6 +148,22 @@ function typographyBullets(snapshot: ElementSnapshot): string[] {
   bullets.push(
     `- Font source: ${typography.source.kind}${typography.source.url ? ` (${typography.source.url})` : ''}`,
   );
+  const identity = typography.identity;
+  if (identity) {
+    bullets.push(
+      `- Font identity: ${scrubEmDashes(identityDescription(typography.familyReading, identity, typography.source.kind) ?? '')}`,
+    );
+    if (identity.version) bullets.push(`- Font version: ${scrubEmDashes(identity.version)}`);
+    if (identity.axes.length > 0) {
+      bullets.push(
+        `- Variable axes: ${identity.axes.map((axis) => `${axis.tag} ${num(axis.min)} to ${num(axis.max)}`).join(', ')}`,
+      );
+    }
+    if (identity.licenseUrl) bullets.push(`- Font licence: ${identity.licenseUrl}`);
+  }
+  if (typography.renderCheck) {
+    bullets.push(`- Rendering check: ${typography.renderCheck}`);
+  }
 
   return bullets;
 }
@@ -393,13 +418,16 @@ function radiiAndShadows(summary: PageSummary): string {
 
 function fontsTable(summary: PageSummary): string {
   if (summary.fonts.length === 0) return 'No font records were collected.';
-  const rows = summary.fonts.map(
-    (font) =>
-      `| ${escapeCell(font.family)} | ${font.declared ? 'yes' : 'no'} | ${font.loaded === null ? 'unknown' : font.loaded ? 'yes' : 'no'} | ${font.matchedToContent ? 'yes' : 'no'} | ${font.source.kind} | ${escapeCell(font.weights.join(', ') || 'unknown')} |`,
-  );
+  const rows = summary.fonts.map((font) => {
+    const identity = font.identity;
+    const identified = identity
+      ? scrubEmDashes([identity.family, identity.subfamily].filter(Boolean).join(' '))
+      : 'not identified';
+    return `| ${escapeCell(font.family)} | ${escapeCell(identified)} | ${font.declared ? 'yes' : 'no'} | ${font.loaded === null ? 'unknown' : font.loaded ? 'yes' : 'no'} | ${font.matchedToContent ? 'yes' : 'no'} | ${font.source.kind} | ${escapeCell(font.weights.join(', ') || 'unknown')} | ${escapeCell(identity?.licenseUrl ?? 'unknown')} |`;
+  });
   return [
-    '| Family | Declared | Loaded | Matched | Source | Weights |',
-    '| --- | --- | --- | --- | --- | --- |',
+    '| Family | Identified as | Declared | Loaded | Matched | Source | Weights | License |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- |',
     ...rows,
   ].join('\n');
 }

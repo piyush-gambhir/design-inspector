@@ -404,6 +404,68 @@ describe('SummaryTab', () => {
     ]);
   });
 
+  it('identifies a font file on request and then shows the typeface, not the alias', async () => {
+    const chrome = (globalThis as unknown as {
+      chrome: { runtime: { sendMessage: ReturnType<typeof vi.fn> } };
+    }).chrome;
+    chrome.runtime.sendMessage = vi.fn(async (message: unknown) => {
+      sent.push(message);
+      return {
+        ok: true,
+        identity: {
+          family: 'Inter Display',
+          subfamily: 'SemiBold',
+          fullName: 'Inter Display SemiBold',
+          postscriptName: 'InterDisplay-SemiBold',
+          designer: 'Rasmus Andersson',
+          manufacturer: 'Inter Project',
+          version: '4.0',
+          license: 'Licensed under the SIL Open Font License. See the URL below.',
+          licenseUrl: 'https://openfontlicense.invalid',
+          axes: [],
+          container: 'woff2',
+          fileSize: 49152,
+          evidence: 'name-table',
+          url: 'https://example.com/fonts/inter-display.woff2',
+        },
+      };
+    });
+
+    const container = await render(
+      <SummaryTab
+        tabId={1}
+        pageTitle="Pricing"
+        summary={summary}
+        loading={false}
+        error={null}
+        progress={null}
+        stale={false}
+        onScan={() => undefined}
+      />,
+    );
+
+    const identify = [...container.querySelectorAll('button')].find(
+      button => button.textContent === 'Identify',
+    ) as HTMLButtonElement;
+    expect(identify).not.toBeUndefined();
+    // It says what pressing it does before it is pressed (PRD 17.1).
+    expect(identify.title).toContain("Contacts the font's host");
+
+    await act(async () => {
+      identify.click();
+    });
+
+    expect(sent).toContainEqual({
+      type: 'font.identify',
+      url: 'https://example.com/fonts/inter-display.woff2',
+    });
+    const text = (container.textContent ?? '').replace(/\s+/g, ' ');
+    expect(text).toContain('Rasmus Andersson for Inter Project');
+    expect(text).toContain('SemiBold');
+    expect(text).toContain('openfontlicense.invalid');
+    expect(text).toContain('Self-hosted on example.com · woff2 · 48 KB');
+  });
+
   it('highlights a group and then steps through its examples', async () => {
     const container = await render(
       <SummaryTab

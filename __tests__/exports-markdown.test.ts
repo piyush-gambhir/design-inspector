@@ -29,6 +29,46 @@ describe('referenceToMarkdown for an element', () => {
     expect(markdown).toContain('- Font reading: Inter Display (matched, not verified)');
   });
 
+  it('names the typeface rather than the CSS alias once the file has been read', () => {
+    // The superpower.com case: the site's @font-face nickname is not a
+    // typeface, and a reference read six months later needs the real name.
+    const identified = referenceToMarkdown(
+      elementReference({
+        ...headingSnapshot,
+        typography: headingSnapshot.typography && {
+          ...headingSnapshot.typography,
+          familyReading: 'Nb international pro webfont',
+          familyConfidence: 'verified',
+          renderCheck: 'rendered',
+          identity: {
+            family: 'NB International Pro',
+            subfamily: 'Regular',
+            fullName: 'NB International Pro Regular',
+            postscriptName: 'NBInternationalPro-Regular',
+            designer: null,
+            manufacturer: 'Neubau Berlin',
+            version: '1.004',
+            license: 'Licensed for web use.',
+            licenseUrl: 'https://example.invalid/eula',
+            axes: [{ tag: 'wght', name: 'Weight', min: 100, max: 900, default: 400 }],
+            container: 'woff2',
+            fileSize: 49152,
+            evidence: 'name-table',
+            url: 'https://cdn.example.invalid/nb.woff2',
+          },
+        },
+      }),
+    );
+
+    expect(identified).toContain(
+      "- Font reading: NB International Pro Regular by Neubau Berlin (declared as 'Nb international pro webfont'), self-hosted (verified)",
+    );
+    expect(identified).toContain('- Font version: 1.004');
+    expect(identified).toContain('- Variable axes: wght 100 to 900');
+    expect(identified).toContain('- Font licence: https://example.invalid/eula');
+    expect(identified).toContain('- Rendering check: rendered');
+  });
+
   it('gives the measured typography with derived equivalents', () => {
     expect(markdown).toContain('- Size: 72px; equivalent 4.5rem at a 16px root');
     expect(markdown).toContain('- Weight: 600');
@@ -199,10 +239,14 @@ describe('summaryToMarkdown', () => {
     expect(markdown).toContain('- Shadows: rgba(0, 0, 0, 0.06) 0px 1px 2px 0px (7)');
   });
 
-  it('shows an unreadable loaded state as unknown', () => {
+  it('shows an unreadable loaded state as unknown, and an unread font file as not identified', () => {
     const fonts = section(markdown, '## Fonts');
-    expect(fonts).toContain('| Inter Display | yes | yes | yes | self-hosted | 600 |');
-    expect(fonts).toContain('| Inter | yes | unknown | yes | google | 400, 500 |');
+    expect(fonts).toContain(
+      '| Inter Display | not identified | yes | yes | yes | self-hosted | 600 | unknown |',
+    );
+    expect(fonts).toContain(
+      '| Inter | not identified | yes | unknown | yes | google | 400, 500 | unknown |',
+    );
   });
 
   it('shows each detection with its version, confidence, and first evidence', () => {

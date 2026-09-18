@@ -3,9 +3,10 @@
 // Section order matches the PRD. Every group is traceable back to the page,
 // every uncertain reading carries its evidence, and nothing here is presented
 // as the site's own token system.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { Download, RefreshCw, Save, ScanLine } from 'lucide-react';
 import type {
+  FontIdentity,
   FontRecord,
   PageSummary,
   SavedReference,
@@ -15,6 +16,16 @@ import type {
 import { SCHEMA_VERSION } from '@/lib/contracts';
 import { sendToBackground } from '@/lib/messages';
 import { groupTypographyByScale } from '@/lib/readings/summary-aggregate';
+import {
+  aliasDiffers,
+  axisChipText,
+  designerLine,
+  displayFamily,
+  firstSentence,
+  fontSourceLine,
+  formatFromUrl,
+  providerLink,
+} from '@/lib/readings/fonts';
 import { summaryToMarkdown, toJsonEnvelope } from '@/lib/exports';
 import { Button, Input, Progress } from '@/components/ui';
 import {
@@ -571,6 +582,302 @@ function ShadowsSection({
   );
 }
 
+const SPECIMEN_PANGRAM = 'The quick brown fox jumps over the lazy dog';
+/** One specimen per loaded weight, capped: a family with 18 faces is a download, not a panel. */
+const MAX_SPECIMEN_FACES = 4;
+const SPECIMEN_PX = 28;
+
+const FONT_FILE_URL = /\.(woff2|woff|ttf|otf)(\?|#|$)/i;
+
+/** The first loaded face URL for a family, which is what "Identify" reads. */
+function identifiableUrl(font: FontRecord): string | null {
+  const loaded = font.faces.filter(face => face.status === 'loaded' && face.urls.length > 0);
+  const pool = loaded.length > 0 ? loaded : font.faces.filter(face => face.urls.length > 0);
+  for (const face of pool) {
+    const url = face.urls.find(candidate => FONT_FILE_URL.test(candidate));
+    if (url) return url;
+  }
+  return font.source.url && FONT_FILE_URL.test(font.source.url) ? font.source.url : null;
+}
+
+
+interface SpecimenFace {
+  key: string;
+  label: string;
+  /** The local family name this file was registered under, never the page's own. */
+  localFamily: string;
+}
+
+/**
+ * Loads the family's own files into this panel so the reader sees the typeface
+ * rather than a description of it.
+ *
+ * The bytes are fetched here rather than passed back from the worker because
+ * extension messages are JSON: sending a megabyte of font through them would
+ * base64 it twice. The browser has the file cached from the identify request a
+ * moment earlier, so this is a second read of the same cache entry.
+ */
+function useSpecimens(
+  font: FontRecord,
+  enabled: boolean,
+  idPrefix: string,
+): { faces: SpecimenFace[]; error: string | null } {
+  const [faces, setFaces] = useState<SpecimenFace[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!enabled) return;
+    if (typeof FontFace !== 'function' || !document.fonts) {
+      setError('This browser cannot preview font files.');
+      return;
+    }
+    const wanted = font.faces
+      .filter(face => face.status === 'loaded' && face.urls.some(url => FONT_FILE_URL.test(url)))
+      .slice(0, MAX_SPECIMEN_FACES);
+    const pool = wanted.length > 0 ? wanted : font.faces.filter(face => face.urls.length > 0).slice(0, 1);
+    if (pool.length === 0) return;
+
+    let cancelled = false;
+    const added: FontFace[] = [];
+
+    void (async () => {
+      const loaded: SpecimenFace[] = [];
+      for (const [index, face] of pool.entries()) {
+        const url = face.urls.find(candidate => FONT_FILE_URL.test(candidate));
+        if (!url) continue;
+        const localFamily = `${idPrefix}-${index}`;
+        try {
+          const response = await fetch(url, { credentials: 'omit', cache: 'force-cache' });
+          if (!response.ok) throw new Error(`${response.status}`);
+          const bytes = await response.arrayBuffer();
+          const fontFace = new FontFace(localFamily, bytes);
+          await fontFace.load();
+          if (cancelled) return;
+          document.fonts.add(fontFace);
+          added.push(fontFace);
+          loaded.push({
+            key: `${face.weight}-${face.style}-${index}`,
+            label: `${face.weight}${face.style !== 'normal' ? ` ${face.style}` : ''}`,
+            localFamily,
+          });
+        } catch {
+          // One weight that will not load is not a reason to drop the rest.
+        }
+      }
+      if (cancelled) return;
+      setFaces(loaded);
+      if (loaded.length === 0) setError('The font files could not be loaded for a preview.');
+    })();
+
+    return () => {
+      cancelled = true;
+      for (const fontFace of added) {
+        try {
+          document.fonts.delete(fontFace);
+        } catch {
+          // Already gone with the panel.
+        }
+      }
+    };
+  }, [enabled, font, idPrefix]);
+
+  return { faces, error };
+}
+
+function FontCard({
+  font,
+  headingSample,
+  onDownload,
+  identity,
+  onIdentified,
+}: {
+  font: FontRecord;
+  headingSample: string | null;
+  onDownload: (url: string, filename: string) => void;
+  identity: FontIdentity | null;
+  onIdentified: (url: string, identity: FontIdentity) => void;
+}) {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const reactId = useId().replace(/[^a-zA-Z0-9]/g, '');
+  const idPrefix = `di-specimen-${reactId}`;
+  const url = identifiableUrl(font);
+  const { faces: specimens, error: specimenError } = useSpecimens(font, identity !== null, idPrefix);
+
+  const shownFamily = displayFamily(font.family, identity);
+  const alias = aliasDiffers(font.family, identity) ? font.family : null;
+  const provider = providerLink(font.source.kind, shownFamily);
+  const by = identity ? designerLine(identity) : null;
+  const licenseSentence = identity && !identity.licenseUrl ? firstSentence(identity.license) : null;
+
+  const identify = () => {
+    if (!url) return;
+    setPending(true);
+    setError(null);
+    void (async () => {
+      const response = await sendToBackground({ type: 'font.identify', url });
+      setPending(false);
+      if (!response.ok) {
+        setError(response.error);
+        return;
+      }
+      if (!('identity' in response)) {
+        setError('The font file returned no identity.');
+        return;
+      }
+      onIdentified(url, response.identity);
+    })();
+  };
+
+  return (
+    <li className="rounded-[8px] bg-surface-2 p-2">
+      <div className="flex items-center gap-2">
+        <span className="truncate text-[12px] font-medium">{shownFamily}</span>
+        <span className="ml-auto text-[12px] text-muted-foreground">
+          {FONT_SOURCE_LABELS[font.source.kind]}
+        </span>
+      </div>
+      <div className="mt-1 grid gap-0.5">
+        {identity?.subfamily ? <Field label="Style">{identity.subfamily}</Field> : null}
+        {alias ? <Field label="Declared as">{alias}</Field> : null}
+        <Field label="Declared">{font.declared ? 'Yes' : 'No'}</Field>
+        <Field label="Loaded">
+          {font.loaded === null ? 'Unknown' : font.loaded ? 'Yes' : 'No'}
+        </Field>
+        <Field label="Matched to content">{font.matchedToContent ? 'Yes' : 'No'}</Field>
+        {font.weights.length > 0 ? <Field label="Weights">{font.weights.join(', ')}</Field> : null}
+        {by ? <Field label="Designer">{by}</Field> : null}
+        {identity?.version ? <Field label="Version">{identity.version}</Field> : null}
+        {identity?.licenseUrl ? (
+          <Field label="License">
+            <a
+              href={identity.licenseUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="value-cell underline-offset-2 hover:underline"
+            >
+              {identity.licenseUrl}
+            </a>
+          </Field>
+        ) : licenseSentence ? (
+          <Field label="License">{licenseSentence}</Field>
+        ) : null}
+        {identity?.axes.length ? (
+          <Field label="Axes">{identity.axes.map(axisChipText).join(', ')}</Field>
+        ) : null}
+        <Field label="Source">{fontSourceLine(font.source, identity?.fileSize ?? null)}</Field>
+        {font.source.subset !== null ? (
+          <Field label="Subset">{font.source.subset ? 'Yes' : 'No'}</Field>
+        ) : null}
+      </div>
+      {font.source.note ? <StatusLine>{font.source.note}</StatusLine> : null}
+      {/* An unlocatable source is a reading, not an error, but it still
+          owes the reader somewhere to go next (PRD 19.3). */}
+      {font.source.kind === 'unknown' && !font.source.note ? (
+        <StatusLine>
+          No download source was found for this family. Copy the family name and look it up, or read
+          the declared faces below for the URLs the page did use.
+        </StatusLine>
+      ) : null}
+
+      {specimens.length > 0 ? (
+        <div className="mt-2 grid gap-1.5">
+          {/* The point of the whole feature: what the typeface looks like. */}
+          {specimens.map((face, index) => (
+            <div key={face.key} className="grid gap-0.5">
+              <span className="text-[12px] text-muted-foreground">Specimen {face.label}</span>
+              <span
+                className="break-words leading-tight"
+                style={{ fontFamily: `"${face.localFamily}"`, fontSize: `${SPECIMEN_PX}px` }}
+              >
+                {SPECIMEN_PANGRAM}
+              </span>
+              {index === 0 && headingSample ? (
+                <span
+                  className="break-words leading-tight text-muted-foreground"
+                  style={{ fontFamily: `"${face.localFamily}"`, fontSize: `${SPECIMEN_PX}px` }}
+                >
+                  {headingSample}
+                </span>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {specimenError ? <StatusLine>{specimenError}</StatusLine> : null}
+
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+        {!identity && url ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="text"
+            disabled={pending}
+            title="Reads this one font file to find the typeface name, designer, and licence. Contacts the font's host."
+            onClick={identify}
+          >
+            <ScanLine aria-hidden />
+            {pending ? 'Reading the file' : 'Identify'}
+          </Button>
+        ) : null}
+        {url ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="text"
+            onClick={() =>
+              onDownload(url, `${shownFamily}.${font.source.format ?? formatFromUrl(url) ?? 'woff2'}`)
+            }
+          >
+            <Download aria-hidden />
+            Download font file
+          </Button>
+        ) : null}
+        {provider ? (
+          <a
+            href={provider.url}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="inline-flex h-7 items-center rounded-full bg-surface-3 px-2.5 text-[12px] text-muted-foreground no-underline hover:text-foreground"
+          >
+            {provider.label}
+          </a>
+        ) : null}
+      </div>
+      {error ? <StatusLine tone="error">{error}</StatusLine> : null}
+
+      {font.faces.length > 0 ? (
+        <Collapsible summary={`Declared faces (${font.faces.length})`}>
+          <ul className="grid gap-1">
+            {font.faces.map((face, index) => (
+              <li key={`${face.family}-${face.weight}-${index}`} className="text-[12px]">
+                <span className="font-mono">
+                  {face.weight} {face.style}
+                </span>
+                <span className="ml-1 text-muted-foreground">{face.status ?? 'status unknown'}</span>
+                {face.urls.length > 0 ? (
+                  <span className="value-cell ml-1 text-muted-foreground">{face.urls[0]}</span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </Collapsible>
+      ) : null}
+    </li>
+  );
+}
+
+/** The largest text the page actually sets, used as the second specimen line. */
+export function largestHeadingSample(summary: PageSummary): string | null {
+  let best: TypographyGroup | null = null;
+  for (const group of summary.typography) {
+    if (!group.sample.trim()) continue;
+    if (!best || group.sizePx > best.sizePx) best = group;
+  }
+  const sample = best?.sample.trim() ?? '';
+  return sample === '' ? null : sample.slice(0, 60);
+}
+
 function FontsSection({
   summary,
   onDownload,
@@ -580,6 +887,11 @@ function FontsSection({
   onDownload: (url: string, filename: string) => void;
   filtering: boolean;
 }) {
+  // Identities live here rather than in each card so a family identified once
+  // stays identified while the reader filters and scrolls.
+  const [identities, setIdentities] = useState<Record<string, FontIdentity>>({});
+  const headingSample = useMemo(() => largestHeadingSample(summary), [summary]);
+
   if (summary.fonts.length === 0) {
     if (!filtering) return null;
     return (
@@ -593,80 +905,24 @@ function FontsSection({
       id={SECTION_IDS.fonts}
       title="Fonts"
       count={summary.fonts.length}
-      subtitle="Declared faces are not the same as loaded ones, or as faces used by content."
+      subtitle="Declared faces are not the same as loaded ones, or as faces used by content. Identify reads the file itself, which contacts the font's host."
     >
       <ul className="grid gap-2">
-        {summary.fonts.map(font => (
-          <li key={font.family} className="rounded-[8px] bg-surface-2 p-2">
-            <div className="flex items-center gap-2">
-              <span className="truncate text-[12px] font-medium">{font.family}</span>
-              <span className="ml-auto text-[12px] text-muted-foreground">
-                {FONT_SOURCE_LABELS[font.source.kind]}
-              </span>
-            </div>
-            <div className="mt-1 grid gap-0.5">
-              <Field label="Declared">{font.declared ? 'Yes' : 'No'}</Field>
-              <Field label="Loaded">
-                {font.loaded === null ? 'Unknown' : font.loaded ? 'Yes' : 'No'}
-              </Field>
-              <Field label="Matched to content">{font.matchedToContent ? 'Yes' : 'No'}</Field>
-              {font.weights.length > 0 ? (
-                <Field label="Weights">{font.weights.join(', ')}</Field>
-              ) : null}
-              {font.source.format ? <Field label="Format">{font.source.format}</Field> : null}
-              {font.source.subset !== null ? (
-                <Field label="Subset">{font.source.subset ? 'Yes' : 'No'}</Field>
-              ) : null}
-            </div>
-            {font.source.note ? <StatusLine>{font.source.note}</StatusLine> : null}
-            {/* An unlocatable source is a reading, not an error, but it still
-                owes the reader somewhere to go next (PRD 19.3). */}
-            {font.source.kind === 'unknown' && !font.source.note ? (
-              <StatusLine>
-                No download source was found for this family. Copy the family name and look it up,
-                or read the declared faces below for the URLs the page did use.
-              </StatusLine>
-            ) : null}
-            {font.source.kind === 'self-hosted' && font.source.url ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="text"
-                className="mt-1.5"
-                onClick={() =>
-                  onDownload(
-                    font.source.url as string,
-                    `${font.family}.${font.source.format ?? 'woff2'}`,
-                  )
-                }
-              >
-                <Download aria-hidden />
-                Download font file
-              </Button>
-            ) : null}
-            {font.faces.length > 0 ? (
-              <Collapsible summary={`Declared faces (${font.faces.length})`}>
-                <ul className="grid gap-1">
-                  {font.faces.map((face, index) => (
-                    <li key={`${face.family}-${face.weight}-${index}`} className="text-[12px]">
-                      <span className="font-mono">
-                        {face.weight} {face.style}
-                      </span>
-                      <span className="ml-1 text-muted-foreground">
-                        {face.status ?? 'status unknown'}
-                      </span>
-                      {face.urls.length > 0 ? (
-                        <span className="value-cell ml-1 text-muted-foreground">
-                          {face.urls[0]}
-                        </span>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </Collapsible>
-            ) : null}
-          </li>
-        ))}
+        {summary.fonts.map(font => {
+          const url = identifiableUrl(font);
+          return (
+            <FontCard
+              key={font.family}
+              font={font}
+              headingSample={headingSample}
+              onDownload={onDownload}
+              identity={(url ? identities[url] : undefined) ?? font.identity ?? null}
+              onIdentified={(key, identity) =>
+                setIdentities(current => ({ ...current, [key]: identity }))
+              }
+            />
+          );
+        })}
       </ul>
     </Section>
   );

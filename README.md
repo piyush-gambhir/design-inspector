@@ -20,10 +20,21 @@ reasoning: [docs/COMPETITIVE_FEATURES.md](docs/COMPETITIVE_FEATURES.md). Data co
   Clicking a heading's inner span selects the heading, and clicking a heading inside a link
   the size of a tile selects the heading with the link kept as its parent (toggle in the
   badge, or the "Prefer semantic parents" switch in the popup).
-- Typography: family with declared or matched confidence (never "verified"), source
-  (Google, Adobe, Fontshare, self-hosted, system, or unknown), weight, size in px and rem,
-  line height and ratio, tracking, color in hex, rgb, and oklch, contrast with an honest
-  "unavailable" over images, gradients, and video.
+- Typography: the typeface's real name, not the site's CSS alias. Press "Identify font
+  file" and the served woff2 is read for what its own `name` table says: family, style,
+  designer, foundry, version and licence, plus the `fvar` axes of a variable font. A site
+  calling a font "Nb international pro webfont" reads as NB International Pro Regular by
+  Neubau Berlin, with the alias kept beside it as what it is.
+- Confidence that means something: declared (it is first in the CSS stack), matched (a
+  loaded face covers this family and weight), verified (a canvas measurement showed the
+  family paints text at a different width than the fallbacks it would drop to). Only the
+  measurement earns "verified", and it is taken on the pinned element, never on hover.
+- The font source as one line, "Self-hosted on cdn.example.com, woff2, 48 KB", with
+  Download, Copy URL, and a link to the provider's specimen page. The hashed CDN URL is
+  behind the button, not printed across seven lines of panel.
+- The rest of the typography reading: weight, size in px and rem, line height and ratio,
+  tracking, color in hex, rgb, and oklch, contrast with an honest "unavailable" over
+  images, gradients, and video.
 - Surfaces and layout: backgrounds, borders, radii, shadows, filters, flex and grid values,
   position, insets. Grid and flex overlays drawn on the pinned element.
 - Copy any value, or a category as computed CSS, faithful Tailwind, or closest-standard
@@ -49,7 +60,9 @@ reasoning: [docs/COMPETITIVE_FEATURES.md](docs/COMPETITIVE_FEATURES.md). Data co
 
 - Summary: type scale with combinations grouped under each step, palette clustered by
   perceptual distance with role filters, spacing rhythm, radii, shadows, fonts, scan scope,
-  text filter, "Show on page" for every group, cancel during long scans. A "Jump to" row at
+  text filter, "Show on page" for every group, cancel during long scans. Each font card
+  identifies its file on request and then renders a specimen in the real face, one line per
+  loaded weight, set in the page's own largest heading text. A "Jump to" row at
   the top skips to any section, so the keyboard does not have to walk hundreds of swatches.
 - Assets: every discoverable asset with filters, selection, and ZIP download with a
   manifest of skipped items. File details are fetched only when you ask.
@@ -127,7 +140,7 @@ pointed at. That is treated as a budget with evidence, not a claim:
 | Scrolling at 60 steps a second with rulers on | Added script time under 5 percent, zero long tasks, rulers move by transform only |
 | Scan of a 6,001 element page | No task over 50ms, under 1.5s in total, heap back within 5 MB afterwards |
 | Teardown | Identical to a page that was never activated, and every node, listener and observer gone |
-| Bundle | Production `content-scripts/inspector.js` under 200 kB, gzip size reported |
+| Bundle | Production `content-scripts/inspector.js` under 205 KiB, gzip size reported. Raised from 200 KiB when font identity and the verified-rendering check landed; the execution budgets above did not move. |
 
 ### Re-measuring
 
@@ -165,12 +178,17 @@ regression fails the build.
 
 ## Privacy
 
-Page analysis and saved references stay on your device. Fetching asset details or
-downloading an asset contacts that asset's host. There is no analysis server and no
-telemetry.
+Page analysis and saved references stay on your device. Fetching asset details,
+identifying a font file, or downloading an asset contacts that resource's host. There is no
+analysis server and no telemetry.
 
 The Assets tab lists what the page rendered without touching the network. File size
 and MIME type are only knowable from a request, so they are fetched when you press
 Fetch file details, and never before.
+
+"Identify font file" is the same bargain for fonts: a typeface's real name lives inside the
+file, so pressing the button fetches that one file from the host the page already loaded it
+from, reads its `name` and `fvar` tables, and keeps only the parsed identity. Nothing is
+fetched on hover, on pin, or on a scan.
 
 Full policy, including what is stored locally and how to delete it: [PRIVACY.md](PRIVACY.md).

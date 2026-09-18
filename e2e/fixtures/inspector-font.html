@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Design Inspector fixture: real font identity</title>
+    <!--
+      The superpower.com case, reproduced: the @font-face family is the
+      nickname whoever wrote the CSS typed, the file behind it is on a path
+      with a content hash, and the typeface's own name is only inside the file.
+
+      The served font is e2e/fixtures/fonts/inspector-test-sans.woff2, whose
+      name table says "Inspector Test Sans" by "Design Inspector Fixtures".
+
+      Ids are part of the test contract. Keep them stable and meaningful.
+    -->
+    <style>
+      @font-face {
+        /* The alias, not the typeface. This is the whole point of the test. */
+        font-family: 'Its webfont alias';
+        src: url('./fonts/inspector-test-sans.woff2') format('woff2');
+        font-weight: 400;
+        font-style: normal;
+        font-display: block;
+      }
+
+      :root {
+        font-size: 16px;
+      }
+
+      body {
+        margin: 0;
+        padding: 48px;
+        background: #ffffff;
+        color: #101828;
+        font-family: 'Its webfont alias', Georgia, serif;
+      }
+
+      #hero-heading {
+        margin: 0;
+        font-family: 'Its webfont alias', Georgia, serif;
+        font-weight: 400;
+        font-size: 56px;
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+      }
+
+      #system-heading {
+        margin: 32px 0 0;
+        font-family: Georgia, serif;
+        font-weight: 400;
+        font-size: 32px;
+      }
+
+      #missing-heading {
+        margin: 32px 0 0;
+        font-family: 'Nothing Serves This', 'Also Absent';
+        font-weight: 400;
+        font-size: 24px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 id="hero-heading">Your health, handled</h1>
+    <h2 id="system-heading">A family the machine already has</h2>
+    <h3 id="missing-heading">A family nothing serves</h3>
+  </body>
+</html>

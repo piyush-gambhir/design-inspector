@@ -4,6 +4,7 @@
 // (PRD 18.2).
 import type { ContentEvent, InspectorState } from '@/lib/messages';
 import { isMessage, sendToTab } from '@/lib/messages';
+import { loadFontIdentities } from './font-identity';
 import { activeTabId, toggleInspector } from './inspector-control';
 import { handleBackgroundRequest, isBackgroundRequest, isContentEventType } from './router';
 import { SIDEPANEL_PORT } from '@/lib/ports';
@@ -62,6 +63,11 @@ export function registerBackground(): void {
   // A restarted worker has forgotten which tabs had a panel open, so the set is
   // read back from session storage before the first presence message (W1).
   void loadPresence();
+
+  // Identified fonts survive a worker restart the same way, so pressing
+  // "Identify font file" again on a page the user already asked about does not
+  // contact the font's host a second time (PRD 17.1).
+  void loadFontIdentities();
 
   // The side panel holds a port open for as long as it is on screen. Its
   // disconnect is the close: the unmount message races the page going away.

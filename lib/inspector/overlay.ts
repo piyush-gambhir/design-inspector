@@ -12,10 +12,23 @@ import type {
   AssetReading,
   ColorValue,
   ElementSnapshot,
+  FontIdentity,
   Rect,
   Sides,
   SourceContext,
+  TypographyReading,
 } from '../contracts';
+import {
+  aliasDiffers,
+  axisChipText,
+  confidenceEvidence,
+  designerLine,
+  displayFamily,
+  firstSentence,
+  fontSourceLine,
+  hostnameOf,
+  providerLink,
+} from '../readings/fonts';
 import type { InspectorMode, MockupState, OutlineMode } from '../messages';
 import type { StyleCategory } from '../exports';
 import { formatNumber, formatPx, parsePx, roundTo } from '../readings/units';
@@ -398,6 +411,13 @@ export interface OverlayCallbacks {
    * asset's host. Resolves with an error string when it cannot be answered.
    */
   onAssetDetails(url: string): Promise<AssetDetails | string>;
+  /**
+   * Read one font file's own name table. This is the only request in the
+   * product that contacts a host the user did not already load, so it happens
+   * on a press and never on its own (PRD 17.1). Resolves with the identity, or
+   * with a sentence saying why it could not be read.
+   */
+  onIdentifyFont(url: string): Promise<FontIdentity | string>;
   onSave(request: SaveRequest): Promise<string | null>;
   /** Returns the text to copy, or null when the exporter is unavailable. */
   cssFor(category: StyleCategory): string | null;
@@ -731,9 +751,9 @@ button {
   cursor: pointer;
 }
 button:hover { background: var(--di-surface-3); }
-button:focus-visible { outline: 2px solid var(--di-accent); outline-offset: 2px; }
-button.quiet { background: transparent; color: var(--di-text-muted); padding: 2px 5px; }
-button.quiet:hover { background: var(--di-surface-2); color: var(--di-text); }
+button:focus-visible, a.quiet:focus-visible { outline: 2px solid var(--di-accent); outline-offset: 2px; }
+button.quiet, a.quiet { background: transparent; color: var(--di-text-muted); padding: 2px 5px; }
+button.quiet:hover, a.quiet:hover { background: var(--di-surface-2); color: var(--di-text); }
 button.crumb { background: var(--di-surface-2); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* The pinned element's own chip is a label too, and a long selector should not
    set the panel's width. */
@@ -784,6 +804,9 @@ button.primary { background: var(--di-accent); color: var(--di-accent-foreground
 .swatch i { display: block; width: 100%; height: 100%; }
 
 .note { color: var(--di-text-muted); padding: 3px 0; }
+/* A provider page is a link, not a button: it is somewhere to go. */
+a.quiet { display: inline-block; border-radius: 6px; font: inherit; font-size: 12px; text-decoration: none; }
+.row-value .chip { margin-left: 5px; vertical-align: 1px; }
 .limitations { margin-top: 8px; color: var(--di-text-muted); }
 .limitations li { margin-left: 14px; }
 
@@ -805,7 +828,7 @@ input[type="text"], textarea {
 }
 textarea { min-height: 48px; resize: vertical; }
 label.check { display: flex; align-items: center; gap: 6px; color: var(--di-text-muted); }
-.form-actions { display: flex; gap: 6px; align-items: center; }
+.form-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 
 #badge {
   position: absolute;
@@ -963,8 +986,25 @@ function extensionForDataUrl(url: string): string {
 
 const FONT_FILE = /\.(woff2|woff|ttf|otf|eot)(\?|#|$)/i;
 
+/** Said before the press, not after: this is the one request the user opts into (PRD 17.1). */
+const IDENTIFY_TITLE = 'Reads this font file for its real name, designer and licence. Contacts the font host.';
+
 function safeName(label: string): string {
   return label.replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'asset';
+}
+
+/**
+ * A text button that is really a link. Provider pages are destinations, so
+ * they get an anchor a user can open in a new tab or copy, not a click
+ * handler. `noreferrer` keeps the inspected page out of the referrer.
+ */
+function textLink(label: string, url: string, title?: string): HTMLAnchorElement {
+  const node = h('a', 'quiet', label);
+  node.href = url;
+  node.target = '_blank';
+  node.rel = 'noreferrer noopener';
+  node.title = title ?? url;
+  return node;
 }
 
 // ---------------------------------------------------------------------------
@@ -1429,6 +1469,14 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
   let edgeTitle: HTMLElement | null = null;
   /** The background pixel supplied for the pinned element's contrast row. */
   let pickedBackground: ColorValue | null = null;
+  /** The repaintable block of typography rows that depend on the font file. */
+  let fontIdentityHost: HTMLElement | null = null;
+  /**
+   * Identities already read, keyed by font URL, for this page session. Pinning
+   * a second heading in the same family must not cost a second request to the
+   * font's host (PRD 17.1).
+   */
+  const fontIdentities = new Map<string, FontIdentity>();
 
   // -------------------------------------------------------------------------
   // Box model and labels
@@ -1694,8 +1742,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     return swatch;
   }
 
-  function copyButton(label: string, value: () => string): HTMLButtonElement {
-    const node = button('Copy', 'quiet row-copy', `Copy ${label}`);
+  function copyButton(label: string, value: () => string, text = 'Copy'): HTMLButtonElement {
+    const node = button(text, 'quiet row-copy', `Copy ${label}`);
     node.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -1704,8 +1752,36 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
         lastCopyAt = Date.now();
         node.textContent = ok ? 'Copied' : 'Failed';
         window.setTimeout(() => {
-          node.textContent = 'Copy';
+          node.textContent = text;
         }, COPY_FEEDBACK_MS);
+      });
+    });
+    return node;
+  }
+
+  /**
+   * A Download button that reports what happened next to itself. The request is
+   * resolved on the press, because an asset can turn out to have no
+   * downloadable source at all.
+   */
+  function downloadButton(
+    className: string,
+    ariaLabel: string,
+    status: HTMLElement,
+    request: () => DownloadRequest | null,
+  ): HTMLButtonElement {
+    const node = button('Download', className, ariaLabel);
+    node.addEventListener('click', () => {
+      node.disabled = true;
+      const target = request();
+      if (!target) {
+        node.disabled = false;
+        status.textContent = 'This asset has no downloadable source.';
+        return;
+      }
+      void callbacks.onDownload(target).then((error) => {
+        node.disabled = false;
+        status.textContent = error ?? 'Download started';
       });
     });
     return node;
@@ -1724,6 +1800,10 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
        * the rest of the section under six lines of hash.
        */
       oneLine?: boolean;
+      /** Short labels after the value: a confidence badge, a variable axis range. */
+      chips?: { text: string; title?: string; accent?: boolean }[];
+      /** Renders the value as a link to this address (a licence, a provider page). */
+      href?: string;
     } = {},
   ): HTMLElement {
     const line = h('div', 'row');
@@ -1734,7 +1814,14 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
       valueNode.title = value;
     }
     if (options.color) valueNode.appendChild(swatchFor(options.color));
-    valueNode.appendChild(document.createTextNode(value));
+    valueNode.appendChild(
+      options.href ? textLink(value, options.href) : document.createTextNode(value),
+    );
+    for (const chip of options.chips ?? []) {
+      const node = h('span', chip.accent ? 'chip accent' : 'chip', chip.text);
+      if (chip.title) node.title = chip.title;
+      valueNode.appendChild(node);
+    }
     line.append(valueNode, copyButton(key, () => options.copy ?? value));
     // Every color row offers the picker, because the rendered pixel and the
     // computed color are different claims (competitive Tier 1 item 2).
@@ -2880,6 +2967,134 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
   // -------------------------------------------------------------------------
   // Pinned panel
 
+  /**
+   * The typography rows that come from the font file rather than from CSS.
+   *
+   * The complaint this answers: a pinned heading on superpower.com read
+   * "Nb international pro webfont", "matched", and seven lines of CDN URL. The
+   * alias is the site's nickname for the file, not the typeface's name; the
+   * name is in the file, and this block shows it once the file has been read.
+   * Until then the CSS alias stands in and a single text button offers to go
+   * and look.
+   */
+  function paintFontIdentity(type: TypographyReading): void {
+    const host = fontIdentityHost;
+    if (!host) return;
+    host.textContent = '';
+    const add = (key: string, value: string | null, options?: Parameters<typeof row>[2]): void => {
+      if (value) host.appendChild(row(key, value, options));
+    };
+
+    const fileUrl = type.source.url && FONT_FILE.test(type.source.url) ? type.source.url : null;
+    // A family identified once on this page is identified for every element in
+    // it, so a second pin shows the real name with no second request.
+    if (!type.identity && fileUrl) {
+      const remembered = fontIdentities.get(fileUrl);
+      if (remembered) type.identity = remembered;
+    }
+    const identity = type.identity ?? null;
+    const family = displayFamily(type.familyReading, identity);
+
+    add('Family', family, {
+      chips: [
+        {
+          text: type.familyConfidence,
+          title: confidenceEvidence(type.familyConfidence, type.renderCheck),
+          accent: type.familyConfidence === 'verified',
+        },
+      ],
+    });
+
+    // The computed weight stays on the row whether or not the file was read
+    // (PRD TYP-01 requires it); the subfamily is the typeface's own word for
+    // the same thing, which is the part a designer asks for by name.
+    const computed = `${type.weight}${type.style === 'normal' ? '' : ` ${type.style}`}`;
+    add(
+      'Style',
+      identity?.subfamily ? `${identity.subfamily} · ${computed}` : computed,
+      {
+        chips: (identity?.axes ?? []).map((axis) => ({
+          text: axisChipText(axis),
+          title: `${axis.name ?? axis.tag} axis, default ${axis.default}`,
+        })),
+      },
+    );
+
+    if (aliasDiffers(type.familyReading, identity)) {
+      add('Declared as', type.familyReading, { oneLine: true });
+    }
+    if (type.familyStack.length > 1) add('Stack', type.familyStack.join(', '));
+    add('Variations', type.variationSettings);
+
+    if (identity) {
+      add('Designer', designerLine(identity));
+      // A version string often carries its build tooling after a semicolon
+      // ("3.001;Glyphs 3.2.3 (3260)"). The number is the reading; the whole
+      // string is still what the exports record.
+      if (identity.version) {
+        host.appendChild(h('div', 'note', `Version ${identity.version.split(';')[0]}`));
+      }
+      const licenseUrl = identity.licenseUrl;
+      add(
+        'License',
+        licenseUrl ? (hostnameOf(licenseUrl) ?? licenseUrl) : firstSentence(identity.license),
+        licenseUrl ? { href: licenseUrl, copy: licenseUrl } : undefined,
+      );
+    }
+
+    // One quiet line for the source, and the URL itself behind Copy URL. The
+    // raw address is never printed: it is 180 characters of hash on a CDN.
+    host.appendChild(
+      h('div', 'note', fontSourceLine(type.source, identity?.fileSize ?? null)),
+    );
+    if (type.source.subset === true) {
+      host.appendChild(h('div', 'note', 'A subset, not the whole family.'));
+    }
+    if (type.source.note) host.appendChild(h('div', 'note', type.source.note));
+
+    const actions = h('div', 'form-actions');
+    const status = h('span', 'note');
+    if (fileUrl) {
+      const download = downloadButton('quiet', 'Download this font file', status, () => ({
+        url: fileUrl,
+        filename: filenameFromUrl(fileUrl, `${safeName(family)}.woff2`),
+      }));
+      actions.append(download, copyButton('font URL', () => fileUrl, 'Copy URL'));
+    }
+    const provider = providerLink(type.source.kind, family);
+    if (provider) actions.appendChild(textLink(provider.label, provider.url));
+
+    // The offer to read the file. It is a press, never automatic, and it says
+    // in its title exactly what pressing it does (PRD 17.1).
+    if (!identity && fileUrl) {
+      const identify = button('Identify font file', 'quiet');
+      identify.title = IDENTIFY_TITLE;
+      identify.addEventListener('click', () => {
+        identify.disabled = true;
+        identify.textContent = 'Reading the file';
+        status.textContent = '';
+        void callbacks.onIdentifyFont(fileUrl).then((result) => {
+          if (typeof result === 'string') {
+            identify.disabled = false;
+            identify.textContent = 'Identify font file';
+            status.textContent = result;
+            return;
+          }
+          fontIdentities.set(fileUrl, result);
+          // The reading itself carries the identity from here on, so an export
+          // or a saved reference taken afterwards includes it.
+          type.identity = result;
+          paintFontIdentity(type);
+        });
+      });
+      actions.appendChild(identify);
+    }
+    if (actions.childElementCount > 0) {
+      actions.appendChild(status);
+      host.appendChild(actions);
+    }
+  }
+
   function renderAssetSection(snapshot: ElementSnapshot, parent: HTMLElement): void {
     if (snapshot.assets.length === 0) return;
     const { wrapper, body } = section('Assets', null);
@@ -2936,10 +3151,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
 
       const actions = h('div', 'form-actions');
       const status = h('span', 'note');
-      const download = button('Download', '', `Download asset ${index + 1}`);
-      download.addEventListener('click', () => {
-        download.disabled = true;
-        const request: DownloadRequest | null = asset.url
+      const download = downloadButton('', `Download asset ${index + 1}`, status, () =>
+        asset.url
           ? {
               url: asset.url,
               filename: filenameFromUrl(
@@ -2952,17 +3165,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
                 dataUrl: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(asset.svgMarkup)}`,
                 filename: `${safeName(snapshot.element.label)}.svg`,
               }
-            : null;
-        if (!request) {
-          status.textContent = 'This asset has no downloadable source.';
-          download.disabled = false;
-          return;
-        }
-        void callbacks.onDownload(request).then((error) => {
-          download.disabled = false;
-          status.textContent = error ?? 'Download started';
-        });
-      });
+            : null,
+      );
       actions.append(download, status);
       body.appendChild(actions);
 
@@ -3058,6 +3262,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     pickedBody = null;
     layoutNote = null;
     contrastPickHost = null;
+    fontIdentityHost = null;
     edgeBlock = null;
     edgeBody = null;
     edgeTitle = null;
@@ -3218,60 +3423,12 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
       // Why the px readings below move when the window does. One line, at the
       // top of the section, because it governs every size in it.
       if (fluidRoot) body.appendChild(h('div', 'note', fluidRootNote(snapshot.source)));
-      body.appendChild(
-        row('Family', `${type.familyReading} (${type.familyConfidence})`, { copy: type.familyReading }),
-      );
-      if (type.familyStack.length > 1) {
-        body.appendChild(row('Stack', type.familyStack.join(', ')));
-      }
-      body.appendChild(
-        row(
-          'Source',
-          type.source.url ? `${type.source.kind}: ${type.source.url}` : type.source.kind,
-          { copy: type.source.url ?? type.source.kind, oneLine: !!type.source.url },
-        ),
-      );
-      if (type.source.format) body.appendChild(row('Format', type.source.format));
-      const downloadable = !!type.source.url && FONT_FILE.test(type.source.url);
-      // With a Download button present the subset caveat belongs on the button
-      // as one sentence, not as a separate row plus a note.
-      if (type.source.subset !== null && !downloadable) {
-        body.appendChild(row('Subset', type.source.subset ? 'yes' : 'no'));
-      }
-      if (type.source.note) body.appendChild(h('div', 'note', type.source.note));
-      if (downloadable && type.source.url) {
-        // A discovered font file can be downloaded, but it may be a subset
-        // rather than the whole family (PRD TYP-03).
-        const fontUrl = type.source.url;
-        const actions = h('div', 'form-actions');
-        const status = h('span', 'note');
-        const download = button('Download font', '', `Download the ${type.familyReading} font file`);
-        download.addEventListener('click', () => {
-          download.disabled = true;
-          void callbacks
-            .onDownload({
-              url: fontUrl,
-              filename: filenameFromUrl(fontUrl, `${safeName(type.familyReading)}.woff2`),
-            })
-            .then((error) => {
-              download.disabled = false;
-              status.textContent = error ?? 'Download started';
-            });
-        });
-        // One sentence beside the button says what the file is and is not.
-        const caveat = h(
-          'span',
-          'note',
-          type.source.subset === false
-            ? 'Download the discovered file'
-            : 'Download the discovered file (a subset, not the whole family)',
-        );
-        actions.append(download, caveat, status);
-        body.appendChild(actions);
-      }
-      body.appendChild(row('Weight', String(type.weight)));
-      body.appendChild(row('Style', type.style));
-      if (type.variationSettings) body.appendChild(row('Variations', type.variationSettings));
+      // Everything that changes when the font file is read lives in one
+      // repaintable block, so pressing "Identify font file" fills the rows
+      // above it in place rather than rebuilding the whole panel.
+      fontIdentityHost = h('div', 'stack');
+      body.appendChild(fontIdentityHost);
+      paintFontIdentity(type);
       // One Size row rather than a px row and a rem row: the two are one
       // reading, and on a fluid root only their order says which one is stable.
       body.appendChild(

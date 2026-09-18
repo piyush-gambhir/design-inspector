@@ -13,6 +13,7 @@ import type {
 } from '@/lib/contracts';
 import { num, px, scrubEmDashes } from './format';
 import { isViewportDependentLength } from '@/lib/readings/units';
+import { identityDescription } from '@/lib/readings/fonts';
 
 /** Spacing values listed as the page's rhythm. */
 const MAX_RHYTHM_VALUES = 6;
@@ -201,8 +202,19 @@ function elementLine(snapshot: ElementSnapshot): string {
     return `- ${label}: no text reading, background ${background.hex ?? background.raw}.`;
   }
 
+  // The typeface's own name once the file has been read, with the site's alias
+  // kept in brackets: a ledger entry is read months later, by which time
+  // "Nb international pro webfont" means nothing.
+  const identified = scrubEmDashes(
+    identityDescription(
+      typography.familyReading,
+      typography.identity,
+      typography.source.kind,
+    ) ?? typography.familyReading,
+  );
+
   const parts = [
-    `${typography.familyReading} (${typography.familyConfidence}) ${sizeText(typography.sizePx, typography.sizeRem, snapshot.source)}`,
+    `${identified} (${typography.familyConfidence}) ${sizeText(typography.sizePx, typography.sizeRem, snapshot.source)}`,
     String(typography.weight),
     `lh ${typography.lineHeightRatio === null ? typography.lineHeightRaw : num(typography.lineHeightRatio)}`,
     `tracking ${typography.letterSpacingEm === null ? px(typography.letterSpacingPx) : `${num(typography.letterSpacingEm)}em`}`,

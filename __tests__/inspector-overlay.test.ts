@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { ElementSnapshot, FontIdentity, TypographyReading } from '../lib/contracts';
 import { buildSnapshot } from '../lib/inspector/readings';
 import {
   BADGE_COLLAPSE_WIDTH,
@@ -38,6 +39,7 @@ function callbacks() {
     onReread: () => undefined,
     onDownload: () => Promise.resolve(null),
     onAssetDetails: () => Promise.resolve({ fileSize: 2048, mimeType: 'image/png' }),
+    onIdentifyFont: () => Promise.resolve('No font host was contacted in this test.'),
     onSave: () => Promise.resolve(null),
     cssFor: () => null,
     tailwindFor: () => null,
@@ -1457,5 +1459,167 @@ describe('escape stack hint (Z2)', () => {
     expect(ESCAPE_ORDER_TIP).toContain('measurement lock');
     expect(ESCAPE_ORDER_TIP).toContain('the pin');
     expect(ESCAPE_ORDER_TIP).toContain('exits');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Font identity in the pinned panel (workstream FONT, PRD TYP-01)
+
+/**
+ * A pinned reading of a heading whose CSS calls the family by a nickname and
+ * whose file sits on a CDN: the superpower.com case the panel was failing at.
+ */
+function pinAliasedFont(overrides: Partial<TypographyReading> = {}): {
+  snapshot: ElementSnapshot;
+  element: Element;
+} {
+  document.body.innerHTML = '<h1 id="hero">Your health, handled</h1>';
+  const element = document.getElementById('hero') as Element;
+  const snapshot = buildSnapshot(element, { deep: false });
+  const typography = snapshot.typography as TypographyReading;
+  Object.assign(typography, {
+    familyStack: ['Nb international pro webfont', 'sans-serif'],
+    familyReading: 'Nb international pro webfont',
+    familyConfidence: 'matched',
+    renderCheck: 'rendered',
+    weight: 500,
+    style: 'normal',
+    source: {
+      kind: 'self-hosted',
+      url: 'https://cdn.prod.website-files.com/6650/nb-int-pro-b7f3a91c2d.woff2',
+      format: 'woff2',
+      subset: null,
+    },
+    ...overrides,
+  } satisfies Partial<TypographyReading>);
+  return { snapshot, element };
+}
+
+const NB_IDENTITY: FontIdentity = {
+  family: 'NB International Pro',
+  subfamily: 'Medium',
+  fullName: 'NB International Pro Medium',
+  postscriptName: 'NBInternationalPro-Medium',
+  designer: 'Stefan Gandl',
+  manufacturer: 'Neubau Berlin',
+  version: '1.004',
+  license: 'Licensed for web use only. Redistribution is not permitted.',
+  licenseUrl: 'https://example.invalid/eula',
+  axes: [{ tag: 'wght', name: 'Weight', min: 100, max: 900, default: 400 }],
+  container: 'woff2',
+  fileSize: 49152,
+  evidence: 'name-table',
+  url: 'https://cdn.prod.website-files.com/6650/nb-int-pro-b7f3a91c2d.woff2',
+};
+
+describe('pinned panel: font identity', () => {
+  function panelText(): string {
+    return (overlay.root.getElementById('panel')?.textContent ?? '').replace(/\s+/g, ' ');
+  }
+
+  function findButton(label: string): HTMLButtonElement | undefined {
+    return Array.from(overlay.root.querySelectorAll('button')).find(
+      (node) => node.textContent?.trim() === label,
+    ) as HTMLButtonElement | undefined;
+  }
+
+  it('shows the source as one quiet line and never prints the raw URL', () => {
+    const { snapshot, element } = pinAliasedFont();
+    overlay.setMode('active');
+    overlay.setPinned(snapshot, element);
+
+    const text = panelText();
+    expect(text).toContain('Self-hosted on cdn.prod.website-files.com · woff2');
+    expect(text).not.toContain('nb-int-pro-b7f3a91c2d.woff2');
+    expect(findButton('Identify font file')).not.toBeUndefined();
+    expect(findButton('Download')).not.toBeUndefined();
+    // The address is behind the button, never printed in the row.
+    expect(findButton('Copy URL')).not.toBeUndefined();
+  });
+
+  it('carries the confidence as a badge that explains its own evidence', () => {
+    const { snapshot, element } = pinAliasedFont();
+    overlay.setMode('active');
+    overlay.setPinned(snapshot, element);
+
+    const badge = Array.from(overlay.root.querySelectorAll('.chip')).find(
+      (node) => node.textContent === 'matched',
+    ) as HTMLElement | undefined;
+    expect(badge).not.toBeUndefined();
+    expect(badge?.title).toContain('Not proof');
+  });
+
+  it('replaces the alias with the typeface name once the file has been read', async () => {
+    overlay.destroy();
+    overlay = createOverlay({
+      ...callbacks(),
+      onIdentifyFont: () => Promise.resolve(NB_IDENTITY),
+    });
+
+    const { snapshot, element } = pinAliasedFont();
+    overlay.setMode('active');
+    overlay.setPinned(snapshot, element);
+    expect(panelText()).toContain('Nb international pro webfont');
+
+    const identify = findButton('Identify font file') as HTMLButtonElement;
+    identify.click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const text = panelText();
+    expect(text).toContain('NB International Pro');
+    // The site's own nickname is kept, labelled as what it is.
+    expect(text).toContain('Declared as');
+    expect(text).toContain('Medium · 500');
+    expect(text).toContain('by Stefan Gandl for Neubau Berlin');
+    expect(text).toContain('Version 1.004');
+    expect(text).toContain('wght 100 to 900');
+    expect(text).toContain('48 KB');
+    // The offer is gone once it has been taken.
+    expect(findButton('Identify font file')).toBeUndefined();
+
+    // The reading now carries the identity, so an export taken after this
+    // press names the typeface rather than the alias.
+    expect(snapshot.typography?.identity?.family).toBe('NB International Pro');
+  });
+
+  it('reports a refusal beside the button and lets the reader try again', async () => {
+    overlay.destroy();
+    overlay = createOverlay({
+      ...callbacks(),
+      onIdentifyFont: () => Promise.resolve('The font host refused the request (403).'),
+    });
+
+    const { snapshot, element } = pinAliasedFont();
+    overlay.setMode('active');
+    overlay.setPinned(snapshot, element);
+    (findButton('Identify font file') as HTMLButtonElement).click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(panelText()).toContain('The font host refused the request (403).');
+    const retry = findButton('Identify font file');
+    expect(retry?.disabled).toBe(false);
+  });
+
+  it('offers a provider link instead of a download for a Google Fonts family', () => {
+    const { snapshot, element } = pinAliasedFont({
+      familyStack: ['Inter', 'sans-serif'],
+      familyReading: 'Inter',
+      source: {
+        kind: 'google',
+        url: 'https://fonts.gstatic.com/s/inter/v13/abc.woff2',
+        format: 'woff2',
+        subset: null,
+      },
+    });
+    overlay.setMode('active');
+    overlay.setPinned(snapshot, element);
+
+    const link = Array.from(overlay.root.querySelectorAll('a.quiet')).find((node) =>
+      node.textContent?.includes('Google Fonts'),
+    ) as HTMLAnchorElement | undefined;
+    expect(link?.href).toBe('https://fonts.google.com/specimen/Inter');
+    expect(link?.rel).toContain('noreferrer');
   });
 });

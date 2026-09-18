@@ -11,14 +11,15 @@ uploaded anywhere.
 
 ## What leaves your device, and when
 
-Two things reach the network, and only because you asked for them:
+Three things reach the network, and only because you asked for them:
 
 | Action | What happens | Who receives it |
 | --- | --- | --- |
 | **Fetch file details** on the Assets tab | One request per listed asset, to read its size and MIME type. File size and content type are only knowable from a request, so they are blank until you press the button. | The host that already serves that asset to the page you are on. |
+| **Identify font file** on a pinned element, or **Identify** on the Fonts section | One request for that one font file, so its own name table can be read. That is where the typeface's real name, designer, foundry, version and licence live; a site's CSS alias for a font is only a nickname. The file is read and discarded, and the result is remembered for the browsing session so a second press costs no request. | The host that already serves that font file to the page you are on. |
 | **Download** an asset, a font file, or an asset ZIP | The asset is requested so it can be saved. | The same host. |
 
-Both go to hosts the page you are inspecting already uses. Requests are sent without
+All three go to hosts the page you are inspecting already uses. Requests are sent without
 credentials. Nothing is prefetched, nothing is sent on hover, and nothing is sent in the
 background.
 

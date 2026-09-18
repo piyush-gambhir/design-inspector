@@ -38,6 +38,43 @@ describe('toTasteLedger fragment shape', () => {
     );
   });
 
+  it('writes the typeface name into the element line once the file has been read', () => {
+    // A ledger entry is read months later, by which time the site's own
+    // nickname for its font means nothing to anybody.
+    const identified = toTasteLedger(
+      [
+        elementReference({
+          ...headingSnapshot,
+          typography: headingSnapshot.typography && {
+            ...headingSnapshot.typography,
+            familyReading: 'Nb international pro webfont',
+            familyConfidence: 'verified',
+            identity: {
+              family: 'NB International Pro',
+              subfamily: 'Regular',
+              fullName: 'NB International Pro Regular',
+              postscriptName: 'NBInternationalPro-Regular',
+              designer: 'Stefan Gandl',
+              manufacturer: 'Neubau Berlin',
+              version: '1.004',
+              license: null,
+              licenseUrl: 'https://example.invalid/eula',
+              axes: [],
+              container: 'woff2',
+              fileSize: 49152,
+              evidence: 'name-table',
+              url: 'https://cdn.example.invalid/nb.woff2',
+            },
+          },
+        }),
+      ],
+      '2026-09-18',
+    );
+    expect(identified).toContain(
+      "NB International Pro Regular by Stefan Gandl for Neubau Berlin (declared as 'Nb international pro webfont'), self-hosted (verified)",
+    );
+  });
+
   it('never writes an em dash', () => {
     const withDashes = toTasteLedger(
       [elementReference(headingSnapshot, { title: 'Hero — type', note: 'Big — quiet.' })],

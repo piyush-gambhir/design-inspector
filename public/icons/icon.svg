@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Design Inspector: a lens over a layout box. Accent squircle, white marks. -->
+  <rect x="4" y="4" width="120" height="120" rx="30" fill="oklch(0.62 0.17 255)"/>
+  <rect x="28" y="28" width="52" height="52" rx="8" fill="none" stroke="#fff" stroke-width="9"/>
+  <rect x="28" y="28" width="22" height="22" rx="6" fill="#fff"/>
+  <circle cx="86" cy="86" r="18" fill="oklch(0.62 0.17 255)" stroke="#fff" stroke-width="9"/>
+  <path d="M99 99 L112 112" stroke="#fff" stroke-width="10" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,49 @@
+{
+  "name": "design-inspector",
+  "description": "Hover over anything on a website and read its typography, colors, spacing, assets, and stack. Save references with context.",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "author": "Piyush Gambhir",
+  "packageManager": "pnpm@11.25.0",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "zip": "wxt zip",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "check": "vitest run && tsc --noEmit && wxt build",
+    "test:e2e": "DI_E2E=1 wxt build && playwright test",
+    "build:firefox": "wxt build -b firefox",
+    "perf": "node scripts/perf-profile.mjs",
+    "screenshots": "node scripts/screenshots.mjs",
+    "release": "node scripts/release.mjs",
+    "postinstall": "wxt prepare"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@tailwindcss/vite": "^4.3.2",
+    "@types/chrome": "^0.2.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@wxt-dev/module-react": "^1.2.2",
+    "jsdom": "^29.1.1",
+    "tailwindcss": "^4.3.2",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10",
+    "wxt": "^0.20.27"
+  },
+  "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "idb": "^8.0.3",
+    "lucide-react": "^1.24.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tailwind-merge": "^3.6.0"
+  }
+}

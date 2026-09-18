@@ -1,0 +1,6 @@
+# Single-package repo. Keep allowBuilds explicit so pnpm does not skip esbuild.
+allowBuilds:
+  esbuild: true
+  spawn-sync: true
+pmOnFail: warn
+verifyDepsBeforeRun: false

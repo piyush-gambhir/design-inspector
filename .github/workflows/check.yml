@@ -1,0 +1,50 @@
+name: Check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Unit tests, types, and the production extension build. This is the same
+      # gate `pnpm release` runs locally before it packages anything.
+      - name: Unit tests, types, and production build
+        run: pnpm check
+
+      - name: Install the browser the fixture tests use
+        run: pnpm exec playwright install --with-deps chromium
+
+      # `pnpm test:e2e` builds the DI_E2E bundle first: that build keeps
+      # host_permissions so a fixture tab can be injected without a toolbar
+      # click. The production manifest is asserted separately by the smoke test.
+      - name: Fixture browser tests, accessibility, and performance
+        run: pnpm test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-failure-artifacts
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7

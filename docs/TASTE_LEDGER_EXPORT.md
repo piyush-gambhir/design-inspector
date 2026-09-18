@@ -1,6 +1,6 @@
 # Taste-ledger export mapping
 
-Destination: `/Users/piyush/code/personal/frontend-design-skill/references/session-ledger.md`.
+Destination: the author's private taste-ledger file (`references/session-ledger.md` in a separate notes repository).
 Validated against that file on 2026-09-18 (PRD EXP-03 dependency).
 
 ## What the destination looks like

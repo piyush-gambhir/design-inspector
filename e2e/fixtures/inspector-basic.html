@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Design Inspector fixture: basic page</title>
+    <!--
+      Static fixture. No build step, no network: every asset is a data URL so
+      the page behaves identically from file:// and from a server.
+
+      Ids are part of the test contract. Keep them stable and meaningful.
+    -->
+    <style>
+      :root {
+        font-size: 16px;
+        --page-bg: #f4f5f7;
+        --ink: #101828;
+        --accent: #3874cb;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--page-bg);
+        color: var(--ink);
+        font-family: 'Nonexistent Display', Georgia, serif;
+      }
+
+      main {
+        max-width: clamp(320px, 90vw, 960px);
+        margin: 0 auto;
+        padding: 32px 24px 64px;
+      }
+
+      #hero {
+        padding: 40px 32px;
+        background: #ffffff;
+        border-radius: 16px;
+      }
+
+      #hero-link {
+        text-decoration: none;
+        color: inherit;
+      }
+
+      #hero-heading {
+        margin: 0 0 12px;
+        font-family: 'Nonexistent Display', 'Helvetica Neue', Arial, sans-serif;
+        font-size: 44px;
+        font-weight: 700;
+        line-height: 52px;
+        letter-spacing: -0.02em;
+        color: #101828;
+      }
+
+      #wrapped-heading {
+        margin: 16px 0 0;
+        font-size: 24px;
+        font-weight: 600;
+        line-height: 32px;
+      }
+
+      #hero-sub {
+        margin: 0;
+        font-size: 17px;
+        line-height: normal;
+        color: #475467;
+      }
+
+      #solid-backdrop {
+        margin-top: 28px;
+        padding: 24px;
+        background: #1f2937;
+        border-radius: 14px;
+      }
+
+      #translucent-card {
+        padding: 20px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.62);
+        box-shadow: 0 1px 2px rgb(16, 24, 40, 0.08), 0 12px 32px -12px rgba(16, 24, 40, 0.4);
+        color: #101828;
+        font-size: 15px;
+      }
+
+      #flex-row {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px 20px;
+        margin-top: 28px;
+        padding: 16px;
+        background: #ffffff;
+        border-radius: 12px;
+      }
+
+      #flex-row > p {
+        margin: 0;
+        font-size: 14px;
+      }
+
+      #grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-rows: auto auto;
+        grid-auto-flow: row;
+        gap: 14px 18px;
+        margin-top: 28px;
+      }
+
+      .cell {
+        padding: 14px;
+        background: #ffffff;
+        border-radius: 8px;
+        border-top: 2px solid var(--accent);
+        font-size: 13px;
+      }
+
+      #grid-cell-2 {
+        grid-column: 2 / 3;
+        grid-row: 1 / 2;
+      }
+
+      #negative-margin {
+        margin: -12px 0 0 -18px;
+        padding: 12px 16px;
+        background: #fff7ed;
+        border-radius: 8px;
+        font-size: 13px;
+      }
+
+      #transformed {
+        margin-top: 36px;
+        padding: 18px;
+        background: #ffffff;
+        border-radius: 12px;
+        transform: rotate(-2deg) scale(1.02);
+        font-size: 14px;
+      }
+
+      #logo-svg {
+        display: block;
+        margin-top: 28px;
+        fill: var(--accent);
+        stroke: #101828;
+        stroke-width: 2;
+      }
+
+      #responsive-img {
+        display: block;
+        margin-top: 28px;
+        width: 240px;
+        height: 120px;
+        border-radius: 10px;
+      }
+
+      #bg-image {
+        margin-top: 28px;
+        height: 120px;
+        border-radius: 12px;
+        background-image: url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2240%22%20height%3D%2240%22%3E%3Crect%20width%3D%2240%22%20height%3D%2240%22%20fill%3D%22%23dbe4f0%22%2F%3E%3Ccircle%20cx%3D%2220%22%20cy%3D%2220%22%20r%3D%228%22%20fill%3D%22%233874cb%22%2F%3E%3C%2Fsvg%3E');
+        background-repeat: repeat;
+      }
+
+      #gradient-section {
+        margin-top: 28px;
+        padding: 28px 20px;
+        border-radius: 14px;
+        background-image: linear-gradient(135deg, #3874cb, #7c3aed);
+      }
+
+      #gradient-text {
+        margin: 0;
+        color: #ffffff;
+        font-size: 20px;
+        font-weight: 600;
+      }
+
+      #mobile-nav {
+        display: none;
+      }
+
+      #mobile-nav a {
+        font-family: 'Hidden Nav Face', monospace;
+        font-size: 11px;
+      }
+
+      .visually-hidden-holder {
+        position: absolute;
+        width: 0;
+        height: 0;
+        overflow: hidden;
+      }
+
+      /* A deliberate long run of page so #far-below is reliably offscreen at
+         any sensible viewport height, for the scroll-to-select test. */
+      #tall-spacer {
+        height: 2400px;
+        margin-top: 28px;
+        border-radius: 12px;
+        background: #eef1f6;
+      }
+
+      #far-below {
+        margin-top: 28px;
+        padding: 20px;
+        border-radius: 10px;
+        background: #ffffff;
+        font-size: 15px;
+      }
+
+      /* The heading's text wrapper paints exactly the heading's box, which is
+         the shape the "prefer semantic parents" rule looks for: clicking the
+         words should select the h2, not the span. */
+      #wrapped-heading-text {
+        display: block;
+      }
+
+      /* A generously padded card, so point-to-edge has real distances to find
+         in all four directions from a point inside the padding. */
+      #padded-card {
+        margin-top: 28px;
+        padding: 40px;
+        border-radius: 12px;
+        background: #ffffff;
+      }
+
+      #padded-inner {
+        height: 80px;
+        border-radius: 8px;
+        background: #dbe4f0;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- The <use> target lives outside #logo-svg so the SVG export has to copy it. -->
+    <svg class="visually-hidden-holder" aria-hidden="true" focusable="false">
+      <symbol id="logo-mark" viewBox="0 0 48 48">
+        <path id="logo-mark-path" d="M8 40 L24 8 L40 40 Z" />
+      </symbol>
+    </svg>
+
+    <header id="site-header">
+      <nav id="main-nav" aria-label="Main">
+        <a href="#work">Work</a>
+        <a href="#about">About</a>
+      </nav>
+      <nav id="mobile-nav" aria-label="Mobile">
+        <a href="#work">Work</a>
+        <a href="#about">About</a>
+      </nav>
+    </header>
+
+    <main>
+      <section id="hero">
+        <a id="hero-link" href="#navigated">
+          <h1 id="hero-heading">Design that reads clearly</h1>
+        </a>
+        <p id="hero-sub">A fixture page for the inspector content script.</p>
+        <!-- The text lives in a child, as on real sites that wrap headings. -->
+        <h2 id="wrapped-heading"><span id="wrapped-heading-text">Wrapped</span></h2>
+      </section>
+
+      <section id="solid-backdrop">
+        <div id="translucent-card">
+          Translucent card over a solid backdrop, so contrast composition has something to do.
+        </div>
+      </section>
+
+      <section id="flex-row">
+        <p id="flex-item-1">Flex item one</p>
+        <p id="flex-item-2">Flex item two</p>
+        <p id="flex-item-3">Flex item three</p>
+      </section>
+
+      <section id="grid">
+        <div class="cell" id="grid-cell-1">Grid cell one</div>
+        <div class="cell" id="grid-cell-2">Grid cell two</div>
+        <div class="cell" id="grid-cell-3">Grid cell three</div>
+      </section>
+
+      <p id="negative-margin">Pulled up and left with negative margins.</p>
+
+      <section id="transformed">Rotated and scaled card.</section>
+
+      <svg id="logo-svg" width="48" height="48" viewBox="0 0 48 48" aria-label="Logo">
+        <use href="#logo-mark" />
+      </svg>
+
+      <img
+        id="responsive-img"
+        alt="Two toned placeholder"
+        sizes="(max-width: 600px) 100vw, 240px"
+        src="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22240%22%20height%3D%22120%22%3E%3Crect%20width%3D%22240%22%20height%3D%22120%22%20fill%3D%22%23dbe4f0%22%2F%3E%3C%2Fsvg%3E"
+        srcset="
+          data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22240%22%20height%3D%22120%22%3E%3Crect%20width%3D%22240%22%20height%3D%22120%22%20fill%3D%22%23dbe4f0%22%2F%3E%3C%2Fsvg%3E 240w,
+          data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22480%22%20height%3D%22240%22%3E%3Crect%20width%3D%22480%22%20height%3D%22240%22%20fill%3D%22%23c7d6ea%22%2F%3E%3C%2Fsvg%3E 480w
+        "
+      />
+
+      <div id="bg-image" role="img" aria-label="Repeating pattern"></div>
+
+      <section id="gradient-section">
+        <p id="gradient-text">Text over a gradient, where contrast is unavailable.</p>
+      </section>
+
+      <!-- A generous padding box, so point-to-edge has real distances to find. -->
+      <section id="padded-card">
+        <div id="padded-inner">Padded inner box</div>
+      </section>
+
+      <div id="tall-spacer" aria-hidden="true"></div>
+
+      <p id="far-below">Far below the fold, for scroll-to-select.</p>
+    </main>
+  </body>
+</html>

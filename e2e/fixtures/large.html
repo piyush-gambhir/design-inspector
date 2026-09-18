@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Design Inspector fixture: large DOM</title>
+    <!--
+      Performance fixture for PRD 19.1 and release gate 20.3 item 10.
+
+      The DOM is generated rather than written out: 6,000 elements of literal
+      markup is an unreviewable file, and the generator states the shape of the
+      page in ten lines. It runs synchronously in <body>, so the document is
+      complete before load fires and the scan sees the same page every run.
+
+      Everything is local. The images are data URLs, the type is a system stack,
+      and nothing animates: the only main-thread work during a measurement is
+      the extension's.
+    -->
+    <script>
+      // Installed before anything else so a long task during page construction
+      // is recorded too, and the control run can subtract it.
+      window.__longTasks = [];
+      window.__longTaskSupported = false;
+      try {
+        const observer = new PerformanceObserver(list => {
+          for (const entry of list.getEntries()) {
+            window.__longTasks.push({ name: entry.name, start: entry.startTime, duration: entry.duration });
+          }
+        });
+        observer.observe({ type: 'longtask', buffered: true });
+        window.__longTaskObserver = observer;
+        window.__longTaskSupported = true;
+      } catch {
+        // A browser without the long-task API leaves the flag false, and the
+        // spec fails loudly rather than passing on no evidence.
+      }
+      /** Drop everything recorded so far; the spec calls this between phases. */
+      window.__resetLongTasks = () => {
+        window.__longTasks = [];
+      };
+    </script>
+    <style>
+      :root {
+        font-size: 16px;
+        --ink: #14161a;
+        --muted: #5b6270;
+        --line: #dfe3ea;
+        --accent: #2f6fd0;
+        --page: #f6f7f9;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+        font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+        font-size: 15px;
+        line-height: 1.5;
+      }
+      main {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 24px 16px 64px;
+      }
+      .card {
+        display: grid;
+        grid-template-columns: 56px 1fr;
+        gap: 12px;
+        margin: 0 0 12px;
+        padding: 12px 14px;
+        background: #ffffff;
+        border-radius: 10px;
+        box-shadow: 0 1px 2px rgba(20, 22, 26, 0.06);
+      }
+      .card-head {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+      }
+      .card h2 {
+        margin: 0;
+        font-size: 17px;
+        font-weight: 650;
+        letter-spacing: -0.01em;
+      }
+      .tag {
+        padding: 1px 6px;
+        border-radius: 999px;
+        background: #eaf0fb;
+        color: var(--accent);
+        font-size: 12px;
+      }
+      .body {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .media {
+        display: flex;
+        align-items: flex-start;
+      }
+      .thumb {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        background: #eef1f6;
+      }
+      .meta {
+        display: flex;
+        gap: 10px;
+        margin: 6px 0 0;
+        padding: 0;
+        list-style: none;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .meta li {
+        border-left: 2px solid var(--line);
+        padding-left: 8px;
+      }
+      .card.alt h2 {
+        font-size: 21px;
+        font-weight: 700;
+      }
+      .card.alt .tag {
+        background: #fdf0e6;
+        color: #b4600f;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="grid"></main>
+    <script>
+      // 500 cards of 12 elements each: section.card, div.media, img.thumb,
+      // div (content), header, h2, span.tag, p.body, ul.meta and three li.
+      // 500 x 12 plus <main> is 6,001 elements, which is the "6,000 eligible
+      // elements" the performance spec asserts against. Changing the shape here
+      // changes what the budget means, so the spec checks the count.
+      (() => {
+        const BLOCKS = 500;
+        const grid = document.getElementById('grid');
+        // Two 1x1 PNGs, one blue and one amber, scaled by CSS. Data URLs keep
+        // the fixture offline and keep every image a distinct asset reading.
+        const dots = [
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+        ];
+        const words = [
+          'baseline', 'rhythm', 'measure', 'contrast', 'leading', 'tracking',
+          'surface', 'elevation', 'density', 'cadence', 'palette', 'scale',
+        ];
+        const fragment = document.createDocumentFragment();
+
+        for (let index = 0; index < BLOCKS; index += 1) {
+          const card = document.createElement('section');
+          card.className = index % 4 === 3 ? 'card alt' : 'card';
+
+          const media = document.createElement('div');
+          media.className = 'media';
+          const image = document.createElement('img');
+          image.className = 'thumb';
+          image.src = dots[index % dots.length];
+          image.alt = `Swatch ${index + 1}`;
+          image.width = 48;
+          image.height = 48;
+          media.appendChild(image);
+
+          const content = document.createElement('div');
+
+          const head = document.createElement('header');
+          head.className = 'card-head';
+          const heading = document.createElement('h2');
+          heading.textContent = `Card ${index + 1}: ${words[index % words.length]}`;
+          const tag = document.createElement('span');
+          tag.className = 'tag';
+          tag.textContent = index % 3 === 0 ? 'primary' : 'secondary';
+          head.append(heading, tag);
+
+          const body = document.createElement('p');
+          body.className = 'body';
+          body.textContent =
+            `A paragraph of ordinary running text so the scan has real typography to read ` +
+            `at card ${index + 1}. It wraps, it inherits, and it is not styled inline.`;
+
+          const meta = document.createElement('ul');
+          meta.className = 'meta';
+          const first = document.createElement('li');
+          first.textContent = `${8 + (index % 5) * 4}px gap`;
+          const second = document.createElement('li');
+          second.textContent = `${index % 2 === 0 ? 'grid' : 'flex'} layout`;
+          const third = document.createElement('li');
+          third.textContent = `radius ${4 + (index % 4) * 2}px`;
+          meta.append(first, second, third);
+
+          content.append(head, body, meta);
+          card.append(media, content);
+          fragment.appendChild(card);
+        }
+
+        grid.appendChild(fragment);
+        // main plus everything under it: the two scripts are not part of the
+        // inventory the scan walks, so they are not part of the count either.
+        window.__fixtureElementCount = document.querySelectorAll('main, main *').length;
+      })();
+    </script>
+  </body>
+</html>

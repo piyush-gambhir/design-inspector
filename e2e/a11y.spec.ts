@@ -26,13 +26,12 @@ import {
   tabIdFor,
   type ExtensionSession,
 } from './helpers/extension';
+import { artifactPath } from './helpers/artifacts';
+import { waitForOverlayIdle } from './helpers/timing';
 
 let server: Server;
 let baseUrl: string;
 let session: ExtensionSession;
-
-/** Where the reviewed screenshots are written. */
-const SHOTS = '/private/tmp/claude-502';
 
 /** Non-text contrast minimum for a focus indicator (WCAG 1.4.11). */
 const MIN_INDICATOR_CONTRAST = 3;
@@ -496,12 +495,13 @@ test.describe('side panel accessibility', () => {
     const panel = await openPanel(tabId);
     await scan(panel);
 
-    for (const width of [300, 340, 380, 420]) {
+    /** Read the geometry that a pane too narrow for its content gives away. */
+    const measure = async (width: number) => {
       await panel.setViewportSize({ width, height: 960 });
       // A resize reflows on the next frame, and the container query that folds
       // the Scope rows resolves with it.
-      await panel.waitForTimeout(150);
-      const metrics = await panel.evaluate(() => {
+      await waitForOverlayIdle(panel);
+      return panel.evaluate(() => {
         const root = document.documentElement;
         const tabs = document.querySelector('[role="tablist"]');
         const strip = document.querySelector('header');
@@ -512,10 +512,56 @@ test.describe('side panel accessibility', () => {
           stripLeft: strip ? strip.getBoundingClientRect().left : -1,
         };
       });
+    };
+
+    for (const width of [300, 340, 380, 420]) {
+      const metrics = await measure(width);
       expect(metrics.scrollWidth, `${width}px: horizontal overflow`).toBe(metrics.clientWidth);
       expect(metrics.tabsLeft, `${width}px: tab strip left edge`).toBeGreaterThanOrEqual(0);
       expect(metrics.stripLeft, `${width}px: status strip left edge`).toBeGreaterThanOrEqual(0);
-      if (width === 340) await panel.screenshot({ path: `${SHOTS}/di-d-sidepanel-340.png` });
+      if (width === 340) await panel.screenshot({ path: artifactPath('di-d-sidepanel-340.png') });
+    }
+
+    // Second pass, with the UI font replaced by a much wider one. Inter and
+    // system-ui are not installed everywhere: a Linux machine with neither
+    // paints this panel in DejaVu or Liberation, which is wider at every size,
+    // and a layout that only just fits at 300px in Inter stops fitting. That is
+    // a real user on a real machine, not a CI artefact, so the same geometry is
+    // asserted again under a wide face. DejaVu Sans is the Linux case; Verdana
+    // is the widest family macOS is guaranteed to have, so the pass means
+    // something on both platforms.
+    await panel.addStyleTag({
+      content: `* { font-family: 'DejaVu Sans', Verdana, sans-serif !important; }`,
+    });
+    // A style tag that did not land would make the whole pass a no-op, so the
+    // override is confirmed before anything is read from it. The width is not
+    // asserted to have grown: on a Linux runner the panel is already painted in
+    // DejaVu, because neither Inter nor system-ui is installed there, which is
+    // exactly the condition this pass exists to hold the layout to.
+    expect(
+      await panel.evaluate(() => {
+        const tab = document.querySelector('[role="tab"]');
+        return tab ? getComputedStyle(tab).fontFamily : '';
+      }),
+      'the wide font override did not take effect',
+    ).toContain('DejaVu Sans');
+
+    for (const width of [300, 340, 380, 420]) {
+      const metrics = await measure(width);
+      expect(metrics.scrollWidth, `${width}px wide font: horizontal overflow`).toBe(
+        metrics.clientWidth,
+      );
+      expect(
+        metrics.tabsLeft,
+        `${width}px wide font: tab strip left edge`,
+      ).toBeGreaterThanOrEqual(0);
+      expect(
+        metrics.stripLeft,
+        `${width}px wide font: status strip left edge`,
+      ).toBeGreaterThanOrEqual(0);
+      if (width === 300) {
+        await panel.screenshot({ path: artifactPath('di-d-sidepanel-300-wide-font.png') });
+      }
     }
 
     await page.close();

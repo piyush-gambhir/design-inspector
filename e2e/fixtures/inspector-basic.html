@@ -27,7 +27,13 @@
         padding: 0;
         background: var(--page-bg);
         color: var(--ink);
-        font-family: 'Nonexistent Display', Georgia, serif;
+        /* The first family is deliberately absent everywhere; the families
+           behind it are the ones that have to resolve identically on a Mac and
+           on a Linux runner, or every text metric on this page moves and the
+           layout assertions move with it. Liberation is what
+           `playwright install-deps` puts on Linux, Georgia and Times New Roman
+           are what macOS has. */
+        font-family: 'Nonexistent Display', 'Liberation Serif', Georgia, 'Times New Roman', serif;
       }
 
       main {
@@ -49,7 +55,7 @@
 
       #hero-heading {
         margin: 0 0 12px;
-        font-family: 'Nonexistent Display', 'Helvetica Neue', Arial, sans-serif;
+        font-family: 'Nonexistent Display', 'Liberation Sans', Arial, Helvetica, sans-serif;
         font-size: 44px;
         font-weight: 700;
         line-height: 52px;
@@ -100,7 +106,13 @@
         border-radius: 12px;
       }
 
+      /* Fixed width, so the three items and the two gaps between them are the
+         same geometry on every machine. Left to their text they are as wide as
+         the font renders them, and a wider fallback face wraps the row, which
+         changes how many gap bands the overlay has to draw. */
       #flex-row > p {
+        width: 132px;
+        flex: 0 0 132px;
         margin: 0;
         font-size: 14px;
       }
@@ -114,7 +126,11 @@
         margin-top: 28px;
       }
 
+      /* The columns are 1fr each, so their widths never depend on the text.
+         The height is pinned for the same reason on the row axis: the row track
+         label and the row gap band are read by the grid overlay test. */
       .cell {
+        height: 72px;
         padding: 14px;
         background: #ffffff;
         border-radius: 8px;

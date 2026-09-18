@@ -29,7 +29,7 @@ const outDir = path.join(root, 'store', 'screenshots');
 const WIDTH = 1280;
 const HEIGHT = 800;
 /** Where the design-pass review shots go. They are not store assets. */
-const REVIEW_DIR = '/private/tmp/claude-502';
+const REVIEW_DIR = process.env.CLAUDE_SCRATCH ?? path.join(root, 'test-results', 'screens');
 /** The width Chrome gives a comfortable side panel, and the narrow end of one. */
 const PANEL_WIDTH = 400;
 const PANEL_NARROW = 320;

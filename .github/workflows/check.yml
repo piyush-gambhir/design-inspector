@@ -62,8 +62,21 @@ jobs:
         if: steps.browsers.outputs.cache-hit == 'true'
         run: pnpm exec playwright install-deps chromium
 
-      # The DI_E2E build keeps host_permissions so a fixture tab can be injected
-      # without a toolbar click. The shipped manifest is asserted by the smoke test.
+      # The fixtures name Liberation and DejaVu explicitly, because a runner has
+      # no Inter, no Helvetica Neue and no Georgia: without a family that is
+      # really there, every text metric on a fixture page is whatever the
+      # fallback happens to be. apt-get install is idempotent, and
+      # install-deps already brings fonts-liberation, so this is the belt to
+      # that braces plus the wide face the 300px pane test asserts against.
+      - name: Install the fonts the fixtures name
+        run: sudo apt-get install -y --no-install-recommends fonts-liberation fonts-dejavu-core
+
+      # Two builds, because the suite asserts on both. The DI_E2E build keeps
+      # host_permissions so a fixture tab can be injected without a toolbar
+      # click; the plain build is the shipped manifest, which the smoke test
+      # reads off disk to prove no host permissions ship.
+      - name: Build the shipped extension
+        run: pnpm exec wxt build
       - name: Build the test extension
         run: DI_E2E=1 pnpm exec wxt build
       - name: Fixture browser tests, accessibility, and performance

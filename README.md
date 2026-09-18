@@ -94,6 +94,27 @@ Press Alt+Shift+I or click the toolbar icon on a page to start inspecting.
 `.github/workflows/check.yml` runs `pnpm check` and `pnpm test:e2e` on every pull request
 and on `main`.
 
+### Running the browser suite the way CI runs it
+
+CI is Linux and has none of the fonts a Mac has, which is enough on its own to move
+text metrics, click targets and layout. To reproduce that from a Mac, run the suite
+inside the Playwright image for the version in `package.json`. One command, with the
+repo mounted and a container-local `node_modules` so the host install is left alone:
+
+```bash
+docker run --rm -it --ipc=host --shm-size=1g \
+  -v "$PWD":/repo -v di-node-modules:/repo/node_modules -v di-out-e2e:/repo/.output-e2e \
+  -w /repo "mcr.microsoft.com/playwright:v$(node -p "require('@playwright/test/package.json').version")-jammy" \
+  bash -lc 'corepack enable && pnpm install --frozen-lockfile &&
+            apt-get update -qq && apt-get install -y -qq --no-install-recommends \
+              fonts-liberation fonts-dejavu-core &&
+            pnpm exec wxt build && DI_E2E=1 pnpm exec wxt build && pnpm exec playwright test'
+```
+
+Review screenshots go to `test-results/screens/`, or to `$CLAUDE_SCRATCH` when it is set.
+No spec may write to an absolute path of its own; `__tests__/e2e-artifact-paths.test.ts`
+fails the unit gate if one tries.
+
 ## Release
 
 ```bash

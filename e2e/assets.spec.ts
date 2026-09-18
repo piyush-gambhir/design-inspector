@@ -10,8 +10,8 @@ import {
   toggleInspector,
   type ExtensionSession,
 } from './helpers/extension';
-
-const SHOTS = '/private/tmp/claude-502';
+import { artifactPath } from './helpers/artifacts';
+import { waitForOverlayIdle } from './helpers/timing';
 
 /** A 1x1 PNG, served for the two image paths the fixture references. */
 const PNG = Buffer.from(
@@ -123,7 +123,9 @@ test.describe('assets tab', () => {
     await session.worker.evaluate(async (id) => {
       await chrome.tabs.update(id, { active: true });
     }, tabId);
-    await panel.waitForTimeout(300);
+    // The panel renders its tab strip once it has resolved the active tab, so
+    // the Assets tab being there is the condition to wait for.
+    await expect(panel.getByRole('tab', { name: /assets/i })).toBeEnabled();
 
     await panel.getByRole('tab', { name: /assets/i }).click();
     await panel.getByRole('button', { name: /list assets/i }).click();
@@ -154,8 +156,8 @@ test.describe('assets tab', () => {
     await panel.getByLabel(/select all shown/i).check();
     await expect(panel.getByText('3 selected')).toBeVisible();
     await expect(panel.getByText("Downloading contacts each asset's host.")).toBeVisible();
-    await panel.waitForTimeout(400);
-    await panel.screenshot({ path: `${SHOTS}/di-p-assets.png` });
+    await waitForOverlayIdle(panel);
+    await panel.screenshot({ path: artifactPath('di-p-assets.png') });
 
     // Playwright's own download event is preferred; the download manager is
     // the fallback because chrome.downloads.download is not page-initiated.

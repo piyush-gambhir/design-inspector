@@ -22,9 +22,10 @@ import {
   toggleInspector,
   type ExtensionSession,
 } from './helpers/extension';
+import { artifactPath } from './helpers/artifacts';
+import { waitForOverlayIdle } from './helpers/timing';
 
 const HOST = 'design-inspector-host';
-const SHOTS = '/private/tmp/claude-502';
 
 let server: Server;
 let baseUrl: string;
@@ -128,11 +129,18 @@ async function openPanel(fixtureTabId: number): Promise<Page> {
   return page;
 }
 
+/**
+ * Pin an element and wait until the panel has repainted for it. The panel names
+ * the element it is reading, so its id appearing there is the signal that the
+ * deep reading arrived; a fixed sleep here was only ever a guess at how long
+ * that takes on the machine running the test.
+ */
 async function pin(page: Page, selector: string): Promise<void> {
+  const id = selector.replace(/^#/, '');
   await page.locator(selector).hover();
-  await page.waitForTimeout(120);
+  await waitForOverlayIdle(page);
   await page.locator(selector).click();
-  await page.waitForTimeout(250);
+  await expect.poll(() => panelText(page)).toContain(id);
 }
 
 test.describe('font identity on a page that aliases its own font', () => {
@@ -183,7 +191,7 @@ test.describe('font identity on a page that aliases its own font', () => {
     // Still verified: identifying a file never downgrades the evidence.
     expect((await confidenceBadge(page))?.text).toBe('verified');
 
-    await page.screenshot({ path: `${SHOTS}/di-font-fixture.png` });
+    await page.screenshot({ path: artifactPath('di-font-fixture.png') });
     await page.close();
   });
 
@@ -269,7 +277,7 @@ test.describe('font identity on a page that aliases its own font', () => {
       panel.getByText('The quick brown fox jumps over the lazy dog').first(),
     ).toBeVisible();
 
-    await panel.screenshot({ path: `${SHOTS}/di-font-specimen.png`, fullPage: false });
+    await panel.screenshot({ path: artifactPath('di-font-specimen.png'), fullPage: false });
     await panel.close();
     await page.close();
   });

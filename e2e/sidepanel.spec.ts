@@ -9,6 +9,7 @@ import {
   tabIdFor,
   type ExtensionSession,
 } from './helpers/extension';
+import { artifactPath } from './helpers/artifacts';
 
 // The side panel reads the window's active tab, which a Playwright-driven
 // extension page cannot be. The panel page therefore opens with chrome.tabs
@@ -17,8 +18,6 @@ import {
 let server: Server;
 let baseUrl: string;
 let session: ExtensionSession;
-
-const SHOTS = '/private/tmp/claude-502';
 
 async function openPanel(fixtureTabId: number): Promise<Page> {
   const page = await session.context.newPage();
@@ -102,7 +101,7 @@ test.describe('side panel summary', () => {
     expect(allRows).toBeGreaterThan(0);
 
     await palette.scrollIntoViewIfNeeded();
-    await palette.screenshot({ path: `${SHOTS}/di-r2-palette.png` });
+    await palette.screenshot({ path: artifactPath('di-r2-palette.png') });
 
     await chips.getByRole('button', { name: 'Border' }).click();
     await expect(chips.getByRole('button', { name: 'Border' })).toHaveAttribute(
@@ -167,7 +166,7 @@ test.describe('side panel compare', () => {
     await panel.getByRole('tab', { name: 'Saved' }).click();
     await expect(panel.getByRole('button', { name: 'Select all' })).toBeVisible();
     await expect(panel.getByText(/0 of 2 selected/)).toBeVisible();
-    await panel.screenshot({ path: `${SHOTS}/di-r2-saved.png` });
+    await panel.screenshot({ path: artifactPath('di-r2-saved.png') });
 
     await panel.getByRole('button', { name: 'Select all' }).click();
     await panel.getByRole('button', { name: 'Compare' }).click();
@@ -181,7 +180,7 @@ test.describe('side panel compare', () => {
     await expect(compare.getByRole('heading', { name: 'Type scale' })).toBeVisible();
     await expect(compare.getByRole('heading', { name: 'Palette' })).toBeVisible();
 
-    await compare.screenshot({ path: `${SHOTS}/di-r2-compare.png` });
+    await compare.screenshot({ path: artifactPath('di-r2-compare.png') });
 
     await page.close();
     await panel.close();

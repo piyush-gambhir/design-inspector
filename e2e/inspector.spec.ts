@@ -11,6 +11,8 @@ import {
   toggleInspector,
   type ExtensionSession,
 } from './helpers/extension';
+import { artifactPath } from './helpers/artifacts';
+import { waitForOverlayIdle } from './helpers/timing';
 
 // Extensions cannot inject into file:// pages without an extra grant, so the
 // fixtures are served over plain http from a throwaway local server.
@@ -20,8 +22,6 @@ let session: ExtensionSession;
 let control: Page;
 
 const HOST = 'design-inspector-host';
-
-const SHOTS = '/private/tmp/claude-502';
 
 /** Text of every overlay node matching `selector` inside the shadow root. */
 async function shadowTexts(page: Page, selector: string): Promise<string[]> {
@@ -35,6 +35,20 @@ async function shadowTexts(page: Page, selector: string): Promise<string[]> {
     },
     { host: HOST, selector },
   );
+}
+
+/**
+ * The element the overlay currently has pinned, as the background reports it.
+ * A click travels page -> content script -> worker, so the answer arrives a
+ * moment after the click: every caller polls this rather than timing it.
+ */
+async function pinnedElement(
+  tabId: number,
+): Promise<{ tag?: string; id?: string | null } | null> {
+  const reading = await sendBackground<{
+    state?: { pinned: { element: { tag: string; id: string | null } } | null };
+  }>(control, { type: 'inspector.getState', tabId });
+  return reading.state?.pinned?.element ?? null;
 }
 
 async function shadowText(page: Page): Promise<string> {
@@ -87,17 +101,15 @@ test.describe('inspector on the basic fixture', () => {
 
     const heading = page.locator('#hero-heading');
     await heading.hover();
-    await page.waitForTimeout(150);
-    let text = await shadowText(page);
-    expect(text).toContain('Inspecting');
+    await expect.poll(() => shadowText(page)).toContain('Inspecting');
 
     const urlBefore = page.url();
     await heading.click();
-    await page.waitForTimeout(200);
+    await waitForOverlayIdle(page);
     expect(page.url()).toBe(urlBefore);
 
-    text = await shadowText(page);
-    expect(text).toContain('hero-heading');
+    await expect.poll(() => shadowText(page)).toContain('hero-heading');
+    const text = await shadowText(page);
     expect(text).toMatch(/\d+px/);
     expect(text).toMatch(/\d+(\.\d+)?rem/);
     // The fixture's first-choice family does not exist; it must never read as verified.
@@ -105,20 +117,20 @@ test.describe('inspector on the basic fixture', () => {
 
     // Escape once clears the pin, twice exits.
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(100);
+    await waitForOverlayIdle(page);
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(200);
+    // Exiting takes the host element with it, so its disappearance is the
+    // signal that the round trip has landed. Waiting for that beats guessing.
+    await expect(page.locator(HOST)).toHaveCount(0);
     const state = await sendBackground<{ ok: boolean; state?: { mode: string } }>(control, {
       type: 'inspector.getState',
       tabId,
     });
     expect(state).toMatchObject({ ok: true, state: { mode: 'off' } });
-    await expect(page.locator(HOST)).toHaveCount(0);
 
     // With the inspector off, the link works again.
     await heading.click();
-    await page.waitForTimeout(200);
-    expect(page.url()).not.toBe(urlBefore);
+    await expect.poll(() => page.url()).not.toBe(urlBefore);
     await page.close();
   });
 
@@ -222,8 +234,17 @@ test.describe('inspector on the basic fixture', () => {
     await toggleInspector(control, tabId);
     await page.locator('#hero-heading').hover();
     await page.locator('#hero-heading').click();
-    await page.waitForTimeout(200);
+    await waitForOverlayIdle(page);
 
+    await expect
+      .poll(async () => {
+        const reading = await sendBackground<{ state?: { pinned: unknown } }>(control, {
+          type: 'inspector.getState',
+          tabId,
+        });
+        return !!reading.state?.pinned;
+      })
+      .toBe(true);
     const state = await sendBackground<{ ok: boolean; state?: { pinned: unknown } }>(control, {
       type: 'inspector.getState',
       tabId,
@@ -319,7 +340,12 @@ test.describe('inspector on the basic fixture', () => {
       locator: '#grid',
     });
     expect(selected.ok).toBe(true);
-    await page.waitForTimeout(200);
+    await waitForOverlayIdle(page);
+    // The layer is drawn from a rAF callback after the selection message, so
+    // the labels are waited for rather than read once and hoped for.
+    await expect
+      .poll(async () => (await shadowTexts(page, '#layout-layer .track-label')).length)
+      .toBeGreaterThanOrEqual(5);
 
     const labels = await shadowTexts(page, '#layout-layer .track-label');
     // The fixture's three columns resolve to equal px tracks, plus two rows.
@@ -331,12 +357,11 @@ test.describe('inspector on the basic fixture', () => {
     // Two column gaps and one row gap.
     expect(bands).toHaveLength(3);
 
-    await page.screenshot({ path: `${SHOTS}/di-f-grid.png` });
+    await page.screenshot({ path: artifactPath('di-f-grid.png') });
 
     // Unpinning clears the layer.
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(200);
-    expect(await shadowTexts(page, '#layout-layer .track-label')).toEqual([]);
+    await expect.poll(() => shadowTexts(page, '#layout-layer .track-label')).toEqual([]);
     await page.close();
   });
 
@@ -353,7 +378,10 @@ test.describe('inspector on the basic fixture', () => {
       locator: '#flex-row',
     });
     expect(selected.ok).toBe(true);
-    await page.waitForTimeout(200);
+    await waitForOverlayIdle(page);
+    await expect
+      .poll(async () => (await shadowTexts(page, '#layout-layer .track-label')).length)
+      .toBeGreaterThan(0);
 
     // #flex-row sets `gap: 12px 20px` and `justify-content: space-between`, so
     // each band reports the distance it actually paints plus that 20px gap.
@@ -363,7 +391,7 @@ test.describe('inspector on the basic fixture', () => {
     expect(labels.some((label) => label.includes('20px'))).toBe(true);
     expect(await shadowTexts(page, '#layout-layer .axis-line')).toHaveLength(1);
 
-    await page.screenshot({ path: `${SHOTS}/di-f-flex.png` });
+    await page.screenshot({ path: artifactPath('di-f-flex.png') });
     await page.close();
   });
 
@@ -375,11 +403,16 @@ test.describe('inspector on the basic fixture', () => {
 
     await page.locator('#hero-heading').hover();
     await page.locator('#hero-heading').click();
-    await page.waitForTimeout(200);
+    await expect.poll(() => shadowText(page)).toContain('hero-heading');
 
     await page.keyboard.down('Alt');
     await page.locator('#translucent-card').hover();
-    await page.waitForTimeout(300);
+    // Alt plus a hover starts the measurement on the next frame, and the panel
+    // repaints with it. Both are waited for, not timed.
+    await expect
+      .poll(async () => (await shadowTexts(page, '#measure-layer .measure-label')).length)
+      .toBeGreaterThan(0);
+    await expect.poll(() => shadowText(page)).toMatch(/Gap [xy]/);
 
     const labels = await shadowTexts(page, '#measure-layer .measure-label');
     expect(labels.length).toBeGreaterThan(0);
@@ -390,12 +423,11 @@ test.describe('inspector on the basic fixture', () => {
     expect(panel).toContain('Measure');
     expect(panel).toMatch(/Gap [xy]/);
 
-    await page.screenshot({ path: `${SHOTS}/di-f-measure.png` });
+    await page.screenshot({ path: artifactPath('di-f-measure.png') });
 
     await page.keyboard.up('Alt');
     await page.locator('#hero-sub').hover();
-    await page.waitForTimeout(300);
-    expect(await shadowTexts(page, '#measure-layer .measure-label')).toEqual([]);
+    await expect.poll(() => shadowTexts(page, '#measure-layer .measure-label')).toEqual([]);
     await page.close();
   });
 
@@ -404,7 +436,8 @@ test.describe('inspector on the basic fixture', () => {
     await page.goto(`${baseUrl}/inspector-basic.html`);
     const tabId = await tabIdFor(session.worker, page);
     await toggleInspector(control, tabId);
-    await page.waitForTimeout(200);
+    await expect(page.locator(HOST)).toHaveCount(1);
+    await waitForOverlayIdle(page);
 
     // EyeDropper cannot be driven headlessly, so this only checks that the
     // control follows the browser's own feature detection.
@@ -426,15 +459,18 @@ test.describe('inspector on the basic fixture', () => {
     await session.worker.evaluate(async (id) => {
       await chrome.tabs.update(id, { active: true });
     }, tabId);
-    await panel.waitForTimeout(300);
+    // The panel offers its scan button once it has resolved that tab, so the
+    // button being there is the condition, not a guess at how long it takes.
+    const scanButton = panel.getByRole('button', { name: /scan this page/i });
+    await expect(scanButton).toBeEnabled();
 
-    await panel.getByRole('button', { name: /scan this page/i }).click();
+    await scanButton.click();
     await expect(panel.getByRole('heading', { name: 'Palette' })).toBeVisible();
 
     const filter = panel.getByRole('searchbox', { name: 'Filter the summary' });
     await filter.fill('px');
     await expect(panel.getByText(/\d+ of \d+ shown/)).toBeVisible();
-    await panel.screenshot({ path: `${SHOTS}/di-f-filter.png` });
+    await panel.screenshot({ path: artifactPath('di-f-filter.png') });
 
     // Nothing matches this, so every filtered section says so.
     await filter.fill('zzzz');
@@ -461,7 +497,7 @@ test.describe('inspector on the basic fixture', () => {
       locator: '#wrapped-heading',
     });
     expect(selected.ok).toBe(true);
-    await page.waitForTimeout(200);
+    await expect.poll(() => pinnedElement(tabId)).toMatchObject({ tag: 'h2' });
 
     const state = await sendBackground<{
       ok: boolean;
@@ -492,13 +528,8 @@ test.describe('inspector on the basic fixture', () => {
 
     // The fixture's svg paints through <use>, so the click lands inside it.
     await page.locator('#logo-svg').click({ position: { x: 24, y: 36 } });
-    await page.waitForTimeout(200);
 
-    const state = await sendBackground<{
-      ok: boolean;
-      state?: { pinned: { element: { tag: string; id: string | null } } | null };
-    }>(control, { type: 'inspector.getState', tabId });
-    expect(state.state?.pinned?.element).toMatchObject({ tag: 'svg', id: 'logo-svg' });
+    await expect.poll(() => pinnedElement(tabId)).toMatchObject({ tag: 'svg', id: 'logo-svg' });
     await page.close();
   });
 
@@ -587,8 +618,17 @@ test.describe('inspector on the basic fixture', () => {
         locked: false,
       },
     });
-    await page.waitForTimeout(300);
-    await page.screenshot({ path: `${SHOTS}/di-q-mockup.png` });
+    // The comp is an SVG data URL, so the layer paints once the image decodes.
+    await page
+      .locator('design-inspector-mockup')
+      .evaluate(async (host) => {
+        const image = (host as HTMLElement).shadowRoot?.getElementById(
+          'mockup',
+        ) as HTMLImageElement | null;
+        if (image && !image.complete) await image.decode().catch(() => undefined);
+      });
+    await waitForOverlayIdle(page);
+    await page.screenshot({ path: artifactPath('di-q-mockup.png') });
 
     // Clearing it takes the layer with it.
     const cleared = await sendBackground<{ ok: boolean; state?: { mockup: unknown } }>(control, {
@@ -611,7 +651,9 @@ test.describe('inspector on the basic fixture', () => {
     await page.keyboard.down('Shift');
     // Inside the padded card, off its inner box, so all four edges are real.
     await page.locator('#padded-card').hover({ position: { x: 20, y: 20 } });
-    await page.waitForTimeout(300);
+    await expect
+      .poll(async () => (await shadowTexts(page, '#edge-layer .edge-guide-label')).length)
+      .toBe(4);
 
     const labels = await shadowTexts(page, '#edge-layer .edge-guide-label');
     expect(labels).toHaveLength(4);
@@ -623,12 +665,11 @@ test.describe('inspector on the basic fixture', () => {
     const text = await shadowText(page);
     expect(text).toContain('Nearest element edges, geometric');
 
-    await page.screenshot({ path: `${SHOTS}/di-q-edges.png` });
+    await page.screenshot({ path: artifactPath('di-q-edges.png') });
 
     await page.keyboard.up('Shift');
     await page.mouse.move(10, 10);
-    await page.waitForTimeout(300);
-    expect(await shadowTexts(page, '#edge-layer .edge-guide-label')).toEqual([]);
+    await expect.poll(() => shadowTexts(page, '#edge-layer .edge-guide-label')).toEqual([]);
     await page.close();
   });
 
@@ -637,14 +678,17 @@ test.describe('inspector on the basic fixture', () => {
     await page.goto(`${baseUrl}/inspector-basic.html`);
     const tabId = await tabIdFor(session.worker, page);
     await toggleInspector(control, tabId);
-    await page.waitForTimeout(200);
+    await expect(page.locator(HOST)).toHaveCount(1);
+    await waitForOverlayIdle(page);
 
     // The badge's Rulers toggle is the entry point.
     await page.evaluate((host) => {
       const root = document.querySelector(host)?.shadowRoot;
       (root?.getElementById('badge-rulers') as HTMLButtonElement | null)?.click();
     }, HOST);
-    await page.waitForTimeout(200);
+    await expect
+      .poll(async () => (await shadowTexts(page, '#ruler-top .tick')).length)
+      .toBeGreaterThan(5);
 
     const ticks = await shadowTexts(page, '#ruler-top .tick');
     expect(ticks.length).toBeGreaterThan(5);
@@ -655,7 +699,14 @@ test.describe('inspector on the basic fixture', () => {
 
     // A click on the top ruler drops a vertical guide at that position.
     await page.mouse.click(300, 9);
-    await page.waitForTimeout(200);
+    await expect
+      .poll(() =>
+        page.evaluate(
+          (host) => document.querySelector(host)?.shadowRoot?.querySelectorAll('.page-guide').length ?? 0,
+          HOST,
+        ),
+      )
+      .toBe(1);
     const guides = await page.evaluate((host) => {
       const root = document.querySelector(host)?.shadowRoot;
       return Array.from(root?.querySelectorAll('.page-guide') ?? []).map((node) => ({
@@ -666,7 +717,7 @@ test.describe('inspector on the basic fixture', () => {
     expect(guides).toHaveLength(1);
     expect(guides[0]).toMatchObject({ axis: 'x', left: '300px' });
 
-    await page.screenshot({ path: `${SHOTS}/di-q-rulers.png` });
+    await page.screenshot({ path: artifactPath('di-q-rulers.png') });
     await page.close();
   });
 
@@ -675,13 +726,16 @@ test.describe('inspector on the basic fixture', () => {
     await page.goto(`${baseUrl}/inspector-basic.html`);
     const tabId = await tabIdFor(session.worker, page);
     await toggleInspector(control, tabId);
-    await page.waitForTimeout(200);
+    await expect(page.locator(HOST)).toHaveCount(1);
+    await waitForOverlayIdle(page);
 
     await page.evaluate((host) => {
       const root = document.querySelector(host)?.shadowRoot;
       (root?.getElementById('badge-rulers') as HTMLButtonElement | null)?.click();
     }, HOST);
-    await page.waitForTimeout(200);
+    await expect
+      .poll(async () => (await shadowTexts(page, '#ruler-top .tick')).length)
+      .toBeGreaterThan(5);
 
     const guideCount = async (): Promise<number> =>
       page.evaluate((host) => {
@@ -692,8 +746,7 @@ test.describe('inspector on the basic fixture', () => {
     // A real double click on the guide: the layer captures the pointer, so the
     // browser never delivers a dblclick and the two presses have to carry it.
     await page.mouse.click(300, 9);
-    await page.waitForTimeout(150);
-    expect(await guideCount()).toBe(1);
+    await expect.poll(guideCount).toBe(1);
 
     const label = await page.evaluate((host) => {
       const root = document.querySelector(host)?.shadowRoot;
@@ -703,25 +756,21 @@ test.describe('inspector on the basic fixture', () => {
     expect(label).toContain('double-click or press Delete to remove');
 
     await page.mouse.dblclick(300, 400);
-    await page.waitForTimeout(200);
-    expect(await guideCount()).toBe(0);
+    await expect.poll(guideCount).toBe(0);
 
     // A second guide, removed from the keyboard.
     await page.mouse.click(420, 9);
-    await page.waitForTimeout(150);
-    expect(await guideCount()).toBe(1);
+    await expect.poll(guideCount).toBe(1);
     await page.evaluate((host) => {
       const root = document.querySelector(host)?.shadowRoot;
       (root?.querySelector('.page-guide') as HTMLElement | null)?.focus();
     }, HOST);
     await page.keyboard.press('Delete');
-    await page.waitForTimeout(200);
-    expect(await guideCount()).toBe(0);
+    await expect.poll(guideCount).toBe(0);
 
     // And a third, removed from its own control.
     await page.mouse.click(520, 9);
-    await page.waitForTimeout(150);
-    expect(await guideCount()).toBe(1);
+    await expect.poll(guideCount).toBe(1);
     const control_ = await page.evaluate((host) => {
       const root = document.querySelector(host)?.shadowRoot;
       const node = root?.querySelector('[data-role="guide-remove"]') as HTMLElement | null;
@@ -731,10 +780,9 @@ test.describe('inspector on the basic fixture', () => {
     }, HOST);
     expect(control_).not.toBeNull();
     await page.mouse.click(control_?.x ?? 0, control_?.y ?? 0);
-    await page.waitForTimeout(200);
-    expect(await guideCount()).toBe(0);
+    await expect.poll(guideCount).toBe(0);
 
-    await page.screenshot({ path: `${SHOTS}/di-y-guides.png` });
+    await page.screenshot({ path: artifactPath('di-y-guides.png') });
     await page.close();
   });
 
@@ -744,7 +792,7 @@ test.describe('inspector on the basic fixture', () => {
     await page.goto(`${baseUrl}/inspector-basic.html`);
     const tabId = await tabIdFor(session.worker, page);
     await toggleInspector(control, tabId);
-    await page.waitForTimeout(250);
+    await expect(page.locator(HOST)).toHaveCount(1);
 
     const read = async () =>
       page.evaluate((host) => {
@@ -755,6 +803,7 @@ test.describe('inspector on the basic fixture', () => {
         return { left: rect.left, right: rect.right, collapsed: badge.dataset.collapsed };
       }, HOST);
 
+    await expect.poll(async () => (await read())?.collapsed).toBe('true');
     const collapsed = await read();
     // A phone width viewport opens collapsed, and inside the viewport.
     expect(collapsed?.collapsed).toBe('true');
@@ -764,7 +813,7 @@ test.describe('inspector on the basic fixture', () => {
       const root = document.querySelector(host)?.shadowRoot;
       (root?.getElementById('badge-collapse') as HTMLButtonElement | null)?.click();
     }, HOST);
-    await page.waitForTimeout(200);
+    await expect.poll(async () => (await read())?.collapsed).toBe('false');
 
     const expanded = await read();
     expect(expanded?.collapsed).toBe('false');
@@ -772,7 +821,7 @@ test.describe('inspector on the basic fixture', () => {
     expect(expanded?.left ?? -1).toBeGreaterThanOrEqual(0);
     expect(expanded?.right ?? 0).toBeLessThanOrEqual(390);
 
-    await page.screenshot({ path: `${SHOTS}/di-y-badge-390.png` });
+    await page.screenshot({ path: artifactPath('di-y-badge-390.png') });
     await page.close();
   });
 
@@ -804,7 +853,8 @@ test.describe('inspector on the basic fixture', () => {
         locked: false,
       },
     });
-    await page.waitForTimeout(300);
+    await expect(page.locator('design-inspector-mockup')).toHaveCount(1);
+    await waitForOverlayIdle(page);
 
     // The image is never a pointer target, whatever its lock state is.
     const pointerEvents = await page.evaluate(() => {
@@ -816,15 +866,9 @@ test.describe('inspector on the basic fixture', () => {
     expect(pointerEvents).toBe('none');
 
     await page.locator('#hero-heading').click();
-    await page.waitForTimeout(250);
+    await expect.poll(() => pinnedElement(tabId)).toMatchObject({ id: 'hero-heading' });
 
-    const state = await sendBackground<{
-      ok: boolean;
-      state?: { pinned: { element: { id: string | null } } | null };
-    }>(control, { type: 'inspector.getState', tabId });
-    expect(state.state?.pinned?.element).toMatchObject({ id: 'hero-heading' });
-
-    await page.screenshot({ path: `${SHOTS}/di-y-mockup-click.png` });
+    await page.screenshot({ path: artifactPath('di-y-mockup-click.png') });
     await sendBackground(control, { type: 'mockup.set', tabId, mockup: null });
     await page.close();
   });
@@ -836,13 +880,9 @@ test.describe('inspector on the basic fixture', () => {
     await toggleInspector(control, tabId);
 
     await page.locator('#wrapped-heading span').click();
-    await page.waitForTimeout(250);
-
-    const state = await sendBackground<{
-      ok: boolean;
-      state?: { pinned: { element: { tag: string; id: string | null } } | null };
-    }>(control, { type: 'inspector.getState', tabId });
-    expect(state.state?.pinned?.element).toMatchObject({ tag: 'h2', id: 'wrapped-heading' });
+    await expect
+      .poll(() => pinnedElement(tabId))
+      .toMatchObject({ tag: 'h2', id: 'wrapped-heading' });
 
     // The wrapper is still one click away, as the trailing breadcrumb chip.
     const crumbs = await shadowTexts(page, '[data-role="child-crumb"]');
@@ -855,15 +895,11 @@ test.describe('inspector on the basic fixture', () => {
       (root?.getElementById('badge-semantic') as HTMLButtonElement | null)?.click();
     }, HOST);
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(150);
+    await expect.poll(() => pinnedElement(tabId)).toBeNull();
     await page.locator('#wrapped-heading span').click();
-    await page.waitForTimeout(250);
-
-    const plain = await sendBackground<{
-      ok: boolean;
-      state?: { pinned: { element: { tag: string; id: string | null } } | null };
-    }>(control, { type: 'inspector.getState', tabId });
-    expect(plain.state?.pinned?.element).toMatchObject({ tag: 'span', id: 'wrapped-heading-text' });
+    await expect
+      .poll(() => pinnedElement(tabId))
+      .toMatchObject({ tag: 'span', id: 'wrapped-heading-text' });
     await page.close();
   });
 
@@ -891,14 +927,9 @@ test.describe('inspector on the basic fixture', () => {
       scroll: true,
     });
     expect(selected.ok).toBe(true);
-    await page.waitForTimeout(300);
-
-    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
-    const state = await sendBackground<{
-      ok: boolean;
-      state?: { pinned: { element: { id: string | null } } | null };
-    }>(control, { type: 'inspector.getState', tabId });
-    expect(state.state?.pinned?.element.id).toBe('far-below');
+    // The scroll is smooth, so the page keeps moving after the reply lands.
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+    await expect.poll(() => pinnedElement(tabId)).toMatchObject({ id: 'far-below' });
     await page.close();
   });
 
@@ -912,7 +943,7 @@ test.describe('inspector on the basic fixture', () => {
     await session.worker.evaluate(async (id) => {
       await chrome.tabs.update(id, { active: true });
     }, tabId);
-    await panel.waitForTimeout(300);
+    await expect(panel.getByRole('tab', { name: 'Tools' })).toBeEnabled();
 
     await panel.getByRole('tab', { name: 'Tools' }).click();
     await expect(panel.getByRole('tab', { name: 'Tools' })).toHaveAttribute(
@@ -928,8 +959,9 @@ test.describe('inspector on the basic fixture', () => {
     await expect(panel.getByText('Drop a PNG, JPG, WebP or SVG here')).toBeVisible();
 
     // The colour transition would otherwise be caught mid-flight by the shot.
+    // 150ms is the transition-colors duration the shared components use.
     await panel.waitForTimeout(300);
-    await panel.screenshot({ path: `${SHOTS}/di-q-tools.png` });
+    await panel.screenshot({ path: artifactPath('di-q-tools.png') });
     await panel.close();
     await page.close();
   });
@@ -941,7 +973,7 @@ test.describe('inspector on the basic fixture', () => {
     await toggleInspector(control, tabId);
     await page.locator('#hero-heading').hover();
     await page.locator('#hero-heading').click();
-    await page.waitForTimeout(200);
+    await expect.poll(() => pinnedElement(tabId)).toMatchObject({ id: 'hero-heading' });
     const state = await sendBackground<{
       ok: boolean;
       state?: { pinned: { source: { rootFontSize: number }; typography: { sizePx: number; sizeRem: number } } };
@@ -960,7 +992,7 @@ test.describe('inspector on the basic fixture', () => {
     await toggleInspector(control, tabId);
     await page.locator('#hero-heading').hover();
     await page.locator('#hero-heading').click();
-    await page.waitForTimeout(200);
+    await expect.poll(() => pinnedElement(tabId)).toMatchObject({ id: 'hero-heading' });
 
     const state = await sendBackground<{
       ok: boolean;
@@ -983,7 +1015,7 @@ test.describe('inspector on the basic fixture', () => {
     expect(text).toContain('rem is the stable reading');
     // rem first, px after it, said to be a reading at this width.
     expect(text).toMatch(/Size\s*3\.75rem · [\d.]+px at this width/);
-    await page.screenshot({ path: `${SHOTS}/di-v-fluid-typography.png` });
+    await page.screenshot({ path: artifactPath('di-v-fluid-typography.png') });
     await page.close();
   });
 });
@@ -1032,8 +1064,7 @@ test.describe('side panel presence and the page badge (W)', () => {
     await page.goto(`${baseUrl}/inspector-basic.html`);
     const tabId = await tabIdFor(session.worker, page);
     await toggleInspector(control, tabId);
-    await page.waitForTimeout(200);
-    expect((await badgeState(page))?.collapsed).toBe('false');
+    await expect.poll(async () => (await badgeState(page))?.collapsed).toBe('false');
 
     const panel = await openPanel(tabId);
     await expect(panel.getByRole('group', { name: 'Page tools' })).toBeVisible();
@@ -1044,7 +1075,7 @@ test.describe('side panel presence and the page badge (W)', () => {
     expect((await badgeState(page))?.title).toBe(
       'Controls are in the side panel. Click to expand.',
     );
-    await page.screenshot({ path: `${SHOTS}/di-w-badge-collapsed.png` });
+    await page.screenshot({ path: artifactPath('di-w-badge-collapsed.png') });
 
     // A tool pressed in the panel acts on the page, exactly as the badge did.
     const rulers = panel.getByRole('button', { name: 'Rulers' });
@@ -1068,8 +1099,10 @@ test.describe('side panel presence and the page badge (W)', () => {
       }, HOST),
     ).toBe('true');
 
+    // 150ms of transition-colors on the tool row, doubled so the shot is taken
+    // after it has settled rather than during it.
     await panel.waitForTimeout(300);
-    await panel.screenshot({ path: `${SHOTS}/di-w-panel-tools.png` });
+    await panel.screenshot({ path: artifactPath('di-w-panel-tools.png') });
 
     // The panel closing gives the badge back.
     await sendBackground(control, { type: 'sidepanel.presence', tabId, open: false });

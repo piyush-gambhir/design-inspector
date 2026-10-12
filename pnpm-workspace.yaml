@@ -2,9 +2,10 @@
 allowBuilds:
   esbuild: true
   spawn-sync: true
-minimumReleaseAgeExclude:
-  - '@vitest/mocker@5.0.4'
-  - '@vitest/spy@5.0.4'
-  - vitest@5.0.4
 pmOnFail: warn
 verifyDepsBeforeRun: false
+# Patched transitive versions for open advisories, each scoped to one major.
+overrides:
+  'esbuild@<0.28.1': ^0.28.1
+  'shell-quote@<1.11.0': ^1.11.0
+  'source-map-js@<1.2.2': ^1.2.2

@@ -2,5 +2,9 @@
 allowBuilds:
   esbuild: true
   spawn-sync: true
+minimumReleaseAgeExclude:
+  - '@vitest/mocker@5.0.4'
+  - '@vitest/spy@5.0.4'
+  - vitest@5.0.4
 pmOnFail: warn
 verifyDepsBeforeRun: false

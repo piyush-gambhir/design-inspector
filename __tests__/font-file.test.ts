@@ -10,7 +10,7 @@
 // parser touches (Blob, Response, CompressionStream, DecompressionStream) is a
 // Node 22 global.
 import { describe, expect, it } from 'vitest';
-import brotliCompress from 'brotli/compress';
+import { compress as brotliCompress } from 'brotli/compress';
 
 import {
   FontFileError,
@@ -234,7 +234,7 @@ function base128(value: number): number[] {
 }
 
 /** A WOFF2 wrapper: one Brotli stream holding every table in directory order. */
-function buildWoff2(tables: Woff2Table[]): Uint8Array {
+async function buildWoff2(tables: Woff2Table[]): Promise<Uint8Array> {
   const directory: number[] = [];
   for (const table of tables) {
     const index = WOFF2_TAG_INDEX[table.tag];
@@ -256,7 +256,7 @@ function buildWoff2(tables: Woff2Table[]): Uint8Array {
     decoded.set(table.data, cursor);
     cursor += table.data.byteLength;
   }
-  const compressed = brotliCompress(decoded, { quality: 5 });
+  const compressed = await brotliCompress(decoded, { quality: 5 });
   if (!compressed) throw new Error('The test could not compress its own fixture.');
 
   const out = new Uint8Array(48 + directory.length + compressed.byteLength);
@@ -419,7 +419,7 @@ describe('parseFontIdentity: woff', () => {
 
 describe('parseFontIdentity: woff2', () => {
   it('decodes the brotli stream and locates tables by directory order', async () => {
-    const bytes = buildWoff2([
+    const bytes = await buildWoff2([
       { tag: 'name', data: nameTable },
       { tag: 'fvar', data: fvarTable },
     ]);
@@ -437,7 +437,7 @@ describe('parseFontIdentity: woff2', () => {
     // glyf sits between the two tables that matter, so getting its length
     // wrong would move `name` and the parse would fail outright.
     const glyf = new Uint8Array(64).fill(7);
-    const bytes = buildWoff2([
+    const bytes = await buildWoff2([
       // Transformed, so the directory carries both lengths and only the
       // transformed one counts towards the position of `name`.
       { tag: 'glyf', data: glyf, transformed: true, origLength: 4096 },

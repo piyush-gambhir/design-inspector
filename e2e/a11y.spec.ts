@@ -591,10 +591,19 @@ test.describe('side panel accessibility', () => {
 
 test.describe('popup accessibility', () => {
   test('every control is named and the settings switches are labelled', async () => {
+    // The popup reads the active tab of its window. Real popups sit over the
+    // page being inspected, so keep a fixture page in front and load the popup
+    // as a background tab: newer Chrome otherwise reports the popup page itself
+    // as the active tab, which disables the Inspect button.
+    const fixture = await session.context.newPage();
+    await fixture.goto(`${baseUrl}/inspector-basic.html`);
     const popup = await session.context.newPage();
     await popup.setViewportSize({ width: 420, height: 760 });
     await popup.goto(`chrome-extension://${session.extensionId}/popup.html`);
+    await fixture.bringToFront();
+    await popup.reload();
     await expect(popup.getByRole('heading', { name: 'Design Inspector' })).toBeVisible();
+    await expect(popup.getByRole('button', { name: /^Inspect/ })).toBeEnabled();
 
     expect(await runFindings(popup), 'popup audit').toEqual([]);
 

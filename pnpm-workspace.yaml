@@ -4,3 +4,8 @@ allowBuilds:
   spawn-sync: true
 pmOnFail: warn
 verifyDepsBeforeRun: false
+# Patched transitive versions for open advisories, each scoped to one major.
+overrides:
+  'esbuild@<0.28.1': ^0.28.1
+  'shell-quote@<1.11.0': ^1.11.0
+  'source-map-js@<1.2.2': ^1.2.2

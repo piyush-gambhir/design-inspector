@@ -76,7 +76,7 @@ reasoning: [docs/COMPETITIVE_FEATURES.md](docs/COMPETITIVE_FEATURES.md). Data co
 
 ## Develop
 
-Requires Node 22.13+ and the pnpm version in package.json.
+Requires Node 24 and the pnpm version in package.json.
 
 ```bash
 pnpm install

@@ -10,9 +10,9 @@
     "type": "git",
     "url": "https://github.com/piyush-gambhir/design-inspector"
   },
-  "packageManager": "pnpm@11.25.0",
+  "packageManager": "pnpm@12.11.2",
   "engines": {
-    "node": ">=22.13.0"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "wxt",

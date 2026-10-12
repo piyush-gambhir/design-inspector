@@ -244,12 +244,8 @@ async function brotliDecompress(input: Uint8Array, outputSize: number): Promise<
   let decoded: Uint8Array | null | undefined;
   try {
     // Dynamic so the decoder is only pulled into the bundle that parses files.
-    const module = await import('brotli/decompress');
-    const decompress = (module as unknown as { default?: typeof module.default }).default ?? module;
-    decoded = (decompress as unknown as (a: Uint8Array, b?: number) => Uint8Array)(
-      input,
-      outputSize,
-    );
+    const { decompress } = await import('brotli/decompress');
+    decoded = decompress(input, outputSize);
   } catch (error) {
     throw new FontFileError(
       `This WOFF2 file could not be decompressed (${error instanceof Error ? error.message : String(error)}).`,

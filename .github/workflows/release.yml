@@ -12,6 +12,7 @@ jobs:
   release:
     name: Build & Release Extension Packages
     runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
 

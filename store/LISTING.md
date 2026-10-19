@@ -87,8 +87,13 @@ Paste these into the dashboard's Privacy practices tab, one per permission.
 **Host permissions:** None. The generated manifest has no `host_permissions` key, which
 `e2e/smoke.spec.ts` asserts on every run.
 
-**Data usage:** Design Inspector does not collect or transmit user data. Declare no data
-collection in every category. See [PRIVACY.md](../PRIVACY.md).
+**Data usage:** Design Inspector sends nothing to the developer, but Google requires
+disclosure even for data that stays on the device
+([User Data FAQ, Q3](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq)).
+Saved references keep page content (styles, text, cropped screenshots, mockup images) and
+the URL of the page they came from, in IndexedDB on the device. Tick **Website content**
+and **Web history**, leave every other category unticked, and certify all three limited-use
+statements. See [PRIVACY.md](../PRIVACY.md).
 
 ## Graphics
 
@@ -121,7 +126,7 @@ needs a caption to make sense, fix the UI instead.
 5. [ ] Upload `.output/design-inspector-<version>-chrome.zip`.
 6. [ ] Paste Name, Summary, Description, Category and Language from this file.
 7. [ ] Upload the screenshots from `store/screenshots/`.
-8. [ ] Privacy tab: paste the permission justifications, declare no data collection, answer "no remote code", and paste the privacy policy URL.
+8. [ ] Privacy tab: paste the permission justifications, tick Website content and Web history under data usage, answer "no remote code", and paste the privacy policy URL.
 9. [ ] Confirm the privacy page is deployed and its wording matches the shipped behaviour.
 10. [ ] Set visibility and submit. A submitted package is not an approved one: check the dashboard for the review result.
 

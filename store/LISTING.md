@@ -124,3 +124,9 @@ needs a caption to make sense, fix the UI instead.
 8. [ ] Privacy tab: paste the permission justifications, declare no data collection, answer "no remote code", and paste the privacy policy URL.
 9. [ ] Confirm the privacy page is deployed and its wording matches the shipped behaviour.
 10. [ ] Set visibility and submit. A submitted package is not an approved one: check the dashboard for the review result.
+
+Later releases: after `pnpm release` and the commit, push a `v<version>` tag. The publish
+workflow (`.github/workflows/publish.yml`) reruns `pnpm check`, zips, and submits through the
+Chrome Web Store API v2 with keyless Google auth. It reads the repository variables
+`CHROME_EXTENSION_ID`, `CHROME_PUBLISHER_ID`, `GCP_WORKLOAD_IDENTITY_PROVIDER` and
+`GCP_SERVICE_ACCOUNT`; run it by hand with dry-run to check store access.

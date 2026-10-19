@@ -1,0 +1,72 @@
+name: Publish to Chrome Web Store
+
+# Push a version tag (for example v0.2.0) after `pnpm release` and its commit,
+# or run by hand with dry-run to check store access without uploading.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Check store access without uploading or submitting
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write # GitHub OIDC token, exchanged for the Google service account below
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Verify tag matches package.json version
+        if: github.ref_type == 'tag'
+        run: |
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          if [ "$PKG_VERSION" != "${GITHUB_REF_NAME#v}" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $PKG_VERSION" >&2
+            exit 1
+          fi
+
+      - run: pnpm check
+      - run: pnpm zip
+
+      # Keyless auth: Workload Identity Federation trades this run's OIDC token for a
+      # short-lived token of the service account linked in the Web Store dashboard.
+      - name: Authenticate to Google Cloud
+        id: gcp
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/chromewebstore
+
+      # wxt 0.20 bundles publish-browser-extension 4, which only speaks the Web Store
+      # API v1.1 that shut down on 2026-10-15, so call the v2-capable CLI directly.
+      - name: Submit to Chrome Web Store
+        env:
+          CHROME_API_VERSION: v2
+          CHROME_PUBLISHER_ID: ${{ vars.CHROME_PUBLISHER_ID }}
+          CHROME_EXTENSION_ID: ${{ vars.CHROME_EXTENSION_ID }}
+          CHROME_SERVICE_ACCOUNT_ACCESS_TOKEN: ${{ steps.gcp.outputs.access_token }}
+        run: |
+          ZIP="$(ls .output/*-chrome.zip)"
+          pnpm --package=publish-browser-extension@6.2.0 dlx publish-extension ${{ inputs.dry-run && '--dry-run' || '' }} --chrome-zip "$ZIP"
+
+      - name: Upload ZIP as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrome-extension-zip
+          path: .output/*-chrome.zip
+          retention-days: 30

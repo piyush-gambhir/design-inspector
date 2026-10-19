@@ -155,4 +155,5 @@ for (const zip of zips) {
 }
 console.log('\nNext, by hand:');
 console.log('  1. Review the diff, then commit package.json and CHANGELOG.md.');
-console.log('  2. Upload the zip and follow store/LISTING.md.');
+console.log(`  2. Push a v${next} tag: the publish workflow submits it to the Chrome Web Store.`);
+console.log('     The first release was uploaded by hand; see store/LISTING.md.');

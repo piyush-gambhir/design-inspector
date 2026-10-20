@@ -1,5 +1,11 @@
 # QA evidence: failure states, accessibility, performance
 
+Submission recheck on 21 October 2026, version 0.1.0, Node 24 and WXT 0.21.4:
+`pnpm check` passed (1,144 unit tests, typecheck and production build).
+`pnpm test:e2e` passed 46 checks; the optional real-site profile was skipped.
+`pnpm zip` produced the production package with the five documented permissions
+and no host permissions. The five screenshots are 1280x800 and the promo tile is 440x280.
+
 Release evidence for `docs/PRD.md` sections 19.1, 19.2 and 19.3, for gate 10 of section 20.3,
 and for the download-filename question raised by the second live pass. Recorded for version
 0.1.0 on 18 September 2026.

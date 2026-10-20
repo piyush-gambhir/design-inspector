@@ -98,6 +98,7 @@ statements. See [PRIVACY.md](../PRIVACY.md).
 ## Graphics
 
 - Store icon: `public/icons/icon128.png` (the packaged manifest declares it).
+- Small promotional tile, 440x280: `store/promo-tile.png` (source: `store/promo-tile.svg`).
 - Screenshots, 1280x800, in `store/screenshots/`:
 
 | File | What it shows |

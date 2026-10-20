@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="440" height="280" viewBox="0 0 440 280"><rect width="440" height="280" fill="#3c83d8"/><g transform="translate(124 44) scale(1.5)">
+  <!-- Design Inspector: a lens over a layout box. Accent squircle, white marks. -->
+  <rect x="4" y="4" width="120" height="120" rx="30" fill="#3c83d8"/>
+  <rect x="28" y="28" width="52" height="52" rx="8" fill="none" stroke="#fff" stroke-width="9"/>
+  <rect x="28" y="28" width="22" height="22" rx="6" fill="#fff"/>
+  <circle cx="86" cy="86" r="18" fill="#3c83d8" stroke="#fff" stroke-width="9"/>
+  <path d="M99 99 L112 112" stroke="#fff" stroke-width="10" stroke-linecap="round"/>
+</g></svg>

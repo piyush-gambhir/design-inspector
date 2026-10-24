@@ -28,6 +28,7 @@ jobs:
           node-version: '24.22.1'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm test:security
       - run: pnpm check
 
   browser:
@@ -46,6 +47,7 @@ jobs:
           node-version: '24.22.1'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm test:security
 
       - name: Resolve the Playwright version for the browser cache key
         id: pw

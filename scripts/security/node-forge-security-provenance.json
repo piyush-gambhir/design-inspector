@@ -1,0 +1,22 @@
+{
+  "runtime_baseline_npm_rsa_sha256": "fd4740238145ec26470eb3f06a627c72039538ce1307dbdce40521f94dfd0a50",
+  "upstream_main_lib_equals_npm_release": true,
+  "canonical_pr": 1160,
+  "canonical_head": "9842c3d3cf6f560270b4f42ab3c0c28c68e6f78e",
+  "patched_rsa_sha256": "f1c736cb0dcd2615e9e8225ab894cd4cab55a384f6f07df221da1436096f3761",
+  "backport_package_version": "1.4.0",
+  "test_harness_only_fix": "Official upstream main tests/unit/jsbn.js removes inherited describe.only; same assertions retained",
+  "tests_source": "Exact PR1160 tests/unit/rsa.js, excluding unrelated x509 fixture optimization",
+  "upstream_url": "https://github.com/digitalbazaar/forge/pull/1160",
+  "upstream_status": "Unmerged contributor proposal, not a maintainer-approved release",
+  "patch_sha256": "bd82c2677881341a41a5011db423a5c1331f72818fd5d86bebb39f235817e577",
+  "advisory": "GHSA-86w9-cpqp-85rv",
+  "version": "1.4.0",
+  "license": "BSD-3-Clause (selected from upstream BSD-3-Clause OR GPL-2.0)",
+  "source_runtime_files_changed": [
+    "lib/rsa.js"
+  ],
+  "audit_policy": "Original version and advisory remain visible. No audit exclusions or version spoofing.",
+  "compatibility_note": "RSA signature verification now requires canonical DER DigestInfo. Legacy BER/noncanonical encodings are rejected intentionally; standard NULL/absent-NULL algorithm profiles, PSS and NONE APIs are tested.",
+  "scope": "Node lib/index.js consumer used by web-ext/adbkit. Prebuilt browser dist bundles are not patched or used by this integration."
+}

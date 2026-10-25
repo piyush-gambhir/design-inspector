@@ -70,24 +70,43 @@ const COLOR_FUNCTIONS = new Set(['rgb', 'rgba', 'hsl', 'hsla', 'oklch']);
 const GRADIENT_PREFIX = /^(?:repeating-)?(?:linear|radial|conic)-gradient\(/i;
 
 export function aggregateSummary(input: AggregateInput): PageSummary {
-  const { records } = input;
-  // The flat palette is the record; the clusters are a view over exactly these
-  // groups, so they are built from the same list rather than recomputed later.
-  const colors = buildColors(records);
+  const steps = aggregateSummarySteps(input);
+  let step = steps.next();
+  while (!step.done) step = steps.next();
+  return step.value;
+}
 
+/** Scan callers advance one aggregation phase per task to keep the page responsive. */
+export function* aggregateSummarySteps(input: AggregateInput): Generator<void, PageSummary> {
+  const { records } = input;
+  const colors = buildColors(records);
+  yield;
+  const typography = buildTypography(records);
+  yield;
+  const sizeScale = buildSizeScale(records);
+  yield;
+  const paletteClusters = clusterPalette(colors);
+  yield;
+  const spacing = buildSpacing(records);
+  yield;
+  const fonts = buildFonts(input.fonts, records);
+  yield;
+  const radii = buildRadii(records);
+  yield;
+  const shadows = buildShadows(records);
   return {
     id: crypto.randomUUID(),
     schemaVersion: SCHEMA_VERSION,
     source: input.source,
     scope: input.scope,
-    typography: buildTypography(records),
-    sizeScale: buildSizeScale(records),
+    typography,
+    sizeScale,
     colors,
-    paletteClusters: clusterPalette(colors),
-    spacing: buildSpacing(records),
-    fonts: buildFonts(input.fonts, records),
-    radii: buildRadii(records),
-    shadows: buildShadows(records),
+    paletteClusters,
+    spacing,
+    fonts,
+    radii,
+    shadows,
     stack: input.stack,
     limitations: buildLimitations(input.scope),
   };

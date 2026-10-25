@@ -150,6 +150,22 @@ describe('startScan', () => {
     expect(summary.scope.inaccessibleFrames).toBe(1);
   });
 
+  it('can cancel after collection while aggregation is scheduled', async () => {
+    vi.useFakeTimers();
+    try {
+      fill(1);
+      const run = startScan({ cap: 10 });
+      const rejected = expect(run.summary).rejects.toBeInstanceOf(ScanCancelled);
+      await vi.advanceTimersToNextTimerAsync();
+      await vi.advanceTimersToNextTimerAsync();
+      run.cancel();
+      await rejected;
+      await vi.runAllTimersAsync();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('rejects with ScanCancelled when cancelled', async () => {
     fill(600);
     const run = startScan({ cap: 5000 });

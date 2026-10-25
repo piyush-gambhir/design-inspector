@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   publish:
-    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.dry-run)
+    if: (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.dry-run)) && vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' && vars.CHROME_PUBLISHER_ID != '' && vars.CHROME_EXTENSION_ID != ''
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

@@ -290,7 +290,7 @@ const IDLE_TIMEOUT_MS = 250;
 const IDLE_FLOOR_MS = 1;
 /** Elements between two checks of the deadline. */
 const DEADLINE_EVERY = 25;
-/** What a macrotask fallback pretends it has, so it still yields every 200. */
+/** Elapsed-time budget for a fallback macrotask. */
 const FALLBACK_BUDGET_MS = 8;
 
 type IdleWindow = Window &
@@ -312,7 +312,10 @@ function nextChunk(callback: (timeRemainingMs: () => number) => void): ChunkHand
     return { id, kind: 'idle' };
   }
   return {
-    id: window.setTimeout(() => callback(() => FALLBACK_BUDGET_MS), 0),
+    id: window.setTimeout(() => {
+      const deadline = performance.now() + FALLBACK_BUDGET_MS;
+      callback(() => Math.max(0, deadline - performance.now()));
+    }, 0),
     kind: 'timer',
   };
 }

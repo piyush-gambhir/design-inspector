@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   release:
+    if: startsWith(github.ref, 'refs/tags/v')
     name: Build & Release Extension Packages
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 60
@@ -18,20 +19,21 @@ jobs:
 
       - uses: pnpm/action-setup@v6
         with:
-          version: 12.11.2
+          version: 12.15.0
 
       - uses: actions/setup-node@v7
         with:
-          node-version: '24.22.1'
+          node-version: '26.12.1'
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+      - run: pnpm test:security
       - run: pnpm run check
       - run: pnpm run zip
 
       - name: Create GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          tag="${{ github.ref_name }}"
-          gh release create "$tag" .output/*.zip --title "$tag" --generate-notes
+          gh release create "$RELEASE_TAG" .output/*.zip --title "$RELEASE_TAG" --generate-notes --verify-tag

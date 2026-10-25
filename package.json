@@ -2,7 +2,7 @@
   "name": "design-inspector",
   "description": "Hover over anything on a website and read its typography, colors, spacing, assets, and stack. Save references with context.",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "author": "Piyush Gambhir",
   "license": "MIT",
@@ -10,9 +10,9 @@
     "type": "git",
     "url": "https://github.com/piyush-gambhir/design-inspector"
   },
-  "packageManager": "pnpm@12.11.2",
+  "packageManager": "pnpm@12.15.0",
   "engines": {
-    "node": ">=24.22.1 <25"
+    "node": ">=26.12.1 <27"
   },
   "scripts": {
     "dev": "wxt",
@@ -20,8 +20,8 @@
     "zip": "wxt zip",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
-    "check": "vitest run && tsc --noEmit && wxt build",
+    "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
+    "check": "vitest run && node node_modules/typescript/bin/tsc --noEmit && wxt build",
     "test:e2e": "DI_E2E=1 wxt build && playwright test",
     "build:firefox": "wxt build -b firefox",
     "perf": "node scripts/perf-profile.mjs",
@@ -34,7 +34,7 @@
     "@playwright/test": "^1.64.1",
     "@tailwindcss/vite": "^4.3.3",
     "@types/chrome": "^0.3.6",
-    "@types/node": "^24.19.2",
+    "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@wxt-dev/module-react": "^1.2.2",
@@ -51,7 +51,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "idb": "^8.0.4",
-    "lucide-react": "^1.55.0",
+    "lucide-react": "^1.61.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "tailwind-merge": "^3.7.0"

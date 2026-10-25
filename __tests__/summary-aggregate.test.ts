@@ -3,6 +3,7 @@ import type { ColorGroup, ElementScanRecord, FontRecord, TypographyGroup } from 
 import { parseColor } from '@/lib/readings/color';
 import {
   aggregateSummary,
+  aggregateSummarySteps,
   clusterPalette,
   clusterRoleCounts,
   groupTypographyByScale,
@@ -13,6 +14,25 @@ import { scanRecord, scope, stackReport, textRecord } from './fixtures/summary';
 function run(records: ElementScanRecord[], fonts: FontRecord[] = []) {
   return aggregateSummary({ records, fonts, stack: stackReport, source, scope });
 }
+
+describe('phased aggregation', () => {
+  it('yields between phases and preserves the complete synchronous result', () => {
+    const input = {
+      records: [textRecord({ locator: 'h1', label: 'h1' }), scanRecord({ locator: 'section' })],
+      fonts: [], stack: stackReport, source, scope,
+    };
+    const steps = aggregateSummarySteps(input);
+    let step = steps.next();
+    let yields = 0;
+    while (!step.done) {
+      yields += 1;
+      step = steps.next();
+    }
+    const expected = aggregateSummary(input);
+    expect(yields).toBe(7);
+    expect({ ...step.value, id: expected.id }).toEqual(expected);
+  });
+});
 
 describe('aggregateSummary typography', () => {
   it('groups by the full typography key and sorts by size then count', () => {

@@ -76,10 +76,10 @@ reasoning: [docs/COMPETITIVE_FEATURES.md](docs/COMPETITIVE_FEATURES.md). Data co
 
 ## Develop
 
-Requires Node 24 and the pnpm version in package.json.
+Requires Node 26.12.1 and pnpm 12.15.0.
 
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
 pnpm dev          # development build with reload
 pnpm check        # unit tests, typecheck, production build
 pnpm test:e2e     # Playwright fixture, accessibility and performance tests

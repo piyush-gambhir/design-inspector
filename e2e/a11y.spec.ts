@@ -454,6 +454,10 @@ test.describe('side panel accessibility', () => {
       const panel = await openPanel(tabId);
       await panel.emulateMedia({ colorScheme: scheme });
       await scan(panel);
+      // Theme transitions can still be painting after the summary arrives.
+      await panel.evaluate(async () => {
+        await Promise.all(document.getAnimations().map((animation) => animation.finished));
+      });
 
       // The same audit in this scheme: a colour that reads in light can fail in
       // dark, and text contrast is the check most likely to (workstream V4).

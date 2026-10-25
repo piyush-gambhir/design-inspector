@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   buildLocator,
@@ -193,6 +193,30 @@ describe('buildLocator', () => {
   it('falls back to body when no ancestor has an id', () => {
     document.body.innerHTML = '<div><span>a</span><span class="x">b</span></div>';
     expect(buildLocator(pick('.x'))).toBe('body > div:nth-of-type(1) > span:nth-of-type(2)');
+  });
+
+  it('indexes a wide sibling group once per scan and preserves mixed-tag selectors', () => {
+    document.body.innerHTML = '<main id="wide">' +
+      Array.from({ length: 100 }, (_, i) => `<section><p>${i}</p></section><aside>${i}</aside>`).join('') +
+      '</main>';
+    const parent = pick('#wide');
+    const children = Array.from(parent.children);
+    const indices = new WeakMap<Element, number>();
+    const reads = vi.spyOn(parent, 'children', 'get');
+    for (const child of children) {
+      const locator = buildLocator(child, indices);
+      expect(document.querySelector(locator)).toBe(child);
+    }
+    expect(reads).toHaveBeenCalledTimes(1);
+    reads.mockRestore();
+  });
+
+  it('a new scan rebuilds sibling positions after a DOM change', () => {
+    document.body.innerHTML = '<main><p>first</p><p class="target">second</p></main>';
+    const target = pick('.target');
+    expect(buildLocator(target, new WeakMap())).toContain('p:nth-of-type(2)');
+    target.parentElement!.prepend(document.createElement('p'));
+    expect(buildLocator(target, new WeakMap())).toContain('p:nth-of-type(3)');
   });
 
   it('resolves back to the element it describes', () => {

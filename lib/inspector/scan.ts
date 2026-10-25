@@ -13,7 +13,7 @@ import type {
   ScanScope,
   SourceContext,
 } from '../contracts';
-import { aggregateSummary } from '../readings/summary-aggregate';
+import { aggregateSummarySteps } from '../readings/summary-aggregate';
 import { detectStack } from '../readings/stack-signatures';
 import { parseColor } from '../readings/color';
 import {
@@ -140,6 +140,7 @@ export function buildScanRecord(
   element: Element,
   style: CSSStyleDeclaration,
   identify: (family: string, weight: number) => { reading: string; confidence: FontConfidence },
+  locatorIndices?: WeakMap<Element, number>,
 ): ElementScanRecord {
   const ownText = hasOwnText(element);
   const svg = isSvgElement(element);
@@ -178,7 +179,7 @@ export function buildScanRecord(
   const isContainer = display.includes('flex') || display.includes('grid');
 
   return {
-    locator: buildLocator(element),
+    locator: buildLocator(element, locatorIndices),
     label: labelOf(element),
     hasOwnText: ownText,
     typography,
@@ -290,7 +291,7 @@ const IDLE_TIMEOUT_MS = 250;
 const IDLE_FLOOR_MS = 1;
 /** Elements between two checks of the deadline. */
 const DEADLINE_EVERY = 25;
-/** What a macrotask fallback pretends it has, so it still yields every 200. */
+/** Elapsed-time budget for a fallback macrotask. */
 const FALLBACK_BUDGET_MS = 8;
 
 type IdleWindow = Window &
@@ -312,7 +313,10 @@ function nextChunk(callback: (timeRemainingMs: () => number) => void): ChunkHand
     return { id, kind: 'idle' };
   }
   return {
-    id: window.setTimeout(() => callback(() => FALLBACK_BUDGET_MS), 0),
+    id: window.setTimeout(() => {
+      const deadline = performance.now() + FALLBACK_BUDGET_MS;
+      callback(() => Math.max(0, deadline - performance.now()));
+    }, 0),
     kind: 'timer',
   };
 }
@@ -346,6 +350,8 @@ export function startScan(options: ScanOptions): ScanRun {
     const { elements, shadowRoots } = collectCandidates(doc);
     const total = elements.length;
     const records: ElementScanRecord[] = [];
+    // Reuse sibling positions only within this scan's DOM snapshot.
+    const locatorIndices = new WeakMap<Element, number>();
     const skipped = new Map<SkipReason, number>();
     const fonts = readDocumentFonts(doc);
     const identificationCache = new Map<string, { reading: string; confidence: FontConfidence }>();
@@ -402,29 +408,39 @@ export function startScan(options: ScanOptions): ScanRun {
       const fontRecords = buildFontRecords(fonts, records, pageOrigin);
       const stack = detectStack(gatherEvidence(options.globals ?? [], doc));
 
-      try {
-        const summaryValue = aggregateSummary({
-          records,
-          fonts: fontRecords,
-          stack,
-          source,
-          scope,
-        });
-        // The summary is the whole point of the scan; the per-element records
-        // and the element list behind them are scaffolding. Dropping them here
-        // rather than waiting for the closure to become garbage is what keeps
-        // a 6,000 element page from leaving its DOM pinned in memory (PERF 2).
+      const aggregation = aggregateSummarySteps({
+        records,
+        fonts: fontRecords,
+        stack,
+        source,
+        scope,
+      });
+      const clear = (): void => {
         records.length = 0;
         elements.length = 0;
         identificationCache.clear();
         skipped.clear();
-        resolve(summaryValue);
-      } catch (error) {
-        records.length = 0;
-        elements.length = 0;
-        identificationCache.clear();
-        reject(error instanceof Error ? error : new Error(String(error)));
-      }
+      };
+      const aggregateStep = (): void => {
+        if (cancelled) {
+          clear();
+          reject(new ScanCancelled());
+          return;
+        }
+        try {
+          const step = aggregation.next();
+          if (!step.done) {
+            handle = nextChunk(aggregateStep);
+            return;
+          }
+          clear();
+          resolve(step.value);
+        } catch (error) {
+          clear();
+          reject(error instanceof Error ? error : new Error(String(error)));
+        }
+      };
+      handle = nextChunk(aggregateStep);
     };
 
     const step = (timeRemainingMs: () => number): void => {
@@ -450,7 +466,7 @@ export function startScan(options: ScanOptions): ScanRun {
           } else {
             eligible += 1;
             try {
-              records.push(buildScanRecord(element, getComputedStyle(element), identify));
+              records.push(buildScanRecord(element, getComputedStyle(element), identify, locatorIndices));
             } catch {
               skipped.set('hidden', (skipped.get('hidden') ?? 0) + 1);
             }
@@ -466,7 +482,7 @@ export function startScan(options: ScanOptions): ScanRun {
       options.onProgress?.(records.length, total);
 
       if (capped || index >= total) {
-        finish();
+        handle = nextChunk(finish);
         return;
       }
       handle = nextChunk(step);

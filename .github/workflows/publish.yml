@@ -18,14 +18,15 @@ permissions:
 
 jobs:
   publish:
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.dry-run)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
-          node-version: '24.22.1'
+          node-version: '26.12.1'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
@@ -38,6 +39,7 @@ jobs:
             exit 1
           fi
 
+      - run: pnpm test:security
       - run: pnpm check
       - run: pnpm zip
 
@@ -64,7 +66,7 @@ jobs:
           pnpm --package=publish-browser-extension@6.2.0 dlx publish-extension ${{ inputs.dry-run && '--dry-run' || '' }} --chrome-zip "$ZIP"
 
       - name: Upload ZIP as workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: chrome-extension-zip
           path: .output/*-chrome.zip

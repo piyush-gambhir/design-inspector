@@ -185,25 +185,31 @@ function cssEscape(value: string): string {
   return value.replace(/[^\w-]/g, (char) => `\\${char}`);
 }
 
-function nthOfType(element: Element): number {
+function nthOfType(element: Element, indices?: WeakMap<Element, number>): number {
+  const cached = indices?.get(element);
+  if (cached !== undefined) return cached;
   const parent = element.parentElement;
   if (!parent) return 1;
-  let index = 0;
-  for (const child of Array.from(parent.children)) {
-    if (child.tagName === element.tagName) {
-      index += 1;
-      if (child === element) return index;
+  const counts = new Map<string, number>();
+  let index = 1;
+  for (const child of parent.children) {
+    const count = (counts.get(child.tagName) ?? 0) + 1;
+    counts.set(child.tagName, count);
+    indices?.set(child, count);
+    if (child === element) {
+      index = count;
+      if (!indices) return index;
     }
   }
-  return index || 1;
+  return index;
 }
 
 /**
  * Best-effort CSS path. Prefers a unique `#id`, otherwise builds an
  * `:nth-of-type` chain back to the nearest ancestor with a usable id, or to
- * `body`.
+ * `body`. Optional sibling indices belong to one scan snapshot, never a global cache.
  */
-export function buildLocator(element: Element): string {
+export function buildLocator(element: Element, indices?: WeakMap<Element, number>): string {
   const doc = element.ownerDocument;
   const id = element.getAttribute('id');
   if (id) {
@@ -239,7 +245,7 @@ export function buildLocator(element: Element): string {
       }
     }
 
-    parts.unshift(`${tag}:nth-of-type(${nthOfType(current)})`);
+    parts.unshift(`${tag}:nth-of-type(${nthOfType(current, indices)})`);
 
     const parent: Element | null = current.parentElement;
     if (!parent) {

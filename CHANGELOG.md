@@ -4,6 +4,11 @@ Every released version, newest first. Versions are plain semver and match the ve
 `package.json`, which is where the manifest takes it from. `scripts/release.mjs` writes each
 new section from its `--notes` argument.
 
+## 0.1.1 (2026-10-25)
+
+- Use Node 26.12.1 tooling and current compatible dependencies.
+- Verify security backports before packaging and restrict store submission to version tags.
+
 ## 0.1.0 (2026-09-18)
 
 First release: the Phase 1 scope of `docs/PRD.md`.

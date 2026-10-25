@@ -105,6 +105,27 @@ describe('startScan', () => {
     expect(progress[progress.length - 1]).toBeGreaterThan(progress[0] as number);
   });
 
+  it('yields when the fallback macrotask exhausts its elapsed-time budget', async () => {
+    fill(75);
+    vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+    let elapsed = 0;
+    vi.spyOn(performance, 'now').mockImplementation(() => elapsed);
+    const readStyle = window.getComputedStyle.bind(window);
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((element, pseudo) => {
+      elapsed += 1;
+      return readStyle(element, pseudo);
+    });
+    const progress: number[] = [];
+
+    const summary = await startScan({
+      cap: 5000,
+      onProgress: (scanned) => progress.push(scanned),
+    }).summary;
+
+    expect(progress).toEqual([25, 50, 75]);
+    expect(summary.scope.scannedElements).toBe(75);
+  });
+
   it('descends into open shadow roots and counts them', async () => {
     document.body.innerHTML = '<div id="host"></div>';
     const host = document.getElementById('host') as HTMLElement;
@@ -127,6 +148,22 @@ describe('startScan', () => {
 
     const summary = await startScan({ cap: 100 }).summary;
     expect(summary.scope.inaccessibleFrames).toBe(1);
+  });
+
+  it('can cancel after collection while aggregation is scheduled', async () => {
+    vi.useFakeTimers();
+    try {
+      fill(1);
+      const run = startScan({ cap: 10 });
+      const rejected = expect(run.summary).rejects.toBeInstanceOf(ScanCancelled);
+      await vi.advanceTimersToNextTimerAsync();
+      await vi.advanceTimersToNextTimerAsync();
+      run.cancel();
+      await rejected;
+      await vi.runAllTimersAsync();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('rejects with ScanCancelled when cancelled', async () => {

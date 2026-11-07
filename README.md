@@ -74,7 +74,7 @@ Chrome treats a different folder as a different extension, without your saved re
 
 **Side panel**
 
-![The side panel's page summary beside the page it read: the palette clustered by role, then spacing values by frequency](docs/images/page-summary.png)
+![The side panel's page summary beside the page it read: the palette clustered by color similarity with role filters, then spacing values by frequency](docs/images/page-summary.png)
 
 - Summary: type scale with combinations grouped under each step, palette clustered by
   perceptual distance with role filters, spacing rhythm, radii, shadows, fonts, scan scope,

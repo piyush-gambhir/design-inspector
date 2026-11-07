@@ -4,9 +4,25 @@ Hover over anything on a website and read its design. A Chrome extension for stu
 how sites are built: typography, colors, spacing, layout, assets, and stack, plus a page
 summary, a local reference collection, and exports for your own notes.
 
+![A pinned heading with the inspector panel open: the typeface named from its font file (General Sans by Frode Helland for Indian Type Foundry), then weight, size, line height, tracking and color](docs/images/inspect-heading.png)
+
 Product requirements: [docs/PRD.md](docs/PRD.md). Competitor research and roadmap
 reasoning: [docs/COMPETITIVE_FEATURES.md](docs/COMPETITIVE_FEATURES.md). Data contracts:
 [lib/contracts.ts](lib/contracts.ts). Message protocol: [lib/messages.ts](lib/messages.ts).
+
+## Install
+
+Every [GitHub release](https://github.com/piyush-gambhir/design-inspector/releases/latest)
+carries a ready-made Chrome build.
+
+1. Download `design-inspector-<version>-chrome.zip` from the latest release.
+2. Unzip it into a folder of its own.
+3. Open `chrome://extensions` and turn on **Developer mode**.
+4. Click **Load unpacked** and select that folder.
+
+Press Alt+Shift+I or click the toolbar icon on a page to start inspecting. To update, unzip
+the newer release into the same folder and press the reload button on the extension's card.
+Chrome treats a different folder as a different extension, without your saved references.
 
 ## Features
 
@@ -57,6 +73,8 @@ reasoning: [docs/COMPETITIVE_FEATURES.md](docs/COMPETITIVE_FEATURES.md). Data co
 - Save a pinned element as a reference with a note and a cropped screenshot.
 
 **Side panel**
+
+![The side panel's page summary beside the page it read: the palette clustered by role, then spacing values by frequency](docs/images/page-summary.png)
 
 - Summary: type scale with combinations grouped under each step, palette clustered by
   perceptual distance with role filters, spacing rhythm, radii, shadows, fonts, scan scope,

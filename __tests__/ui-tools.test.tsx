@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 
-// One in-memory store keyed by origin, standing in for idb.
+
 const fakeIdb = vi.hoisted(() => {
   const records = new Map<string, unknown>();
   return {
@@ -55,11 +55,11 @@ interface Mounted {
   rerender: (next: ReactNode) => Promise<void>;
 }
 
-/**
- * The tab's work is asynchronous twice over: a FileReader read and an
- * IndexedDB write. A macrotask turn per settle lets both land before the
- * assertions run.
- */
+
+
+
+
+
 async function settle(times = 3): Promise<void> {
   for (let turn = 0; turn < times; turn += 1) {
     await act(async () => {
@@ -91,7 +91,7 @@ async function render(node: ReactNode): Promise<Mounted> {
   };
 }
 
-/** Push a file through the file input, which jsdom will not do on its own. */
+
 async function chooseFile(container: HTMLElement, file: File): Promise<void> {
   const input = container.querySelector('input[type="file"]') as HTMLInputElement;
   Object.defineProperty(input, 'files', { configurable: true, value: [file] });
@@ -163,7 +163,7 @@ describe('ToolsTab', () => {
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
     expect(input.accept).toBe('image/png,image/jpeg,image/webp,image/svg+xml');
     expect(container.textContent).toContain('Drop a PNG, JPG, WebP or SVG here');
-    // No controls until there is something to control.
+
     expect(container.querySelector('#mockup-opacity')).toBeNull();
   });
 
@@ -292,7 +292,7 @@ describe('ToolsTab', () => {
     const blobBefore = (await getMockup(ORIGIN))?.blob;
     sent = [];
 
-    // What a drag on the page looks like from here: a new state, same image.
+
     await rerender(
       <ToolsTab
         tabId={7}
@@ -330,7 +330,7 @@ describe('ToolsTab and a mockup it did not set (F8)', () => {
     expect(block.textContent).toContain('12, 34');
     expect(block.textContent).toContain('1.5');
     expect(block.textContent).toContain('difference');
-    // Nothing to edit: there is no stored image behind these numbers.
+
     expect(container.querySelector('#mockup-opacity')).toBeNull();
 
     const remove = [...block.querySelectorAll('button')].find(

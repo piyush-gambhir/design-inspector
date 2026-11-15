@@ -43,8 +43,8 @@ describe('status text', () => {
   });
 
   it('keeps the unsupported reason out of the status pill', () => {
-    // The pill says what the inspector is doing. Why a page refuses it is a
-    // different fact, and it belongs in the notice under the button.
+
+
     expect(statusText('off', 'Chrome does not allow extensions on browser pages.')).toBe('Off');
     expect(noticeText('chrome://extensions/', 'Chrome does not allow extensions.')).toMatch(
       /does not allow/,
@@ -107,7 +107,7 @@ describe('StackReportView', () => {
     const container = await render(<StackReportView report={report} />);
     expect(container.textContent).toContain('No confident evidence found');
     expect(container.textContent).toContain('does not prove a technology is absent');
-    // The readable local stamp; the ISO string belongs to the exports.
+
     expect(container.textContent).toMatch(/Observed at \d{1,2} \w{3} 2026, \d{2}:\d{2}/);
   });
 
@@ -194,10 +194,10 @@ describe('surfaces render without a chrome runtime', () => {
     ).toBe('Stack');
   });
 
-  // Chrome's side panel is dragged to whatever width the user wants, and 300px
-  // is the narrow end of that. Anything that pins a width wider than the pane
-  // takes the whole column with it and clips the left edge, so nothing in the
-  // panel is allowed to declare one.
+
+
+
+
   it('pins no width wider than a narrow side panel', async () => {
     const container = await render(<SidePanelApp />);
     const offenders: string[] = [];
@@ -258,7 +258,7 @@ describe('side panel with a stubbed chrome runtime', () => {
       expect(sendMessage).toHaveBeenCalledWith({ type: 'summary.request', tabId: 3 });
       expect(container.textContent).toContain('Scan refused in this test');
     } finally {
-      // Unmount while chrome still exists, the way a real panel closes.
+
       while (mounted.length) mounted.pop()?.();
       delete (globalThis as unknown as { chrome?: unknown }).chrome;
     }
@@ -351,8 +351,8 @@ describe('layout outlines in the popup', () => {
     });
     expect(sendMessage).toHaveBeenCalledWith({ type: 'outlines.set', tabId: 4, mode: 'tag' });
 
-    // The coloring segments only exist while the outlines are on, which the
-    // click above just did.
+
+
     const byDepth = [...container.querySelectorAll('button')].find(
       button => button.textContent === 'Depth',
     );
@@ -488,8 +488,8 @@ describe('side panel page tools row', () => {
     expect(pill(container, 'Pick color')).toBeUndefined();
     const hint = container.querySelector('#panel-pick-hint');
     expect(hint?.textContent).toBe('Pick color is on the page badge');
-    // Hidden until the info control is hovered or focused, and named for the
-    // reader who never hovers anything.
+
+
     expect(hint?.className).toContain('opacity-0');
     const info = container.querySelector('[aria-label="Where Pick color is"]');
     expect(info?.getAttribute('aria-describedby')).toBe('panel-pick-hint');

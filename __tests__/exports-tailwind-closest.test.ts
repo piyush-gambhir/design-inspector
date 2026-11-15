@@ -18,7 +18,7 @@ import {
 } from '@/lib/exports/tailwind-theme';
 import { cardSnapshot, color, corners, gridSnapshot, headingSnapshot, sides } from './fixtures/snapshots';
 
-/** The classes of one output, as a set, so order never matters in assertions. */
+
 function classesOf(output: { classes: string }): string[] {
   return output.classes.split(' ').filter((entry) => entry !== '');
 }
@@ -81,7 +81,7 @@ describe('withinTolerance', () => {
   it('uses a flat 1px for px values under 8px', () => {
     expect(withinTolerance(3, 4, 'px')).toBe(true);
     expect(withinTolerance(3, 4.01, 'px')).toBe(false);
-    // The flat rule never applies to a unitless scale such as opacity.
+
     expect(withinTolerance(0.96, 0.95, '')).toBe(true);
     expect(withinTolerance(2, 0, '')).toBe(false);
   });
@@ -108,8 +108,8 @@ describe('toTailwindClosest: type scales', () => {
   });
 
   it('accepts the nearest size at the edge of the threshold', () => {
-    // 36px is text-4xl; 40px is 11.1 percent away, 41px is 12.2 percent away
-    // from the step, which the rule measures against the observed value.
+
+
     const output = toTailwindClosest(withTypography({ sizePx: 40 }), 'typography');
     expect(classesOf(output)).toContain('text-4xl');
     expect(deviationFor(output, 'font-size')?.delta).toBe('-4px');
@@ -128,7 +128,7 @@ describe('toTailwindClosest: type scales', () => {
       withTypography({ sizePx: 16, sizeRem: 1, lineHeightPx: 24, lineHeightRaw: '24px' }),
       'typography',
     );
-    // 24px is both leading-6 and leading-normal; the named class reads better.
+
     expect(classesOf(output)).toContain('leading-normal');
     expect(deviationFor(output, 'line-height')).toBeUndefined();
   });

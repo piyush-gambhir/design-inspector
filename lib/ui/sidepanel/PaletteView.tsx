@@ -1,12 +1,12 @@
-// Palette read at a glance (PRD SUM-03, competitive Tier 2 item 5).
-//
-// A real page reports hundreds of palette rows: one per role, one per shade,
-// one per alpha. This view clusters the shades that read as the same swatch and
-// keeps every measured member one click away, so the page's colour language is
-// legible without any measurement being hidden or averaged away.
-//
-// Clustering is a suggestion about perception, never a claim about the site's
-// tokens. The exact values stay exact.
+
+
+
+
+
+
+
+
+
 import { useMemo, useState, type ReactNode } from 'react';
 import type { ColorGroup, ColorRole } from '@/lib/contracts';
 import {
@@ -26,7 +26,7 @@ export const ROLE_LABELS: Record<ColorRole, string> = {
   'gradient-stop': 'Gradient',
 };
 
-/** Chip order. 'all' is always offered; the rest appear when the scan saw them. */
+
 export const ROLE_CHIPS: ColorRole[] = [
   'text',
   'background',
@@ -36,11 +36,11 @@ export const ROLE_CHIPS: ColorRole[] = [
   'gradient-stop',
 ];
 
-/**
- * A fixed hue per role so a cluster's roles can be scanned quickly. The dots are
- * decoration: the same roles are written out beside them and again, with their
- * counts, inside the expanded cluster.
- */
+
+
+
+
+
 const ROLE_DOTS: Record<ColorRole, string> = {
   text: 'oklch(0.58 0.16 265)',
   background: 'oklch(0.68 0.14 145)',
@@ -75,16 +75,16 @@ function RoleDots({ roles }: { roles: ColorRole[] }) {
   );
 }
 
-/**
- * One palette row, as a fixed grid rather than a flex line.
- *
- * The four columns are a swatch, the hex at a fixed width, the roles (the only
- * column allowed to shrink, so it truncates instead of pushing anything), and
- * the count, right aligned on its own column so counts line up down the list.
- * Annotations such as an alpha value or the inferred accent go on a second line
- * under the hex: inline they collided with the hex at 320px, which is the bug
- * from screenshot 1.
- */
+
+
+
+
+
+
+
+
+
+
 const ROW_GRID = 'grid grid-cols-[16px_88px_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1';
 
 function AnnotationChip({ children }: { children: ReactNode }) {
@@ -200,11 +200,11 @@ function ClusterRow({
   );
 }
 
-/** The flat, unclustered list, kept because clustering is a view and not a truth. */
+
 function FlatList({ colors, tabId }: { colors: ColorGroup[]; tabId: number | null }) {
-  // A real page reports hundreds of measured values here, and this list sits
-  // inside a disclosure most readers never open. It is windowed rather than
-  // built in full: nothing is hidden, the total is stated on the button.
+
+
+
   return (
     <div className="grid gap-1.5">
       <WindowedList items={colors} className="grid gap-1.5" noun="measured values">
@@ -238,11 +238,11 @@ export function PaletteView({
 }: {
   colors: ColorGroup[];
   tabId: number | null;
-  /**
-   * The clusters the scan already computed and stored on the summary. They
-   * describe the whole palette, so they are used as they are when nothing is
-   * filtered and recomputed otherwise (tester finding F11).
-   */
+
+
+
+
+
   clusters?: PaletteCluster[];
 }) {
   const [role, setRole] = useState<RoleFilter>('all');
@@ -252,15 +252,15 @@ export function PaletteView({
     () => ROLE_CHIPS.filter(entry => colors.some(group => group.role === entry)),
     [colors],
   );
-  // A filter that the current scan cannot satisfy would silently empty the view.
+
   const activeRole: RoleFilter = role !== 'all' && !available.includes(role) ? 'all' : role;
   const shown = useMemo(
     () => (activeRole === 'all' ? colors : colors.filter(group => group.role === activeRole)),
     [colors, activeRole],
   );
-  // Clustering a few hundred colours is not free, and the scan has already
-  // done it. The stored answer only describes the unfiltered palette, so a role
-  // filter, or a summary saved before the field existed, recomputes.
+
+
+
   const useStored = activeRole === 'all' && stored !== undefined;
   const computed = useMemo(
     () => (useStored ? [] : clusterPalette(shown)),

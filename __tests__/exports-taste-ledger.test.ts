@@ -39,8 +39,8 @@ describe('toTasteLedger fragment shape', () => {
   });
 
   it('writes the typeface name into the element line once the file has been read', () => {
-    // A ledger entry is read months later, by which time the site's own
-    // nickname for its font means nothing to anybody.
+
+
     const identified = toTasteLedger(
       [
         elementReference({

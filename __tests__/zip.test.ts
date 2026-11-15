@@ -40,7 +40,7 @@ describe('dosDateTime', () => {
     expect(stamp.date & 0x1f).toBe(18);
     expect(stamp.time >> 11).toBe(10);
     expect((stamp.time >> 5) & 0x3f).toBe(30);
-    // DOS stores seconds in two-second steps.
+
     expect(stamp.time & 0x1f).toBe(10);
   });
 });
@@ -54,32 +54,32 @@ describe('ZipWriter', () => {
     expect(blob.type).toBe('application/zip');
 
     const bytes = await bytesOf(blob);
-    // 2 x (30 + name + data) + 2 x (46 + name) + 22
+
     expect(bytes.byteLength).toBe(35 + 5 + 37 + 6 + 51 + 53 + 22);
 
-    // First local file header.
+
     expect(signatureAt(bytes, 0)).toEqual([0x50, 0x4b, 0x03, 0x04]);
-    expect(u16(bytes, 6)).toBe(0x0800); // UTF-8 filename flag
-    expect(u16(bytes, 8)).toBe(0); // STORE
-    expect(u32(bytes, 18)).toBe(5); // compressed size == size
+    expect(u16(bytes, 6)).toBe(0x0800);
+    expect(u16(bytes, 8)).toBe(0);
+    expect(u32(bytes, 18)).toBe(5);
     expect(u32(bytes, 22)).toBe(5);
-    expect(u16(bytes, 26)).toBe(5); // name length
+    expect(u16(bytes, 26)).toBe(5);
     expect(new TextDecoder().decode(bytes.slice(30, 35))).toBe('a.txt');
     expect(new TextDecoder().decode(bytes.slice(35, 40))).toBe('hello');
     expect(u32(bytes, 14)).toBe(crc32(new TextEncoder().encode('hello')));
 
-    // Insertion order is the archive order.
+
     expect(signatureAt(bytes, 40)).toEqual([0x50, 0x4b, 0x03, 0x04]);
     expect(new TextDecoder().decode(bytes.slice(70, 77))).toBe('b/c.txt');
 
-    // Central directory, right after the last payload.
+
     const centralOffset = 40 + 43;
     expect(signatureAt(bytes, centralOffset)).toEqual([0x50, 0x4b, 0x01, 0x02]);
-    expect(u32(bytes, centralOffset + 42)).toBe(0); // first entry's local offset
+    expect(u32(bytes, centralOffset + 42)).toBe(0);
     expect(signatureAt(bytes, centralOffset + 51)).toEqual([0x50, 0x4b, 0x01, 0x02]);
-    expect(u32(bytes, centralOffset + 51 + 42)).toBe(40); // second entry's offset
+    expect(u32(bytes, centralOffset + 51 + 42)).toBe(40);
 
-    // End of central directory record.
+
     const endOffset = bytes.byteLength - 22;
     expect(signatureAt(bytes, endOffset)).toEqual([0x50, 0x4b, 0x05, 0x06]);
     expect(u16(bytes, endOffset + 8)).toBe(2);
@@ -100,7 +100,7 @@ describe('ZipWriter', () => {
     zip.add('café/über.txt', 'x', { mtime: MTIME });
     const bytes = await bytesOf(zip.finish());
     expect(u16(bytes, 6)).toBe(0x0800);
-    // Two two-byte characters make the name longer than its character count.
+
     expect(u16(bytes, 26)).toBe(15);
   });
 

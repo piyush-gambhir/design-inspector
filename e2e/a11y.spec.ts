@@ -1,20 +1,20 @@
-// Accessibility audit for the extension surfaces (PRD 19.2, workstream S1).
-//
-// There is no axe here on purpose: the product ships no runtime dependency it
-// does not need, and a test-only one would still have to be installed in CI.
-// The audit below is small and checks what this UI can actually get wrong: an
-// icon-only control with no name, an image with no alt, a field with no label,
-// a tab order that skips the primary actions, text too small to read, and a
-// focus indicator that cannot be seen against the surface it lands on.
-//
-// Contrast is measured, never asserted from the stylesheet. The outline colour
-// and every ancestor background are read back through getComputedStyle, parsed
-// by the browser's own colour parser (a 1x1 canvas, which handles oklch), then
-// composited and run through the WCAG relative-luminance formula. A non-text
-// indicator needs 3:1 (WCAG 1.4.11).
-//
-// Everything the page runs is inlined into the evaluate callbacks: an MV3
-// extension page forbids eval, so the audit cannot be shipped in as a string.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import { test, expect, type Page } from '@playwright/test';
 import { createServer, type Server } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -33,9 +33,9 @@ let server: Server;
 let baseUrl: string;
 let session: ExtensionSession;
 
-/** Non-text contrast minimum for a focus indicator (WCAG 1.4.11). */
+
 const MIN_INDICATOR_CONTRAST = 3;
-/** The smallest type this UI is allowed to use (PRD 6.2: no tiny metadata). */
+
 const MIN_FONT_PX = 12;
 
 interface AuditFinding {
@@ -53,10 +53,10 @@ interface FocusStop {
   contrast: number;
 }
 
-/**
- * Installs `window.__audit` (the checks plus a focus-stop measurer) and a
- * focusin recorder. Re-running it is safe: the recorder is replaced, not added.
- */
+
+
+
+
 async function installAudit(page: Page, minFontPx: number): Promise<void> {
   await page.evaluate((floor: number) => {
     const canvas = document.createElement('canvas');
@@ -66,7 +66,7 @@ async function installAudit(page: Page, minFontPx: number): Promise<void> {
 
     type Rgba = [number, number, number, number];
 
-    /** Any CSS colour to r, g, b (0-255) and alpha (0-1), via the page's parser. */
+
     const toRgba = (value: string): Rgba | null => {
       if (!value) return null;
       ctx.fillStyle = '#000000';
@@ -102,10 +102,10 @@ async function installAudit(page: Page, minFontPx: number): Promise<void> {
       return x > y ? x / y : y / x;
     };
 
-    /**
-     * The colour actually painted behind an element: every translucent ancestor
-     * background composited down onto the first opaque one.
-     */
+
+
+
+
     const backgroundBehind = (element: Element): Rgba => {
       const stack: Rgba[] = [];
       let node: Element | null = element.parentElement;
@@ -204,15 +204,15 @@ async function installAudit(page: Page, minFontPx: number): Promise<void> {
         if (Number.isFinite(size) && size < floor) {
           out.push({ kind: 'text-too-small', detail: `${size}px ${describe(element)}` });
         }
-        // Text contrast against what is actually painted behind it. Muted text
-        // is the whole reason this check exists: it is the colour most likely
-        // to be tuned for looks in one scheme and left failing in the other
-        // (workstream V4). A control that is deliberately transparent until it
-        // is hovered is measured when it is visible, not while it is hidden.
+
+
+
+
+
         if (Number.parseFloat(style.opacity) === 0) continue;
-        // A disabled control is exempt from the contrast rule (WCAG 1.4.3),
-        // and this UI dims them to half opacity, so measuring one measures the
-        // dimming rather than the palette.
+
+
+
         const disabled =
           (element as HTMLButtonElement).disabled === true ||
           element.getAttribute('aria-disabled') === 'true' ||
@@ -220,9 +220,9 @@ async function installAudit(page: Page, minFontPx: number): Promise<void> {
         if (disabled) continue;
         const foreground = toRgba(style.color);
         if (!foreground) continue;
-        // What is painted behind the text is the element's own background
-        // first, then everything under it. A filled button carries its text on
-        // its own fill, not on the card it sits in.
+
+
+
         const under = backgroundBehind(element);
         const own = toRgba(style.backgroundColor);
         const behind = own && own[3] > 0 ? over(own, under) : under;
@@ -273,11 +273,11 @@ async function runFindings(page: Page): Promise<AuditFinding[]> {
   );
 }
 
-/**
- * Tab through the surface from `anchor` and report every focus stop. The anchor
- * is a non-focusable element near the top of the document: clicking it moves the
- * sequential-navigation starting point there, so the walk is deterministic.
- */
+
+
+
+
+
 async function walkTabOrder(page: Page, anchor: string, steps: number): Promise<FocusStop[]> {
   await installAudit(page, MIN_FONT_PX);
   await page.locator(anchor).first().click();
@@ -286,11 +286,11 @@ async function walkTabOrder(page: Page, anchor: string, steps: number): Promise<
   const stops: FocusStop[] = [];
   for (let step = 0; step < steps; step += 1) {
     await page.keyboard.press('Tab');
-    // The controls carry transition-colors, and outline-color is one of the
-    // properties it animates, so the ring fades in from currentColor over the
-    // default 150ms. The settled colour is the one the user reads and the one
-    // worth measuring, so the walk waits for it. (prefers-reduced-motion turns
-    // the fade off entirely; see the reduced-motion test below.)
+
+
+
+
+
     await page.waitForTimeout(220);
     const stop = await page.evaluate(() => {
       const element = document.activeElement;
@@ -304,7 +304,7 @@ async function walkTabOrder(page: Page, anchor: string, steps: number): Promise<
   return stops;
 }
 
-// ---------------------------------------------------------------------------
+
 
 async function openPanel(fixtureTabId: number): Promise<Page> {
   const page = await session.context.newPage();
@@ -352,11 +352,11 @@ test.afterAll(async () => {
   await new Promise<void>(resolve => server?.close(() => resolve()));
 });
 
-// One browser per test rather than one per file. A persistent context that
-// outlives a test fights Playwright's per-test artifact lifecycle: traces
-// recorded for a passing test are cleaned up underneath it, and the eventual
-// context.close then fails on a recording that is no longer there. A fresh
-// profile per test also means no setting or saved reference leaks across cases.
+
+
+
+
+
 test.beforeEach(async () => {
   session = await launchWithExtension();
   await openControlPage(session);
@@ -376,8 +376,8 @@ test.describe('side panel accessibility', () => {
     await scan(panel);
     expect(await runFindings(panel), 'Summary tab').toEqual([]);
 
-    // The Assets tab owns the images and the per-row checkboxes, so it is
-    // audited too rather than letting the summary stand in for the panel.
+
+
     await panel.getByRole('tab', { name: 'Assets' }).click();
     await panel.getByRole('button', { name: 'List assets' }).click();
     await expect(panel.getByText(/assets discovered/)).toBeVisible({ timeout: 30_000 });
@@ -403,7 +403,7 @@ test.describe('side panel accessibility', () => {
 
     const tabs = panel.getByRole('tab');
     await expect(tabs).toHaveCount(5);
-    // APG roving tabindex: exactly one tab sits in the document's tab order.
+
     const tabIndexes = await tabs.evaluateAll(nodes =>
       nodes.map(node => (node as HTMLElement).tabIndex),
     );
@@ -439,7 +439,7 @@ test.describe('side panel accessibility', () => {
     expect(names).toContain('Save summary');
     expect(names).toContain('Copy Markdown');
     expect(names).toContain('Download JSON');
-    // Activation and the tab list come before the summary's own actions.
+
     expect(names.indexOf('Summary')).toBeLessThan(names.indexOf('Refresh'));
 
     await page.close();
@@ -454,19 +454,19 @@ test.describe('side panel accessibility', () => {
       const panel = await openPanel(tabId);
       await panel.emulateMedia({ colorScheme: scheme });
       await scan(panel);
-      // Theme transitions can still be painting after the summary arrives.
+
       await panel.evaluate(async () => {
         await Promise.all(document.getAnimations().map((animation) => animation.finished));
       });
 
-      // The same audit in this scheme: a colour that reads in light can fail in
-      // dark, and text contrast is the check most likely to (workstream V4).
+
+
       expect(await runFindings(panel), `${scheme} audit`).toEqual([]);
 
       const stops = await walkTabOrder(panel, 'header p', 16);
       expect(stops.length, 'focus stops walked').toBeGreaterThan(6);
 
-      // Printed so store/QA.md can quote a measurement rather than a promise.
+
       const worst = stops.reduce((low, stop) => (stop.contrast < low.contrast ? stop : low));
       // eslint-disable-next-line no-console
       console.log(
@@ -487,11 +487,11 @@ test.describe('side panel accessibility', () => {
     });
   }
 
-  // Chrome hands the side panel whatever width it has been dragged to, and the
-  // narrow end is where a layout that refuses to shrink shows up: the column
-  // keeps its content width, the pane scrolls right, and the left edge of every
-  // row is clipped away. The audit is the document's own geometry, at the
-  // widths people actually use.
+
+
+
+
+
   test('the panel fits every pane width without clipping', async () => {
     const page = await session.context.newPage();
     await page.goto(`${baseUrl}/inspector-basic.html`);
@@ -499,11 +499,11 @@ test.describe('side panel accessibility', () => {
     const panel = await openPanel(tabId);
     await scan(panel);
 
-    /** Read the geometry that a pane too narrow for its content gives away. */
+
     const measure = async (width: number) => {
       await panel.setViewportSize({ width, height: 960 });
-      // A resize reflows on the next frame, and the container query that folds
-      // the Scope rows resolves with it.
+
+
       await waitForOverlayIdle(panel);
       return panel.evaluate(() => {
         const root = document.documentElement;
@@ -526,22 +526,22 @@ test.describe('side panel accessibility', () => {
       if (width === 340) await panel.screenshot({ path: artifactPath('di-d-sidepanel-340.png') });
     }
 
-    // Second pass, with the UI font replaced by a much wider one. Inter and
-    // system-ui are not installed everywhere: a Linux machine with neither
-    // paints this panel in DejaVu or Liberation, which is wider at every size,
-    // and a layout that only just fits at 300px in Inter stops fitting. That is
-    // a real user on a real machine, not a CI artefact, so the same geometry is
-    // asserted again under a wide face. DejaVu Sans is the Linux case; Verdana
-    // is the widest family macOS is guaranteed to have, so the pass means
-    // something on both platforms.
+
+
+
+
+
+
+
+
     await panel.addStyleTag({
       content: `* { font-family: 'DejaVu Sans', Verdana, sans-serif !important; }`,
     });
-    // A style tag that did not land would make the whole pass a no-op, so the
-    // override is confirmed before anything is read from it. The width is not
-    // asserted to have grown: on a Linux runner the panel is already painted in
-    // DejaVu, because neither Inter nor system-ui is installed there, which is
-    // exactly the condition this pass exists to hold the layout to.
+
+
+
+
+
     expect(
       await panel.evaluate(() => {
         const tab = document.querySelector('[role="tab"]');
@@ -595,10 +595,10 @@ test.describe('side panel accessibility', () => {
 
 test.describe('popup accessibility', () => {
   test('every control is named and the settings switches are labelled', async () => {
-    // The popup reads the active tab of its window. Real popups sit over the
-    // page being inspected, so keep a fixture page in front and load the popup
-    // as a background tab: newer Chrome otherwise reports the popup page itself
-    // as the active tab, which disables the Inspect button.
+
+
+
+
     const fixture = await session.context.newPage();
     await fixture.goto(`${baseUrl}/inspector-basic.html`);
     const popup = await session.context.newPage();
@@ -611,8 +611,8 @@ test.describe('popup accessibility', () => {
 
     expect(await runFindings(popup), 'popup audit').toEqual([]);
 
-    // The semantic-parent switch is the S-workstream addition. Reaching it by
-    // name is what a screen reader and a keyboard both depend on.
+
+
     await expect(popup.getByLabel(/Prefer semantic parents/)).toBeVisible();
     await expect(popup.getByLabel(/Hover card/)).toBeVisible();
     await expect(popup.getByLabel('Scan cap')).toBeVisible();

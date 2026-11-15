@@ -1,15 +1,15 @@
-// User-requested downloads (PRD AST-02, EXP-03). The background worker owns
-// chrome.downloads; the panel only asks for a URL and a filename.
+
+
 import type { BackgroundResponse } from '@/lib/messages';
 
 const MAX_FILENAME_LENGTH = 120;
 const FALLBACK_FILENAME = 'design-inspector-download';
 
-/**
- * Make a page-supplied filename safe for chrome.downloads: no path traversal,
- * no control characters, no characters Windows rejects, capped in length with
- * the extension kept.
- */
+
+
+
+
+
 export function sanitizeFilename(raw: string): string {
   const lastSegment = String(raw ?? '').split(/[\\/]/).pop() ?? '';
   let cleaned = '';

@@ -1,15 +1,15 @@
-// Saved references and their screenshots, in IndexedDB (PRD 14, 18.2).
-//
-// Metadata records and binary screenshots live in separate stores so that
-// listing the collection never deserializes image bytes. Nothing here syncs.
+
+
+
+
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type { SavedReference } from '@/lib/contracts';
-// Type only, so the mockup module can keep owning its own record shape without
-// this module importing any of its code.
+
+
 import type { MockupRecord } from './mockups';
 
 export const DB_NAME = 'design-inspector';
-/** 2 added the mockups store, which used to be a database of its own. */
+
 export const DB_VERSION = 2;
 export const REFERENCE_STORE = 'references';
 export const SCREENSHOT_STORE = 'screenshots';
@@ -33,11 +33,11 @@ export interface DesignInspectorDB extends DBSchema {
 
 let dbPromise: Promise<IDBPDatabase<DesignInspectorDB>> | null = null;
 
-/**
- * The one database this extension keeps. Every store is created when it is
- * missing rather than per version step, so a profile opening at any earlier
- * version ends up with the same shape as a fresh one.
- */
+
+
+
+
+
 export function database(): Promise<IDBPDatabase<DesignInspectorDB>> {
   dbPromise ??= openDB<DesignInspectorDB>(DB_NAME, DB_VERSION, {
     upgrade(db) {
@@ -47,8 +47,8 @@ export function database(): Promise<IDBPDatabase<DesignInspectorDB>> {
         store.createIndex('sourceUrl', 'snapshot.source.url');
       }
       if (!db.objectStoreNames.contains(SCREENSHOT_STORE)) {
-        // Blobs cannot carry an in-line key, so screenshots are keyed out of line
-        // by the id of the reference that captured them.
+
+
         db.createObjectStore(SCREENSHOT_STORE);
       }
       if (!db.objectStoreNames.contains(MOCKUP_STORE)) {
@@ -59,15 +59,15 @@ export function database(): Promise<IDBPDatabase<DesignInspectorDB>> {
   return dbPromise;
 }
 
-/** Test seam: drop the cached connection so a fresh openDB runs. */
+
 export function resetDatabaseForTests(): void {
   dbPromise = null;
 }
 
-// ---------------------------------------------------------------------------
-// Errors
 
-/** Turn a raw IndexedDB failure into something a person can act on (PRD 19.3). */
+
+
+
 export function describeStorageError(error: unknown): string {
   const name = (error as { name?: unknown } | null)?.name;
   const message = error instanceof Error ? error.message : String(error);
@@ -84,19 +84,19 @@ function fail(error: unknown): never {
   throw new Error(describeStorageError(error));
 }
 
-// ---------------------------------------------------------------------------
-// Pure rules
+
+
 
 export interface ReferenceMetaPatch {
   title?: string;
   note?: string;
 }
 
-/**
- * Apply a title/note edit. The snapshot is immutable: editing metadata never
- * rewrites measured data (PRD SAV-03). Only supplied fields change, and
- * `updatedAt` always advances.
- */
+
+
+
+
+
 export function applyMetaPatch(
   reference: SavedReference,
   patch: ReferenceMetaPatch,
@@ -108,7 +108,7 @@ export function applyMetaPatch(
     createdAt: reference.createdAt,
     updatedAt: nowIso,
   };
-  // Spread per branch so the discriminant and its snapshot stay paired.
+
   if (reference.kind === 'summary') return { ...reference, ...meta };
   return {
     ...reference,
@@ -116,7 +116,7 @@ export function applyMetaPatch(
   };
 }
 
-/** Newest first, by createdAt then id so the order is stable. */
+
 export function sortNewestFirst(references: SavedReference[]): SavedReference[] {
   return [...references].sort((a, b) => {
     if (a.createdAt === b.createdAt) return a.id < b.id ? 1 : a.id > b.id ? -1 : 0;
@@ -124,7 +124,7 @@ export function sortNewestFirst(references: SavedReference[]): SavedReference[] 
   });
 }
 
-/** True when no reference other than `excludeId` still points at `screenshotId`. */
+
 export function screenshotIsOrphaned(
   references: SavedReference[],
   screenshotId: string,
@@ -133,8 +133,8 @@ export function screenshotIsOrphaned(
   return !references.some(ref => ref.id !== excludeId && ref.screenshotId === screenshotId);
 }
 
-// ---------------------------------------------------------------------------
-// Reference records
+
+
 
 export async function listReferences(): Promise<SavedReference[]> {
   try {
@@ -206,7 +206,7 @@ export async function clearReferences(): Promise<void> {
   }
 }
 
-/** The requested references, in the requested order, skipping unknown ids. */
+
 export async function exportReferences(ids: string[]): Promise<SavedReference[]> {
   try {
     const db = await database();
@@ -221,8 +221,8 @@ export async function exportReferences(ids: string[]): Promise<SavedReference[]>
   }
 }
 
-// ---------------------------------------------------------------------------
-// Screenshots
+
+
 
 export async function putScreenshot(id: string, blob: Blob): Promise<void> {
   try {
@@ -242,7 +242,7 @@ export async function getScreenshot(id: string): Promise<Blob | null> {
   }
 }
 
-/** Object URL for a stored screenshot. The caller revokes it. */
+
 export async function getScreenshotUrl(id: string): Promise<string | null> {
   const blob = await getScreenshot(id);
   if (!blob) return null;
@@ -258,8 +258,8 @@ export async function deleteScreenshot(id: string): Promise<void> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Usage
+
+
 
 export interface UsageEstimate {
   usageBytes: number | null;

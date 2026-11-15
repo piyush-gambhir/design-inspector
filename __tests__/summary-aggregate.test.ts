@@ -76,8 +76,8 @@ describe('aggregateSummary typography', () => {
     const records = Array.from({ length: 40 }, (_unused, index) =>
       textRecord({ locator: `p:nth-of-type(${index})`, label: 'p' }),
     );
-    // The panel highlights 20 at a time and says so, which it can only do when
-    // a group is allowed to carry more than 20 (tester finding F7).
+
+
     expect(run(records).typography[0]?.examples).toHaveLength(24);
   });
 
@@ -151,7 +151,7 @@ describe('aggregateSummary palette', () => {
 
     const stops = summary.colors.filter((group) => group.role === 'gradient-stop');
     expect(stops.map((group) => group.key)).toEqual(['#00ff00', '#ff000080', 'oklch(0.7 0.2 30)']);
-    // The color nested inside color-mix is not a stop.
+
     expect(stops.some((group) => group.key === '#010203')).toBe(false);
   });
 
@@ -197,7 +197,7 @@ describe('aggregateSummary palette', () => {
     expect(label('text', '#4f46e5')).toBe('accent');
     expect(label('text', '#0a0a0a')).toBe('neutral');
     expect(label('background', '#ffffff')).toBe('neutral');
-    // Borders are never accent candidates.
+
     expect(label('border', '#4f46e5')).toBeNull();
   });
 
@@ -387,8 +387,8 @@ describe('aggregateSummary scope and determinism', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Derived views: palette clusters and the type-scale fold (PRD SUM-03, SUM-06)
+
+
 
 function paletteGroup(
   raw: string,
@@ -422,10 +422,10 @@ describe('aggregateSummary palette clusters', () => {
 
     const clusters = summary.paletteClusters ?? [];
     expect(clusters).toEqual(clusterPalette(summary.colors));
-    // The two near-identical text colours read as one swatch, the page as two.
+
     expect(clusters).toHaveLength(2);
     expect(clusters.map((cluster) => cluster.representative.color.hex)).toContain('#4f46e5');
-    // The flat palette is untouched: every measured row is still there.
+
     expect(summary.colors).toHaveLength(3);
   });
 
@@ -443,7 +443,7 @@ describe('clusterPalette', () => {
 
     expect(clusters).toHaveLength(1);
     expect(clusters[0]?.totalCount).toBe(13);
-    // The representative is the member seen most often, not the first read.
+
     expect(clusters[0]?.representative.color.hex).toBe('#4f46e5');
     expect(clusters[0]?.members.map((member) => member.color.hex)).toEqual([
       '#4f46e5',
@@ -465,8 +465,8 @@ describe('clusterPalette', () => {
   });
 
   it('ignores hue for greys, whose hue carries no meaning', () => {
-    // Two near-blacks whose hues are 180 degrees apart but whose chroma is
-    // below the grey threshold.
+
+
     const clusters = clusterPalette([
       paletteGroup('#0a0a0a', 'text', 40),
       paletteGroup('#0b0b0c', 'text', 6),
@@ -517,7 +517,7 @@ describe('clusterPalette', () => {
     expect(byHex.get('#0a0a0a')).toBe('neutral');
     expect(byHex.get('#ffffff')).toBe('neutral');
     expect(byHex.get('#4f46e5')).toBe('accent');
-    // A border is never an accent candidate, so it stays unlabelled.
+
     expect(byHex.get('#e11d48')).toBeNull();
   });
 

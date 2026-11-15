@@ -20,7 +20,7 @@ describe('measureBoxes', () => {
 
     expect(measurement.case).toBe('separated');
     expect(measurement.gapX).toBe(24);
-    // The vertical spans overlap completely, which is a 0px vertical distance.
+
     expect(measurement.gapY).toBeLessThan(0);
     expect(measureAxisLabels(measurement)).toEqual({ x: '24px', y: '0px' });
     expect(measurementCopyText(measurement)).toBe('gap-x: 24px, gap-y: 0px');

@@ -1,10 +1,10 @@
-// Taste-ledger preset (PRD EXP-03). The exact fragment shape is specified in
-// docs/TASTE_LEDGER_EXPORT.md and validated against the destination ledger.
-//
-// The contract this preset keeps: Essence holds only what the user wrote, every
-// measured value lives under Observed, no em dash is ever emitted, and the
-// output is a fragment that starts at its own `##` heading so it can be
-// appended to the ledger.
+
+
+
+
+
+
+
 import type {
   ElementSnapshot,
   PageSummary,
@@ -15,10 +15,10 @@ import { num, px, scrubEmDashes } from './format';
 import { isViewportDependentLength } from '@/lib/readings/units';
 import { identityDescription } from '@/lib/readings/fonts';
 
-/** Spacing values listed as the page's rhythm. */
+
 const MAX_RHYTHM_VALUES = 6;
 
-/** Family and weight pairs named next to the type scale. */
+
 const MAX_FAMILIES = 4;
 
 export function toTasteLedger(references: SavedReference[], dateIso: string): string {
@@ -40,8 +40,8 @@ function entryFor(url: string, references: SavedReference[], date: string): stri
   const source = first.snapshot.source;
   const viewport = `${num(source.viewport.width)} x ${num(source.viewport.height)}`;
 
-  // `kind` narrows the snapshot inside the branch, so neither list needs a cast
-  // or a shape test to end up correctly typed.
+
+
   const summaries: PageSummary[] = [];
   const elements: ElementSnapshot[] = [];
   for (const reference of references) {
@@ -65,7 +65,7 @@ function entryFor(url: string, references: SavedReference[], date: string): stri
   return blocks.join('\n\n');
 }
 
-/** Only the user's own words: the title and the note, nothing measured. */
+
 function essenceLine(reference: SavedReference): string {
   const title = scrubEmDashes(reference.title).trim();
   const note = scrubEmDashes(reference.note).trim();
@@ -106,12 +106,12 @@ function familiesSuffix(summary: PageSummary): string {
   return families.length > 0 ? ` (${families.join(', ')})` : '';
 }
 
-/**
- * What the page's colour language reads as: how many swatches it really has
- * once near-identical values merge, which of them are inferred accents, and how
- * many are neutral. A summary recorded before clusters existed keeps the older
- * role counts rather than having clusters invented for it here.
- */
+
+
+
+
+
+
 function paletteLine(summary: PageSummary): string | null {
   const clusters = summary.paletteClusters;
   if (clusters && clusters.length > 0) {
@@ -167,7 +167,7 @@ function radiiAndShadowsLine(summary: PageSummary): string {
   return `- Radii: ${radii}. Shadows: ${shadows}.`;
 }
 
-/** Only detections are named. "Not detected" is never written. */
+
 function stackLine(summary: PageSummary): string | null {
   const detections = summary.stack.detections;
   if (detections.length === 0) return null;
@@ -178,7 +178,7 @@ function stackLine(summary: PageSummary): string | null {
   return `- Stack: ${parts.join(', ')}.`;
 }
 
-/** The root font size, and whether it moves with the viewport (workstream V1). */
+
 function rootText(source: SourceContext): string {
   if (!source.rootFontSizeFluid) return px(source.rootFontSize);
   const authored = (source.rootFontSizeAuthored ?? '').trim();
@@ -186,7 +186,7 @@ function rootText(source: SourceContext): string {
   return `${px(source.rootFontSize)} (fluid${from}, so px sizes are readings at this width)`;
 }
 
-/** "1.125rem (18px at 1440 wide)" on a fluid root, "18px / 1.125rem" otherwise. */
+
 function sizeText(sizePx: number, sizeRem: number, source: SourceContext): string {
   if (!source.rootFontSizeFluid || !Number.isFinite(sizeRem) || sizeRem <= 0) {
     return `${px(sizePx)} / ${num(sizeRem)}rem`;
@@ -202,9 +202,9 @@ function elementLine(snapshot: ElementSnapshot): string {
     return `- ${label}: no text reading, background ${background.hex ?? background.raw}.`;
   }
 
-  // The typeface's own name once the file has been read, with the site's alias
-  // kept in brackets: a ledger entry is read months later, by which time
-  // "Nb international pro webfont" means nothing.
+
+
+
   const identified = scrubEmDashes(
     identityDescription(
       typography.familyReading,

@@ -1,23 +1,23 @@
-// Grid and flex geometry for the pinned element's layout overlay
-// (PRD LAY-01, competitive Tier 1 item 4).
-//
-// Pure functions over computed strings and boxes, so every track, line, and
-// gap band is unit testable without a layout engine. The overlay never invents
-// a track: a computed template we cannot read as a plain px list is refused by
-// name instead of guessed at (`none`, `repeat(`, `masonry`, named lines).
+
+
+
+
+
+
+
 
 import type { Rect } from '../contracts';
 import { roundTo, splitTopLevel } from '../readings/units';
 
 const PX_TRACK = /^-?\d+(?:\.\d+)?px$/;
 
-/**
- * Resolved track sizes from a computed `grid-template-columns` or
- * `grid-template-rows`. Chrome serializes these as a space separated px list
- * once the grid is laid out. Anything else, including `none`, an unresolved
- * `repeat(`, `masonry`, or a list carrying `[line-names]`, returns null so the
- * caller can say so rather than draw a wrong grid.
- */
+
+
+
+
+
+
+
 export function parseTrackList(computed: string | null | undefined): number[] | null {
   const text = (computed ?? '').trim();
   if (!text) return null;
@@ -40,20 +40,20 @@ export function parseTrackList(computed: string | null | undefined): number[] | 
 }
 
 export interface TrackBand {
-  /** Offset from the start of the content box, in CSS px. */
+
   start: number;
   size: number;
-  /** True for the gap bands between two tracks. */
+
   gap: boolean;
-  /** 1-based track number. Null for gap bands. */
+
   index: number | null;
 }
 
-/**
- * Tracks and the gap bands between them, as offsets along one axis of the
- * content box. The trailing gap after the last track does not exist in CSS, so
- * it is not drawn.
- */
+
+
+
+
+
 export function trackBands(sizes: number[], gap: number): TrackBand[] {
   const bands: TrackBand[] = [];
   let offset = 0;
@@ -70,26 +70,26 @@ export function trackBands(sizes: number[], gap: number): TrackBand[] {
 
 export type FlexAxis = 'horizontal' | 'vertical';
 
-/** The main axis a computed `flex-direction` runs along. */
+
 export function flexMainAxis(direction: string | null | undefined): FlexAxis {
   const text = (direction ?? 'row').trim().toLowerCase();
   return text.startsWith('column') ? 'vertical' : 'horizontal';
 }
 
 export interface GapBand {
-  /** Viewport-space box of the band between one child and the next. */
+
   rect: Rect;
-  /** The measured distance along the main axis, in CSS px. */
+
   size: number;
 }
 
-/**
- * The bands between consecutive children along the main axis, in viewport
- * coordinates. Children are ordered by their painted position rather than
- * their DOM order, so `row-reverse` and `order` read correctly, and a pair that
- * does not share a line on the cross axis is skipped: with `flex-wrap` the
- * distance from the end of one line to the start of the next is not a gap.
- */
+
+
+
+
+
+
+
 export function flexGapBands(children: Rect[], axis: FlexAxis): GapBand[] {
   const horizontal = axis === 'horizontal';
   const mainStart = (rect: Rect): number => (horizontal ? rect.x : rect.y);
@@ -104,7 +104,7 @@ export function flexGapBands(children: Rect[], axis: FlexAxis): GapBand[] {
     const current = ordered[index] as Rect;
     const next = ordered[index + 1] as Rect;
 
-    // Same line only: the cross-axis spans have to actually overlap.
+
     const sharedStart = Math.max(crossStart(current), crossStart(next));
     const sharedEnd = Math.min(crossEnd(current), crossEnd(next));
     if (sharedEnd <= sharedStart) continue;

@@ -1,12 +1,12 @@
-// The overlay: box-model highlight, edge labels, hover card, pinned panel,
-// badge, and highlight outlines (PRD 6.2, INS-02, INS-05).
-//
-// Everything lives in one open shadow root on a single host element appended
-// to documentElement, so body styles cannot move it and page CSS cannot leak
-// in. The root stylesheet starts with `all: initial` for that reason. The root
-// is open rather than closed so browser tests can assert on it.
-//
-// Page-derived strings are only ever written with textContent (PRD 17.3).
+
+
+
+
+
+
+
+
+
 
 import type {
   AssetReading,
@@ -74,45 +74,45 @@ export const HOST_TAG = 'design-inspector-host';
 const CARD_GAP = 10;
 const EDGE = 8;
 const MAX_HIGHLIGHTS = 20;
-/** Ancestor chips kept either side of the collapsed middle of a breadcrumb. */
+
 const CRUMBS_HEAD = 1;
 const CRUMBS_TAIL = 2;
 const COPY_FEEDBACK_MS = 1000;
-/** Picked pixels kept for the page session (PRD 17.1: nothing is persisted). */
+
 const MAX_PICKED_HISTORY = 8;
 
-/** A rect this wide relative to the viewport leaves no room beside it. */
+
 const WIDE_RECT_RATIO = 0.6;
-/**
- * A wide rect this tall is a band, not a line: the panel beside it would cover
- * text, so it goes above or below instead (tester UX note 7).
- */
+
+
+
+
 export const WIDE_RECT_MIN_HEIGHT = 80;
-/** Below this viewport width the badge starts collapsed to its dot. */
+
 export const BADGE_COLLAPSE_WIDTH = 480;
-/** Vertical room the badge needs in the top right corner. */
+
 const BADGE_CLEARANCE = 60;
-/** How far left of the right edge the badge can reach. */
+
 const BADGE_BAND = 420;
-/** Two presses on one guide inside this window remove it (tester finding F2). */
+
 export const GUIDE_DOUBLE_MS = 400;
 
-/**
- * What the next Escape press lets go of. `boot.ts` releases these in exactly
- * this order, and the badge says which one is next so a keyboard user does not
- * have to guess how many presses stand between them and the page (Z2).
- */
+
+
+
+
+
 export type EscapeStep = 'menu' | 'edges' | 'measure' | 'unpin' | 'exit';
 
 export interface EscapeStackState {
-  /** An open menu or save form. */
+
   menuOpen: boolean;
   edgesLocked: boolean;
   measureLocked: boolean;
   pinned: boolean;
 }
 
-/** The step the next Escape press takes, given what is currently held. */
+
 export function nextEscapeStep(state: EscapeStackState): EscapeStep {
   if (state.menuOpen) return 'menu';
   if (state.edgesLocked) return 'edges';
@@ -121,7 +121,7 @@ export function nextEscapeStep(state: EscapeStackState): EscapeStep {
   return 'exit';
 }
 
-/** The badge label for each step. Quiet, and short enough to sit in the row. */
+
 export const ESCAPE_HINTS: Record<EscapeStep, string> = {
   menu: 'Esc: close form',
   edges: 'Esc: release edge lock',
@@ -130,7 +130,7 @@ export const ESCAPE_HINTS: Record<EscapeStep, string> = {
   exit: 'Esc: exit',
 };
 
-/** The whole order, said once in the pinned panel so the stack is legible. */
+
 export const ESCAPE_ORDER_TIP =
   'Tip: Escape releases the save form, then an edge lock, then a measurement lock, ' +
   'then the pin, then exits';
@@ -139,54 +139,54 @@ export function escapeHintFor(state: EscapeStackState): string {
   return ESCAPE_HINTS[nextEscapeStep(state)];
 }
 
-/**
- * Picked colors and the layout-overlay preference live at module scope so they
- * survive leaving and re-entering the inspector on the same page. Neither ever
- * reaches storage: a reload forgets both.
- */
+
+
+
+
+
 const pickedHistory: ColorValue[] = [];
 let lastPicked: ColorValue | null = null;
 let layoutOverlayEnabled = true;
-/** Rulers and their guides are a page-session preference, like the above. */
+
 let rulersEnabled = false;
-/** Where the user dragged the panel, kept for the page session only. */
+
 let draggedPanelPosition: { x: number; y: number } | null = null;
-/**
- * The one-time panel tips, in the order they are offered. Each is shown for one
- * selection and stays through that selection's live re-reads, because a tip
- * that is repainted away mid-sentence is a tip nobody reads. After the list is
- * exhausted the tip line is gone for the rest of the page session.
- */
+
+
+
+
+
+
 const PANEL_TIPS: readonly string[] = ['Tip: ArrowUp selects the parent', ESCAPE_ORDER_TIP];
 let tipIndex = 0;
 let tipFor: Element | null = null;
-/**
- * Whether the user has taken the badge's collapse decision away from the
- * viewport. Until they press the control the badge follows the window width;
- * after that their choice stands until the page is reloaded (Z1).
- */
+
+
+
+
+
 let badgeCollapseChoice: 'collapsed' | 'expanded' | null = null;
-/**
- * Whether a side panel is open for this tab. The panel hosts the same tools, so
- * the badge steps aside to its dot for as long as the panel is there (W2).
- */
+
+
+
+
 let badgeSidepanelOpen = false;
 
-/** What the collapsed dot says on hover while the side panel holds the tools. */
+
 export const BADGE_SIDEPANEL_TITLE = 'Controls are in the side panel. Click to expand.';
-/** What it says the rest of the time. */
+
 export const BADGE_EXPAND_TITLE = 'Click to expand';
 
-/**
- * Record a collapse decision and answer with the state the badge should be in.
- * Kept out of `createOverlay` because the decision also arrives while there is
- * no badge on screen: a side panel can open before the inspector is switched on.
- *
- * A press on the control ('user') stands until the page is reloaded. A presence
- * change ('sidepanel') takes the decision back, because an expansion sticks
- * only until the panel opens or closes; a panel that closes leaves the badge
- * collapsed only when the user collapsed it themselves (W2).
- */
+
+
+
+
+
+
+
+
+
+
 export function recordBadgeCollapse(
   collapsed: boolean,
   reason: 'sidepanel' | 'user',
@@ -205,22 +205,22 @@ export function recordBadgeCollapse(
   return narrowViewport();
 }
 
-/** True while a side panel is open for this page, badge or no badge. */
+
 export function badgeSidepanelPresence(): boolean {
   return badgeSidepanelOpen;
 }
 
-/** The rulers preference, readable with no overlay on screen. */
+
 export function currentRulers(): boolean {
   return rulersEnabled;
 }
 
-/** The same preference, set from the side panel while the inspector is off. */
+
 export function setRulersEnabled(enabled: boolean): void {
   rulersEnabled = enabled;
 }
 
-/** The grid and flex overlay preference, readable with no overlay on screen. */
+
 export function currentLayoutOverlay(): boolean {
   return layoutOverlayEnabled;
 }
@@ -229,7 +229,7 @@ export function setLayoutOverlayEnabled(enabled: boolean): void {
   layoutOverlayEnabled = enabled;
 }
 
-/** Test seam: forgets the dragged panel position and the one-time tips. */
+
 export function resetOverlaySession(): void {
   draggedPanelPosition = null;
   tipIndex = 0;
@@ -240,11 +240,11 @@ export function resetOverlaySession(): void {
   badgeSidepanelOpen = false;
 }
 
-/**
- * True when the element is actually painting something right now. A connected
- * element with no client rects (or one `checkVisibility` rejects) is hidden by
- * a breakpoint or a toggle, not gone (PRD 19.3).
- */
+
+
+
+
+
 export function isElementRendered(element: Element): boolean {
   if (!element.isConnected) return false;
   try {
@@ -263,12 +263,12 @@ export function isElementRendered(element: Element): boolean {
 
 export type CardCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
-/**
- * The corner whose card overlaps the selected rect least. A hero band that
- * spans the viewport cannot be stepped around, so the panel takes the corner
- * that covers the least of it; a tie prefers the right, where the panel
- * normally lives (PRD 6.2).
- */
+
+
+
+
+
+
 export function chooseCardCorner(
   target: Rect,
   card: { width: number; height: number },
@@ -299,15 +299,15 @@ export function chooseCardCorner(
   return best.corner;
 }
 
-/**
- * Where to put the panel for a rect that spans the viewport and is tall enough
- * to hold text: below it, or above it, whichever has more room (tester UX note
- * 7). A hero heading is 1200px wide and 120px tall, and a panel placed beside
- * it lands on the words. Null means neither band fits and the caller should
- * fall back to the least-overlap corner.
- *
- * Pure: no layout is read here, so the rule is unit testable.
- */
+
+
+
+
+
+
+
+
+
 export function chooseWidePlacement(
   target: Rect,
   card: { width: number; height: number },
@@ -347,7 +347,7 @@ function rememberPicked(color: ColorValue): void {
   if (pickedHistory.length > MAX_PICKED_HISTORY) pickedHistory.length = MAX_PICKED_HISTORY;
 }
 
-/** Test seam: clears the module-level picked memory. */
+
 export function resetPickedColors(): void {
   pickedHistory.length = 0;
   lastPicked = null;
@@ -365,7 +365,7 @@ export interface SaveRequest {
   captureScreenshot: boolean;
 }
 
-/** What a network round trip can add to an asset row that the DOM cannot. */
+
 export interface AssetDetails {
   fileSize: number | null;
   mimeType: string | null;
@@ -374,61 +374,61 @@ export interface AssetDetails {
 export interface OverlayCallbacks {
   onExit(): void;
   onTogglePaused(): void;
-  /** Badge button: cycles layout outlines off to the configured coloring. */
+
   onToggleOutlines(): void;
-  /** Badge button: rulers and their guides on or off (competitive Tier 2). */
+
   onToggleRulers(): void;
-  /**
-   * Badge button: "Prefer semantic parents". This lives on the badge rather
-   * than in the popup because `Settings` belongs to another contract and adding
-   * a field to it is out of this workstream's bounds, so the preference is a
-   * per-page-session toggle.
-   */
+
+
+
+
+
+
   onToggleSemanticParents(): void;
-  /**
-   * The pinned panel's "Layout overlay" toggle was pressed. The overlay has
-   * already applied it; this is how the side panel's mirror of the same tool
-   * learns about it (W3).
-   */
+
+
+
+
+
   onToggleLayoutOverlay(): void;
-  /** The badge's own collapse control was pressed, dot to row or back (W2). */
+
   onToggleBadge(): void;
-  /** Badge button: show or hide the mockup overlay without forgetting it. */
+
   onToggleMockupVisible(): void;
   onUnpin(): void;
   onSelectAncestor(index: number): void;
-  /**
-   * The breadcrumb's trailing child chip: the inline wrapper a click was
-   * promoted away from (competitive tester note, PRD INS-04).
-   */
+
+
+
+
   onSelectChild(): void;
   onNavigate(direction: 'up' | 'down'): void;
   onReread(): void;
-  /** Resolves with an error string, or null on success. */
+
   onDownload(request: DownloadRequest): Promise<string | null>;
-  /**
-   * File size and MIME type for one asset URL, which costs a request to that
-   * asset's host. Resolves with an error string when it cannot be answered.
-   */
+
+
+
+
   onAssetDetails(url: string): Promise<AssetDetails | string>;
-  /**
-   * Read one font file's own name table. This is the only request in the
-   * product that contacts a host the user did not already load, so it happens
-   * on a press and never on its own (PRD 17.1). Resolves with the identity, or
-   * with a sentence saying why it could not be read.
-   */
+
+
+
+
+
+
   onIdentifyFont(url: string): Promise<FontIdentity | string>;
   onSave(request: SaveRequest): Promise<string | null>;
-  /** Returns the text to copy, or null when the exporter is unavailable. */
+
   cssFor(category: StyleCategory): string | null;
   tailwindFor(category: StyleCategory): string | null;
-  /**
-   * Closest-standard Tailwind (PRD EXP-02 mode 2). Null while the adapter is
-   * missing, which the button reports as "Copy unavailable" rather than
-   * pretending to have copied something.
-   */
+
+
+
+
+
   tailwindClosestFor(category: StyleCategory): string | null;
-  /** The mockup's settings changed on the page: drag or arrow-key nudge. */
+
   onMockupMoved(state: MockupSettings): void;
 }
 
@@ -436,62 +436,62 @@ export interface Overlay {
   host: HTMLElement;
   root: ShadowRoot;
   setMode(mode: InspectorMode): void;
-  /** Reflects the current layout-outline mode on the badge toggle. */
+
   setOutlines(mode: OutlineMode): void;
   setHover(snapshot: ElementSnapshot | null, element: Element | null): void;
-  /**
-   * `child` is the inline wrapper a click was promoted away from, shown as the
-   * trailing breadcrumb chip so the wrapper stays one click away.
-   */
+
+
+
+
   setPinned(
     snapshot: ElementSnapshot | null,
     element: Element | null,
     options?: { child?: Element | null },
   ): void;
   markPinnedMissing(): void;
-  /**
-   * The pinned element is still in the document but renders nothing right now.
-   * The readings stay on screen, dimmed, and the bands come off until it
-   * renders again (PRD 19.3).
-   */
+
+
+
+
+
   setPinnedHidden(hidden: boolean): void;
-  /**
-   * Alt measurement against a second element (PRD LAY-02). Null clears it.
-   * A locked measurement survives releasing Alt until it is cleared.
-   */
+
+
+
+
   setMeasure(element: Element | null, options?: { locked?: boolean }): void;
   measureLocked(): boolean;
-  /**
-   * Point-to-edge measurement (competitive Tier 2 item 3). The point is in
-   * viewport coordinates; null clears the reading. A locked reading survives
-   * releasing Shift until Escape clears it.
-   */
+
+
+
+
+
   setEdges(point: { x: number; y: number } | null, options?: { locked?: boolean }): void;
   edgesLocked(): boolean;
-  /** Rulers and guides on or off, reflected on the badge. */
+
   setRulers(enabled: boolean): void;
   rulersOn(): boolean;
-  /** Reflects the per-session "Prefer semantic parents" toggle on the badge. */
+
   setSemanticParents(enabled: boolean): void;
-  /** The grid and flex overlay for the pinned element, on or off. */
+
   setLayoutOverlay(enabled: boolean): void;
   layoutOverlayOn(): boolean;
-  /**
-   * Collapse the badge to its dot, or expand it again. 'sidepanel' is a panel
-   * opening or closing, 'user' is a deliberate press somewhere else (W2).
-   */
+
+
+
+
   setBadgeCollapsed(collapsed: boolean, reason: 'sidepanel' | 'user'): void;
-  /** True while the badge is showing nothing but its dot. */
+
   badgeCollapsed(): boolean;
-  /** The mockup overlay for this page. Null clears it. */
+
   setMockup(mockup: MockupState | null): void;
-  /** The current mockup settings, without the image. Null when there is none. */
+
   mockupState(): MockupSettings | null;
-  /**
-   * Pointer dragging for an unlocked mockup. The image itself never takes
-   * pointer events, so `select.ts` offers it every pointerdown and starts a
-   * drag only when this says the point belongs to the mockup.
-   */
+
+
+
+
+
   mockupDragStart(point: { x: number; y: number }): boolean;
   mockupDragMove(point: { x: number; y: number }): void;
   mockupDragEnd(): void;
@@ -510,8 +510,8 @@ export interface Overlay {
   destroy(): void;
 }
 
-// ---------------------------------------------------------------------------
-// Stylesheet. Inlined so no extension resource has to be web accessible.
+
+
 
 const STYLES = `
 :host {
@@ -892,8 +892,8 @@ label.check { display: flex; align-items: center; gap: 6px; color: var(--di-text
 }
 `;
 
-// ---------------------------------------------------------------------------
-// Small DOM helpers
+
+
 
 function h<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -924,7 +924,7 @@ function clamp(value: number, low: number, high: number): number {
   return Math.min(Math.max(value, low), Math.max(low, high));
 }
 
-/** True on a viewport too narrow to hold the badge's full row. */
+
 function narrowViewport(): boolean {
   const width = typeof window === 'undefined' ? 0 : window.innerWidth;
   return width > 0 && width < BADGE_COLLAPSE_WIDTH;
@@ -943,7 +943,7 @@ async function copyText(text: string): Promise<boolean> {
       return true;
     }
   } catch {
-    // Fall through to the legacy path, which works without permissions.
+
   }
   try {
     const area = document.createElement('textarea');
@@ -969,12 +969,12 @@ function filenameFromUrl(url: string, fallback: string): string {
     const last = parsed.pathname.split('/').filter(Boolean).pop();
     if (last) return decodeURIComponent(last);
   } catch {
-    // Not a parseable URL; use the fallback.
+
   }
   return fallback;
 }
 
-/** Extension for a data URL asset, so a download still gets a sensible name. */
+
 function extensionForDataUrl(url: string): string {
   const match = /^data:([\w.+-]+)\/([\w.+-]+)/i.exec(url);
   const subtype = match?.[2]?.toLowerCase();
@@ -986,18 +986,18 @@ function extensionForDataUrl(url: string): string {
 
 const FONT_FILE = /\.(woff2|woff|ttf|otf|eot)(\?|#|$)/i;
 
-/** Said before the press, not after: this is the one request the user opts into (PRD 17.1). */
+
 const IDENTIFY_TITLE = 'Reads this font file for its real name, designer and licence. Contacts the font host.';
 
 function safeName(label: string): string {
   return label.replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'asset';
 }
 
-/**
- * A text button that is really a link. Provider pages are destinations, so
- * they get an anchor a user can open in a new tab or copy, not a click
- * handler. `noreferrer` keeps the inspected page out of the referrer.
- */
+
+
+
+
+
 function textLink(label: string, url: string, title?: string): HTMLAnchorElement {
   const node = h('a', 'quiet', label);
   node.href = url;
@@ -1007,14 +1007,14 @@ function textLink(label: string, url: string, title?: string): HTMLAnchorElement
   return node;
 }
 
-// ---------------------------------------------------------------------------
-// Size readings.
-//
-// The overlay writes readings code-style, with the unit against the number
-// ("16.12px", "1.125rem"), which is how they would be typed into CSS. Which
-// value leads depends on the page: a root font size that scales with the
-// viewport makes every px reading true only at this width, so the rem value
-// goes first and the px value follows it as the reading at this width.
+
+
+
+
+
+
+
+
 
 function remText(value: number, rootFontSize: number): string | null {
   if (!Number.isFinite(rootFontSize) || rootFontSize <= 0) return null;
@@ -1029,7 +1029,7 @@ function sizeText(value: number, source: SourceContext): string {
     : `${formatPx(value)} · ${rem}`;
 }
 
-/** The same reading without the trailing clause, for the small hover card. */
+
 function sizeTextCompact(value: number, source: SourceContext): string {
   const rem = remText(value, source.rootFontSize);
   if (!rem) return formatPx(value);
@@ -1038,17 +1038,17 @@ function sizeTextCompact(value: number, source: SourceContext): string {
     : `${formatPx(value)} · ${rem}`;
 }
 
-/** What Copy puts on the clipboard for a size row: the stable value. */
+
 function sizeCopyText(value: number, source: SourceContext): string {
   const rem = remText(value, source.rootFontSize);
   return source.rootFontSizeFluid && rem ? rem : `${value}px`;
 }
 
-/**
- * A width by height reading. Both numbers carry the unit: one trailing "px"
- * reads as though only the second value had one, and a Rendered row in px
- * beside an Intrinsic row without one reads as an oversight.
- */
+
+
+
+
+
 function sizePair(width: number, height: number): string {
   return `${formatPx(width)} x ${formatPx(height)}`;
 }
@@ -1064,15 +1064,15 @@ function sidesText(values: Sides<number>): string {
   const parts = [values.top, values.right, values.bottom, values.left].map((value) =>
     formatNumber(roundTo(value, 2), 2),
   );
-  // Every side carries its own unit. One trailing "px" on a four value row read
-  // as though only the last value had a unit ("0 0 12 0px").
+
+
   return parts.every((part) => part === parts[0])
     ? `${parts[0]}px`
     : parts.map((part) => `${part}px`).join(' ');
 }
 
-// ---------------------------------------------------------------------------
-// Box geometry
+
+
 
 interface BoxGeometry {
   margin: Rect;
@@ -1084,14 +1084,14 @@ interface BoxGeometry {
   borderValues: Sides<number>;
 }
 
-/**
- * The box model as rects, from values already measured.
- *
- * Kept separate from the reading so the hover path can build the highlight out
- * of the snapshot it has just taken instead of measuring the same element a
- * second time: one `getComputedStyle`, twelve property reads and one
- * `getBoundingClientRect` saved per frame (PERF 3).
- */
+
+
+
+
+
+
+
+
 function geometryFrom(
   rect: Rect,
   marginValues: Sides<number>,
@@ -1140,13 +1140,13 @@ function geometryOf(element: Element): BoxGeometry | null {
   );
 }
 
-/** The same geometry, out of a snapshot's layout reading. */
+
 function geometryOfLayout(layout: ElementSnapshot['layout']): BoxGeometry | null {
   return geometryFrom(layout.visualRect, layout.margin, layout.padding, layout.border);
 }
 
-// ---------------------------------------------------------------------------
-// Overlay
+
+
 
 export function createOverlay(callbacks: OverlayCallbacks): Overlay {
   const host = document.createElement(HOST_TAG);
@@ -1159,8 +1159,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
   style.textContent = STYLES;
   root.appendChild(style);
 
-  // Grid and flex drawing sits under the box-model bands, so a pinned
-  // element's own padding and margin still read on top of its track lines.
+
+
   const layoutLayer = h('div', 'layer');
   layoutLayer.id = 'layout-layer';
 
@@ -1181,8 +1181,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
   edgeLayer.id = 'edge-layer';
   const highlightLayer = h('div', 'layer');
 
-  // Rulers sit above the drawing layers and below the cards: a guide should be
-  // visible over the page, and the panel should still be readable over a guide.
+
+
   const rulerLayer = h('div', 'layer');
   rulerLayer.id = 'ruler-layer';
   rulerLayer.hidden = true;
@@ -1190,8 +1190,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
   rulerTop.id = 'ruler-top';
   const rulerLeft = h('div', 'ruler');
   rulerLeft.id = 'ruler-left';
-  // Ticks and labels live in a strip that only ever moves by transform; the
-  // accent marks are redrawn from the hovered rect and stay out of it.
+
+
   const rulerTopStrip = h('div', 'ruler-strip');
   const rulerLeftStrip = h('div', 'ruler-strip');
   const rulerTopMarks = h('div', 'ruler-marks');
@@ -1231,16 +1231,16 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
   const badgeDot = h('span', 'dot');
   const badgeText = h('span', undefined, 'Inspecting');
   badgeStatus.append(badgeText);
-  // The collapse control carries the status dot, so a collapsed badge is a dot
-  // that is still the button that brings the badge back.
+
+
   const collapseButton = button('', 'quiet', 'Collapse the Design Inspector badge');
   collapseButton.id = 'badge-collapse';
   const collapseChevron = h('span', 'chevron', '⌃');
   collapseButton.append(badgeDot, collapseChevron);
   const badgeProgress = h('span');
   badgeProgress.id = 'badge-progress';
-  // The next Escape action, said quietly. A live region would announce every
-  // hover; this is read when the badge is read, which is what it is for.
+
+
   const badgeEscape = h('span');
   badgeEscape.id = 'badge-escape';
   const outlinesButton = button('Outlines', 'quiet', 'Toggle layout outlines');
@@ -1252,7 +1252,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
   const semanticButton = button('Semantic', 'quiet', 'Prefer semantic parents when selecting');
   semanticButton.id = 'badge-semantic';
   semanticButton.setAttribute('aria-pressed', 'true');
-  // Only meaningful while a mockup exists, so it is absent until one does.
+
   const mockupButton = button('Mockup', 'quiet', 'Show or hide the mockup overlay');
   mockupButton.id = 'badge-mockup';
   mockupButton.setAttribute('aria-pressed', 'false');
@@ -1269,7 +1269,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     semanticButton,
     mockupButton,
   );
-  // No native picker means no button at all, rather than one that cannot work.
+
   const pickButton = hasEyeDropper() ? button('Pick color', 'quiet', 'Pick a color from the page') : null;
   if (pickButton) {
     pickButton.id = 'badge-pick';
@@ -1293,8 +1293,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
   );
   (document.documentElement ?? document.body).appendChild(host);
 
-  // The mockup carries its own host: see the comment at the top of mockup.ts
-  // for why a blended image cannot live inside this stacking context.
+
+
   const mockupLayer: MockupLayer = createMockupLayer({
     onStateChange: (next) => {
       applyMockupBadge();
@@ -1302,11 +1302,11 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     },
   });
 
-  /**
-   * A phone-width viewport has no room for the full row, so the badge starts as
-   * its dot and the user expands it (tester finding F6). Wider viewports open
-   * with everything on show, as before.
-   */
+
+
+
+
+
   let badgeCollapsed = badgeCollapseChoice
     ? badgeCollapseChoice === 'collapsed'
     : badgeSidepanelOpen || narrowViewport();
@@ -1314,8 +1314,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     badge.dataset.collapsed = badgeCollapsed ? 'true' : 'false';
     badge.dataset.collapseReason = badgeSidepanelOpen ? 'sidepanel' : 'user';
     collapseChevron.textContent = badgeCollapsed ? '⌄' : '⌃';
-    // The dot is the only thing left on screen when the side panel holds the
-    // tools, so it says where they went rather than just how to get it back.
+
+
     if (badgeCollapsed) {
       collapseButton.setAttribute(
         'title',
@@ -1338,20 +1338,20 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
   collapseButton.addEventListener('click', (event) => {
     event.preventDefault();
     event.stopPropagation();
-    // Pressing the control takes the decision off the viewport for good: a
-    // rotation must not undo what the user just asked for (Z1). It also
-    // outlives the side panel closing again (W2).
+
+
+
     badgeCollapsed = recordBadgeCollapse(!badgeCollapsed, 'user');
     applyBadgeCollapsed();
     callbacks.onToggleBadge();
   });
 
-  /**
-   * The collapse decision follows the window until the user takes it. Rotating
-   * a phone, dragging a window across 480px, or opening DevTools beside a page
-   * all change how much room the badge has, and the state it was given at mount
-   * stops being the right one (Z1).
-   */
+
+
+
+
+
+
   function syncBadgeToViewport(): void {
     const narrow = narrowViewport();
     if (narrow && !badgeCollapsed && badgeCollapseChoice !== 'expanded') {
@@ -1396,7 +1396,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     event.stopPropagation();
     callbacks.onExit();
   });
-  // The click is the user gesture the EyeDropper API requires.
+
   pickButton?.addEventListener('click', (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -1411,51 +1411,51 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
   let highlighted: Element[] = [];
   let lastCopyAt = 0;
   let saveOpen = false;
-  /**
-   * The one open section copy menu, if any. One at a time, and Escape closes it
-   * before it touches anything else the user is holding (Z2).
-   */
+
+
+
+
   let openCopyMenu: { menu: HTMLElement; toggle: HTMLButtonElement } | null = null;
   let hostVisible = true;
-  /** The pinned element is connected but renders nothing at the moment. */
+
   let pinnedHidden = false;
 
-  // Measurement state. None of it is persisted or part of a snapshot.
+
   let measureElement: Element | null = null;
   let measureLockedFlag = false;
   let measurement: BoxMeasurement | null = null;
 
-  // Point-to-edge state, same rule: read on screen, never saved.
+
   let edgePoint: { x: number; y: number } | null = null;
   let edgeReading: NearestEdges | null = null;
   let edgeLockedFlag = false;
 
-  /** The inline wrapper a click was promoted away from, if any. */
+
   let pinnedChild: Element | null = null;
-  /** Guide being dragged, so a pointermove knows which line it is moving. */
-  /**
-   * Ruler strip bookkeeping. The strips are rebuilt only when the viewport
-   * size changes; `rulerBaseX` and `rulerBaseY` are the document coordinate
-   * the strips' origin currently stands for, so a scroll that stays inside the
-   * same major step rewrites no text at all.
-   */
+
+
+
+
+
+
+
   let rulerStripWidth = -1;
   let rulerStripHeight = -1;
   let rulerBaseX = Number.NaN;
   let rulerBaseY = Number.NaN;
   const rulerTopLabels: { node: HTMLElement; offset: number }[] = [];
   const rulerLeftLabels: { node: HTMLElement; offset: number }[] = [];
-  /** Guides are redrawn only when the set changes; a scroll re-places them. */
+
   let guideCount = -1;
 
-  /** The pinned rect the layout overlay was last drawn from, in viewport px. */
+
   let layoutOrigin: Rect | null = null;
 
   let guideDrag: { id: string; axis: 'x' | 'y' } | null = null;
-  /** Last pointerdown on a guide, so a second one can read as a double click. */
+
   let lastGuidePress: { id: string; at: number } | null = null;
 
-  // Panel pieces that are repainted without rebuilding the whole panel.
+
   let measureBlock: HTMLElement | null = null;
   let measureBody: HTMLElement | null = null;
   let measureTitle: HTMLElement | null = null;
@@ -1467,19 +1467,19 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
   let edgeBlock: HTMLElement | null = null;
   let edgeBody: HTMLElement | null = null;
   let edgeTitle: HTMLElement | null = null;
-  /** The background pixel supplied for the pinned element's contrast row. */
+
   let pickedBackground: ColorValue | null = null;
-  /** The repaintable block of typography rows that depend on the font file. */
+
   let fontIdentityHost: HTMLElement | null = null;
-  /**
-   * Identities already read, keyed by font URL, for this page session. Pinning
-   * a second heading in the same family must not cost a second request to the
-   * font's host (PRD 17.1).
-   */
+
+
+
+
+
   const fontIdentities = new Map<string, FontIdentity>();
 
-  // -------------------------------------------------------------------------
-  // Box model and labels
+
+
 
   function clearBox(): void {
     bandMargin.style.display = 'none';
@@ -1551,7 +1551,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     (['top', 'bottom', 'left', 'right'] as const).forEach(marginBand);
   }
 
-  /** The read half: measure the element, then hand the geometry to the writes. */
+
   function drawBox(element: Element | null): void {
     if (!element || !element.isConnected) {
       clearBox();
@@ -1560,12 +1560,12 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     drawBoxGeometry(geometryOf(element));
   }
 
-  /**
-   * The write half of drawing the box. Split from the read half so a caller
-   * that has already measured the element (the hover path) can take every
-   * reading before the first style write and avoid a forced synchronous
-   * layout in the middle of the frame.
-   */
+
+
+
+
+
+
   function drawBoxGeometry(geometry: BoxGeometry | null): void {
     if (!geometry) {
       clearBox();
@@ -1599,19 +1599,19 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     drawLabels(geometry);
   }
 
-  // -------------------------------------------------------------------------
-  // Card placement
 
-  /**
-   * Drag the panel by its header. Pointer events are handled inside the shadow
-   * root only, with pointer capture, so the page never sees the drag and no
-   * window listener is needed.
-   */
+
+
+
+
+
+
+
   function makeDraggable(handle: HTMLElement): void {
     let offset: { x: number; y: number } | null = null;
 
     handle.addEventListener('pointerdown', (event) => {
-      // Buttons in the header are controls, not a drag handle.
+
       if ((event.target as Element | null)?.closest('button')) return;
       const rect = panel.getBoundingClientRect();
       offset = { x: event.clientX - rect.x, y: event.clientY - rect.y };
@@ -1619,7 +1619,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
       try {
         handle.setPointerCapture(event.pointerId);
       } catch {
-        // Capture is an optimisation; the move handler still works without it.
+
       }
       event.preventDefault();
       event.stopPropagation();
@@ -1644,7 +1644,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
       try {
         handle.releasePointerCapture(event.pointerId);
       } catch {
-        // Already released with the pointer.
+
       }
     };
     handle.addEventListener('pointerup', end);
@@ -1660,17 +1660,17 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     const width = size.width || 300;
     const height = size.height || 120;
 
-    // The panel is the user's to place: a dragged position wins over anything
-    // computed, for the rest of the page session.
+
+
     if (card === panel && draggedPanelPosition) {
       card.style.left = `${clamp(draggedPanelPosition.x, EDGE, Math.max(EDGE, viewWidth - width - EDGE))}px`;
       card.style.top = `${clamp(draggedPanelPosition.y, EDGE, Math.max(EDGE, viewHeight - height - EDGE))}px`;
       return;
     }
 
-    // A rect that spans most of the viewport cannot be stepped around. A tall
-    // one gets the band above or below it, whichever has more room; anything
-    // else takes the corner that covers the least of it.
+
+
+
     if (card === panel && target && target.width >= viewWidth * WIDE_RECT_RATIO) {
       const band = chooseWidePlacement(
         target,
@@ -1699,7 +1699,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
       if (above >= EDGE) {
         top = above;
       } else {
-        // Neither below nor above fits: sit beside the element instead of over it.
+
         top = Math.min(Math.max(EDGE, anchor.y), Math.max(EDGE, viewHeight - height - EDGE));
         const right = anchor.x + anchor.width + CARD_GAP;
         left = right + width <= viewWidth - EDGE ? right : anchor.x - width - CARD_GAP;
@@ -1712,11 +1712,11 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     card.style.top = `${card === panel ? clearBadge(left, top, width, height, viewWidth, viewHeight) : top}px`;
   }
 
-  /**
-   * The badge is drawn over the panel, so a panel that would start under it
-   * loses its own header. This drops the panel below the badge when the two
-   * would share the top right corner.
-   */
+
+
+
+
+
   function clearBadge(
     left: number,
     top: number,
@@ -1731,8 +1731,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     return Math.min(BADGE_CLEARANCE, Math.max(EDGE, viewHeight - height - EDGE));
   }
 
-  // -------------------------------------------------------------------------
-  // Value rows
+
+
 
   function swatchFor(color: ColorValue): HTMLElement {
     const swatch = h('span', 'swatch');
@@ -1759,11 +1759,11 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     return node;
   }
 
-  /**
-   * A Download button that reports what happened next to itself. The request is
-   * resolved on the press, because an asset can turn out to have no
-   * downloadable source at all.
-   */
+
+
+
+
+
   function downloadButton(
     className: string,
     ariaLabel: string,
@@ -1794,15 +1794,15 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
       color?: ColorValue;
       copy?: string;
       allowPick?: boolean;
-      /**
-       * Keep the value on one line, with the whole of it in a tooltip and on
-       * the Copy button. A CDN font URL is 180 characters: wrapped, it buries
-       * the rest of the section under six lines of hash.
-       */
+
+
+
+
+
       oneLine?: boolean;
-      /** Short labels after the value: a confidence badge, a variable axis range. */
+
       chips?: { text: string; title?: string; accent?: boolean }[];
-      /** Renders the value as a link to this address (a licence, a provider page). */
+
       href?: string;
     } = {},
   ): HTMLElement {
@@ -1823,8 +1823,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
       valueNode.appendChild(node);
     }
     line.append(valueNode, copyButton(key, () => options.copy ?? value));
-    // Every color row offers the picker, because the rendered pixel and the
-    // computed color are different claims (competitive Tier 1 item 2).
+
+
     if (options.color && options.allowPick !== false && hasEyeDropper()) {
       const pick = button('Pick', 'quiet row-copy', 'Pick a color from the page');
       pick.addEventListener('click', (event) => {
@@ -1837,11 +1837,11 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     return line;
   }
 
-  /**
-   * A section-head copy button over an exporter that may be unavailable. The
-   * label reports what happened and returns to itself, so the button is never
-   * left claiming a state it is not in.
-   */
+
+
+
+
+
   function exportButton(
     label: string,
     ariaLabel: string,
@@ -1874,7 +1874,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     return node;
   }
 
-  /** Closes whichever section's copy menu is open. True when one was. */
+
   function closeCopyMenu(): boolean {
     if (!openCopyMenu) return false;
     openCopyMenu.menu.hidden = true;
@@ -1893,11 +1893,11 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     const body = h('div', 'section-body');
 
     if (category) {
-      // Three labelled copy buttons wrapped onto two lines and misaligned the
-      // head at panel width, so the head carries one control and the three
-      // exporters live in a menu under it. It opens downward inside the
-      // section rather than floating, which keeps it inside the scroll area
-      // and out of the clipped corners, and Escape closes it first (Z2).
+
+
+
+
+
       const menu = h('div', 'copy-menu');
       menu.setAttribute('role', 'group');
       menu.setAttribute('aria-label', `Copy ${name} as`);
@@ -1925,9 +1925,9 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
         exportButton('Tailwind', `Copy ${name} as Tailwind classes`, () =>
           callbacks.tailwindFor(category),
         ),
-        // Mode 2 of PRD EXP-02: standard utilities only, with the deviations
-        // stated. Its adapter belongs to another workstream, so an absent
-        // implementation reads as "Copy unavailable" rather than as a crash.
+
+
+
         exportButton(
           'Closest standard',
           `Copy ${name} as the closest standard Tailwind classes`,
@@ -1943,8 +1943,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     return { wrapper, body };
   }
 
-  // -------------------------------------------------------------------------
-  // Eyedropper (competitive Tier 1 item 2)
+
+
 
   function rectOf(element: Element): Rect {
     const rect = element.getBoundingClientRect();
@@ -1954,15 +1954,15 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
   function applyHostDisplay(hiddenForPick: boolean): void {
     const hidden = hiddenForPick || !hostVisible;
     host.style.display = hidden ? 'none' : '';
-    // A screenshot or a picked pixel must read the page, not our mockup.
+
     mockupLayer.setHostVisible(!hidden);
   }
 
-  /**
-   * The badge's Escape hint, repainted whenever anything Escape would release
-   * changes. It is cheap enough to call from every one of those places rather
-   * than trying to remember which of them can matter (Z2).
-   */
+
+
+
+
+
   function applyEscapeHint(): void {
     badgeEscape.textContent = escapeHintFor({
       menuOpen: saveOpen || openCopyMenu !== null,
@@ -1972,18 +1972,18 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     });
   }
 
-  /** The Mockup toggle exists only while there is a mockup to toggle. */
+
   function applyMockupBadge(): void {
     const state = mockupLayer.current();
     mockupButton.hidden = state === null;
     mockupButton.setAttribute('aria-pressed', state?.visible ? 'true' : 'false');
   }
 
-  /**
-   * True for anything the extension drew, in either host. Used both by the
-   * public `owns` and by the edge sampler, which must never mistake one of our
-   * own guides for a page element.
-   */
+
+
+
+
+
   function ownsNode(node: Node | null | undefined): boolean {
     if (!node) return false;
     if (node === host) return true;
@@ -1996,11 +1996,11 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     return mockupLayer.owns(node);
   }
 
-  /**
-   * Opens the native picker. The overlay host is hidden for the duration so
-   * the pick reads the page's own pixel and not our tint, and is restored
-   * whether the pick succeeded, was cancelled, or threw.
-   */
+
+
+
+
+
   async function runPick(purpose: 'value' | 'background'): Promise<void> {
     const outcome = await pickPixel({
       onBeforeOpen: () => applyHostDisplay(true),
@@ -2061,7 +2061,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
       pickedSection.hidden = !lastPicked && !pickedNote;
     }
 
-    // The floating card only exists when there is no panel to put the result in.
+
     pickCard.textContent = '';
     if (!panel.hidden || (!lastPicked && !pickedNote)) {
       pickCard.hidden = true;
@@ -2080,11 +2080,11 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     pickCard.hidden = false;
   }
 
-  /**
-   * Contrast against a picked pixel (PRD SUR-03's future case). The snapshot's
-   * own `contrast` reading is left exactly as it was read; this is panel state
-   * and it says who supplied the background.
-   */
+
+
+
+
+
   function paintPickedContrast(): void {
     if (!contrastPickHost) return;
     contrastPickHost.textContent = '';
@@ -2132,8 +2132,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     );
   }
 
-  // -------------------------------------------------------------------------
-  // Measurement (PRD LAY-02)
+
+
 
   const CASE_LABELS: Record<BoxMeasurement['case'], string> = {
     separated: 'separated',
@@ -2192,8 +2192,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     const current = measurement;
     if (!current || !measureElement || !pinnedSnapshot) {
       measureBlock.hidden = true;
-      // A hidden block that still says "Measure (locked)" is read by assistive
-      // technology and shows through a repaint (tester UX note 2).
+
+
       measureTitle.textContent = '';
       return;
     }
@@ -2261,8 +2261,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     );
   }
 
-  // -------------------------------------------------------------------------
-  // Point-to-edge measurement (competitive Tier 2 item 3)
+
+
 
   const EDGE_ROW_LABELS: Record<EdgeDirection, string> = {
     top: 'Up',
@@ -2271,17 +2271,17 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     left: 'Left',
   };
 
-  /** The topmost page element at a viewport point, with our own UI skipped. */
+
   function sampleAt(x: number, y: number): Element | null {
     if (x < 0 || y < 0 || x >= window.innerWidth || y >= window.innerHeight) return null;
     return elementAtPoint(x, y, ownsNode);
   }
 
-  /**
-   * The boxes of every page element the point is inside, ours excluded. The
-   * hit-test walk only sees where the topmost element changes, which can be
-   * further away than a box that ends right there (tester finding F10).
-   */
+
+
+
+
+
   function stackRectsAt(point: { x: number; y: number }): Rect[] {
     let candidates: Element[] = [];
     try {
@@ -2298,7 +2298,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
         if (rect.width <= 0 || rect.height <= 0) continue;
         rects.push(rect);
       } catch {
-        // An element whose box cannot be read simply contributes no edge.
+
       }
     }
     return rects;
@@ -2322,8 +2322,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     }
     edgeLayer.appendChild(line);
 
-    // A distance the walk never confirmed is labelled as a lower bound, not as
-    // a measurement (PRD 16.1).
+
+
     const text = value.found ? formatPx(value.distance) : `>${formatPx(value.distance)}`;
     const label = h('div', 'edge-label edge-guide-label', text);
     const half = length / 2;
@@ -2379,7 +2379,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     const actions = h('div', 'form-actions');
     actions.appendChild(copyButton('edge distances', () => edgesCopyText(reading)));
     parent.appendChild(actions);
-    // The method, stated wherever the numbers are (competitive Tier 2 item 3).
+
     parent.appendChild(h('div', 'note', EDGE_METHOD_LABEL));
   }
 
@@ -2396,7 +2396,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
       }
     }
 
-    // With no panel open the reading still needs somewhere to be read.
+
     edgeCard.textContent = '';
     if (!panel.hidden || !reading) {
       edgeCard.hidden = true;
@@ -2409,13 +2409,13 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     edgeCard.hidden = false;
   }
 
-  // -------------------------------------------------------------------------
-  // Rulers and guides (Designer Tools territory)
 
-  /**
-   * `known` is the rect the caller has already measured. Passing it keeps the
-   * hover path free of a second layout read after the card has been written.
-   */
+
+
+
+
+
+
   function drawRulerMarks(known?: Rect | null): void {
     rulerTopMarks.textContent = '';
     rulerLeftMarks.textContent = '';
@@ -2443,13 +2443,13 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     });
   }
 
-  /**
-   * Building the strip is the only DOM work the rulers ever do, and it happens
-   * once per viewport size. The strip is built from document offset zero and
-   * covers the viewport plus one major step, so every tick's "major" flag and
-   * every label's place in the strip are fixed; scrolling only chooses which
-   * document coordinate offset zero currently stands for.
-   */
+
+
+
+
+
+
+
   function buildRulerStrips(): void {
     const width = window.innerWidth;
     const height = window.innerHeight;
@@ -2487,17 +2487,17 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
       rulerLeftLabels.push({ node: label, offset: tick.position });
     });
 
-    // A rebuilt strip carries no labels yet, so the next positioning pass has
-    // to write them whatever the scroll offset is.
+
+
     rulerBaseX = Number.NaN;
     rulerBaseY = Number.NaN;
   }
 
-  /**
-   * One transform per axis. The label text is rewritten only when the strip
-   * has slid a whole major step, which on a 1280px viewport is fourteen text
-   * assignments per 100px of scroll rather than 233 new nodes per frame.
-   */
+
+
+
+
+
   function positionRulerStrips(): void {
     const baseX = Math.floor(window.scrollX / MAJOR_STEP) * MAJOR_STEP;
     const baseY = Math.floor(window.scrollY / MAJOR_STEP) * MAJOR_STEP;
@@ -2527,7 +2527,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
       node.dataset.axis = guide.axis;
       node.dataset.guideId = guide.id;
       node.setAttribute('role', 'separator');
-      // Focusable, because Delete has to have somewhere to be pressed.
+
       node.tabIndex = 0;
       node.setAttribute(
         'aria-label',
@@ -2544,12 +2544,12 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     });
   }
 
-  /**
-   * A scroll does not change a guide's document coordinate, only where it is
-   * painted, so the nodes are moved rather than rebuilt. The set is redrawn
-   * only when its size changed, which is the only way a guide can appear or
-   * disappear outside a drag.
-   */
+
+
+
+
+
+
   function positionGuides(): void {
     const guides = listGuides();
     if (guides.length !== guideCount) {
@@ -2569,7 +2569,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     }
   }
 
-  /** Drops the guide and repaints, wherever the request came from. */
+
   function dropGuide(id: string): void {
     removeGuide(id);
     guideDrag = null;
@@ -2587,7 +2587,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
       rulerLeftMarks.textContent = '';
       rulerTopLabels.length = 0;
       rulerLeftLabels.length = 0;
-      // Force a rebuild the next time the rulers come back on.
+
       rulerStripWidth = -1;
       rulerStripHeight = -1;
       guideLayer.textContent = '';
@@ -2598,7 +2598,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     positionGuides();
   }
 
-  /** A click anywhere on a ruler drops a guide at that document coordinate. */
+
   function rulerClick(axis: 'x' | 'y'): (event: MouseEvent) => void {
     return (event) => {
       event.preventDefault();
@@ -2623,16 +2623,16 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     event.preventDefault();
     event.stopPropagation();
 
-    // The remove control is a control, not a place to start a drag.
+
     const target = event.target as Element | null;
     if (target && typeof target.closest === 'function' && target.closest('.guide-remove')) {
       dropGuide(id);
       return;
     }
 
-    // This layer captures the pointer so a drag survives leaving the 9px strip,
-    // and a captured pointer never produces a dblclick, so the double press is
-    // counted here instead (tester finding F2).
+
+
+
     const now = Date.now();
     if (lastGuidePress && lastGuidePress.id === id && now - lastGuidePress.at <= GUIDE_DOUBLE_MS) {
       dropGuide(id);
@@ -2644,7 +2644,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     try {
       node.setPointerCapture(event.pointerId);
     } catch {
-      // Capture is an optimisation; the move handler works without it.
+
     }
   });
 
@@ -2662,7 +2662,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     const target = event.target as Element | null;
     if (!target || typeof target.closest !== 'function') return;
     if (!target.closest('.guide-remove')) return;
-    // The pointerdown already removed it; this only keeps the click contained.
+
     event.preventDefault();
     event.stopPropagation();
   });
@@ -2673,8 +2673,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     const position =
       drag.axis === 'x' ? event.clientX + window.scrollX : event.clientY + window.scrollY;
     moveGuide(drag.id, position);
-    // The node is moved in place rather than redrawn, so the pointer capture
-    // survives the drag.
+
+
     const node = guideLayer.querySelector(`[data-guide-id="${drag.id}"]`) as HTMLElement | null;
     if (node) {
       if (drag.axis === 'x') node.style.left = `${position - window.scrollX}px`;
@@ -2692,8 +2692,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
   guideLayer.addEventListener('pointerup', endGuideDrag);
   guideLayer.addEventListener('pointercancel', endGuideDrag);
 
-  // Kept for the case where the pointer capture did not take and the browser
-  // does deliver a dblclick. Removing an already removed guide is a no-op.
+
+
   guideLayer.addEventListener('dblclick', (event) => {
     const node = guideNodeFor(event.target);
     const id = node?.dataset.guideId;
@@ -2703,8 +2703,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     dropGuide(id);
   });
 
-  // -------------------------------------------------------------------------
-  // Grid and flex overlay (competitive Tier 1 item 4)
+
+
 
   function drawLine(rect: Rect): void {
     const line = h('div', 'grid-line');
@@ -2811,9 +2811,9 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
       .filter((child) => child.getClientRects().length > 0)
       .map((child) => rectOf(child));
 
-    // The band is the distance actually painted between two children, which
-    // `justify-content` can make much larger than the declared gap. Both are
-    // shown when they disagree, and neither is called a margin (PRD LAY-02).
+
+
+
     const declaredGap = parsePx(axis === 'horizontal' ? style.columnGap : style.rowGap);
     flexGapBands(children, axis).forEach((band) => {
       drawTint(band.rect);
@@ -2852,7 +2852,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
         const display = (style.display || '').toLowerCase();
         if (display.includes('grid')) note = drawGridOverlay(geometry, style);
         else if (display.includes('flex')) note = drawFlexOverlay(element, geometry, style);
-        // Only a drawing can be translated; an empty layer is redrawn instead.
+
         if (layoutLayer.firstChild) layoutOrigin = { ...geometry.border };
       }
     }
@@ -2863,13 +2863,13 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     }
   }
 
-  /**
-   * The scroll path. Tracks and bands are drawn in viewport coordinates, so a
-   * scroll moves every one of them by the same offset: comparing the pinned
-   * rect against the one the drawing was made from turns a full recompute
-   * (a getComputedStyle, a geometry read and a few dozen nodes) into one
-   * transform. Anything that changed the element's size still redraws (PERF 3).
-   */
+
+
+
+
+
+
+
   function repositionLayoutOverlay(): void {
     const element = pinnedElement;
     if (!layoutOverlayEnabled || !element || !element.isConnected || !layoutOrigin) {
@@ -2895,8 +2895,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     layoutLayer.style.transform = dx === 0 && dy === 0 ? '' : `translate(${dx}px, ${dy}px)`;
   }
 
-  // -------------------------------------------------------------------------
-  // Hover card
+
+
 
   function assetSummary(asset: AssetReading): string {
     const kind =
@@ -2964,19 +2964,19 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Pinned panel
 
-  /**
-   * The typography rows that come from the font file rather than from CSS.
-   *
-   * The complaint this answers: a pinned heading on superpower.com read
-   * "Nb international pro webfont", "matched", and seven lines of CDN URL. The
-   * alias is the site's nickname for the file, not the typeface's name; the
-   * name is in the file, and this block shows it once the file has been read.
-   * Until then the CSS alias stands in and a single text button offers to go
-   * and look.
-   */
+
+
+
+
+
+
+
+
+
+
+
+
   function paintFontIdentity(type: TypographyReading): void {
     const host = fontIdentityHost;
     if (!host) return;
@@ -2986,8 +2986,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     };
 
     const fileUrl = type.source.url && FONT_FILE.test(type.source.url) ? type.source.url : null;
-    // A family identified once on this page is identified for every element in
-    // it, so a second pin shows the real name with no second request.
+
+
     if (!type.identity && fileUrl) {
       const remembered = fontIdentities.get(fileUrl);
       if (remembered) type.identity = remembered;
@@ -3005,9 +3005,9 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
       ],
     });
 
-    // The computed weight stays on the row whether or not the file was read
-    // (PRD TYP-01 requires it); the subfamily is the typeface's own word for
-    // the same thing, which is the part a designer asks for by name.
+
+
+
     const computed = `${type.weight}${type.style === 'normal' ? '' : ` ${type.style}`}`;
     add(
       'Style',
@@ -3028,9 +3028,9 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
 
     if (identity) {
       add('Designer', designerLine(identity));
-      // A version string often carries its build tooling after a semicolon
-      // ("3.001;Glyphs 3.2.3 (3260)"). The number is the reading; the whole
-      // string is still what the exports record.
+
+
+
       if (identity.version) {
         host.appendChild(h('div', 'note', `Version ${identity.version.split(';')[0]}`));
       }
@@ -3042,8 +3042,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
       );
     }
 
-    // One quiet line for the source, and the URL itself behind Copy URL. The
-    // raw address is never printed: it is 180 characters of hash on a CDN.
+
+
     host.appendChild(
       h('div', 'note', fontSourceLine(type.source, identity?.fileSize ?? null)),
     );
@@ -3064,8 +3064,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     const provider = providerLink(type.source.kind, family);
     if (provider) actions.appendChild(textLink(provider.label, provider.url));
 
-    // The offer to read the file. It is a press, never automatic, and it says
-    // in its title exactly what pressing it does (PRD 17.1).
+
+
     if (!identity && fileUrl) {
       const identify = button('Identify font file', 'quiet');
       identify.title = IDENTIFY_TITLE;
@@ -3081,8 +3081,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
             return;
           }
           fontIdentities.set(fileUrl, result);
-          // The reading itself carries the identity from here on, so an export
-          // or a saved reference taken afterwards includes it.
+
+
           type.identity = result;
           paintFontIdentity(type);
         });
@@ -3119,8 +3119,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
         );
       });
 
-      // File size and MIME type are only knowable from the network, so they
-      // are fetched when the user asks and never before (PRD 17.1).
+
+
       if (asset.url && !/^(data|blob|filesystem):/i.test(asset.url)) {
         const assetUrl = asset.url;
         const detailActions = h('div', 'form-actions');
@@ -3178,9 +3178,9 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
 
   function renderSaveForm(
     snapshot: ElementSnapshot,
-    /** The action grid the toggle joins, so all four actions share a shape. */
+
     actions: HTMLElement,
-    /** Where the form itself goes: under the grid, full width. */
+
     parent: HTMLElement,
   ): void {
     const form = h('div', 'save-form');
@@ -3237,11 +3237,11 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     parent.append(form);
   }
 
-  /**
-   * The tip line for the current selection. The same selection keeps the tip it
-   * was given through every live re-read; a different one moves to the next tip
-   * in the list, and an exhausted list is no tip line at all.
-   */
+
+
+
+
+
   function currentTip(): string | null {
     if (tipFor !== pinnedElement) {
       if (tipFor !== null) tipIndex += 1;
@@ -3252,8 +3252,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
 
   function renderPanel(snapshot: ElementSnapshot | null, missing: boolean): void {
     panel.textContent = '';
-    // The panel is rebuilt on every live re-read, so the pieces that are
-    // repainted on their own have to forget the nodes that just went away.
+
+
     openCopyMenu = null;
     measureBlock = null;
     measureBody = null;
@@ -3275,8 +3275,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     const head = h('div', 'panel-head');
     makeDraggable(head);
     const title = h('div', 'panel-title', snapshot.element.label);
-    // The label is a selector and can be far longer than the head: it
-    // truncates, and the whole of it is one hover away.
+
+
     title.title = snapshot.element.label;
     head.appendChild(title);
     if (pinnedHidden) head.appendChild(h('span', 'chip', 'Not rendered'));
@@ -3287,8 +3287,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     layoutToggle.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
-      // Through the overlay's own setter, so the side panel's mirror of this
-      // toggle hears about the change as well (W3).
+
+
       overlay.setLayoutOverlay(!layoutOverlayEnabled);
       callbacks.onToggleLayoutOverlay();
     });
@@ -3315,12 +3315,12 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
       );
     }
 
-    // Breadcrumb: outermost ancestor first, then the element itself.
-    //
-    // A deeply nested element on a real page has eight or more ancestors, which
-    // wrapped to four lines of chips and pushed the reading off the panel. The
-    // middle of the chain is the part nobody reads, so it collapses behind a
-    // count that expands in place.
+
+
+
+
+
+
     const crumbs = h('div', 'crumbs');
     crumbs.setAttribute('role', 'group');
     crumbs.setAttribute('aria-label', 'Ancestors');
@@ -3365,9 +3365,9 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
       currentCrumb.title = snapshot.element.label;
       crumbs.appendChild(currentCrumb);
 
-      // A click promoted to a semantic parent still shows the wrapper it came
-      // from, as a child rather than an ancestor, so nothing is hidden by the
-      // preference (competitive tester note).
+
+
+
       if (pinnedChild && pinnedChild.isConnected) {
         const childLabel = describeElement(pinnedChild).label;
         const childCrumb = button(childLabel, 'crumb', `Select ${childLabel}`);
@@ -3381,9 +3381,9 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     paintCrumbs(false);
     scroll.appendChild(crumbs);
 
-    // One tip per selection, in order, and not lost to a live re-read of the
-    // same element, because then it would flash by unread. The ArrowUp tip is
-    // first; the Escape order takes its place once it has been shown (Z2).
+
+
+
     const tip = currentTip();
     if (tip) scroll.appendChild(h('div', 'tip', tip));
 
@@ -3420,17 +3420,17 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     const fluidRoot = snapshot.source.rootFontSizeFluid === true;
     if (type) {
       const { wrapper, body } = section('Typography', 'typography');
-      // Why the px readings below move when the window does. One line, at the
-      // top of the section, because it governs every size in it.
+
+
       if (fluidRoot) body.appendChild(h('div', 'note', fluidRootNote(snapshot.source)));
-      // Everything that changes when the font file is read lives in one
-      // repaintable block, so pressing "Identify font file" fills the rows
-      // above it in place rather than rebuilding the whole panel.
+
+
+
       fontIdentityHost = h('div', 'stack');
       body.appendChild(fontIdentityHost);
       paintFontIdentity(type);
-      // One Size row rather than a px row and a rem row: the two are one
-      // reading, and on a fluid root only their order says which one is stable.
+
+
       body.appendChild(
         row('Size', sizeText(type.sizePx, snapshot.source), {
           copy: sizeCopyText(type.sizePx, snapshot.source),
@@ -3493,8 +3493,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
       } else {
         body.appendChild(h('div', 'note', type.contrast.reason ?? 'Contrast unavailable.'));
       }
-      // When contrast is unavailable the user can supply the background pixel
-      // themselves; the offer lives next to the contrast row either way.
+
+
       if (type.contrast.status === 'unavailable') {
         contrastPickHost = h('div', 'stack');
         body.appendChild(contrastPickHost);
@@ -3624,9 +3624,9 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
       scroll.appendChild(list);
     }
 
-    // Four actions of very different label lengths wrapped into an uneven row,
-    // so they sit on a two column grid: equal widths, two tidy lines, and the
-    // one accent button in the last cell where the eye ends up.
+
+
+
     const actions = h('div', 'panel-actions');
     const reread = button('Re-read', '', 'Read this element again');
     reread.addEventListener('click', () => callbacks.onReread());
@@ -3642,13 +3642,13 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     panel.hidden = false;
   }
 
-  // -------------------------------------------------------------------------
-  // Public surface
+
+
 
   function repositionCards(): void {
     if (!hoverCard.hidden) {
-      // The page can scroll under a still pointer, so the hover card follows
-      // the element's live rect rather than the rect captured at hover time.
+
+
       const live = hoverElement?.isConnected ? hoverElement.getBoundingClientRect() : null;
       positionCard(
         hoverCard,
@@ -3707,14 +3707,14 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
         hoverSnapshot = null;
         drawBox(pinnedElement);
       }
-      // Rulers outlive a mode change, like outlines do: the point of pausing is
-      // to use the page while still reading the measurements over it.
+
+
       drawRulers();
       applyEscapeHint();
     },
 
     setOutlines(next) {
-      // The label stays one word; the pressed state carries the meaning.
+
       outlinesButton.setAttribute('aria-pressed', next === 'off' ? 'false' : 'true');
       outlinesButton.dataset.coloring = next;
     },
@@ -3728,25 +3728,25 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
         if (rulersEnabled) drawRulers();
         return;
       }
-      // Reads first, writes after, and no read at all that the snapshot has
-      // already made: the box model comes out of the reading that was just
-      // taken, so a hover frame measures the element once (PRD 19.1, PERF 3).
+
+
+
       const geometry = geometryOfLayout(snapshot.layout);
       renderHoverCard(snapshot);
       hoverCard.hidden = false;
       drawBoxGeometry(geometry);
       positionCard(hoverCard, snapshot.layout.visualRect);
-      // The ruler's accent marks follow the hovered element, off the rect that
-      // has already been measured rather than off a fresh one.
+
+
       if (rulersEnabled) drawRulers(geometry?.border ?? null);
     },
 
     setPinned(snapshot, element, options = {}) {
       if (options.child !== undefined) pinnedChild = options.child;
-      // A different element means a different background question, so a
-      // previously picked contrast background does not carry over.
+
+
       if (element !== pinnedElement) pickedBackground = null;
-      // A fresh reading is by definition a rendered one.
+
       pinnedHidden = false;
       pinnedSnapshot = snapshot;
       pinnedElement = element;
@@ -3760,7 +3760,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
         drawLayoutOverlay();
         drawMeasure();
         paintPicked();
-        // The panel went away, so a live edge reading moves to its own card.
+
         paintEdgeBlock();
         return;
       }
@@ -3782,7 +3782,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
       if (!pinnedSnapshot) return;
       renderPanel(pinnedSnapshot, false);
       if (hidden) {
-        // Bands drawn around a zero sized box would be a lie about the layout.
+
         clearBox();
         layoutLayer.textContent = '';
         measureElement = null;
@@ -3812,9 +3812,9 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
 
     setMeasure(element, options = {}) {
       measureElement = element;
-      // A lock is only ever let go of on purpose. A hover frame that landed
-      // after an Alt+click used to clear it by arriving with no options at all
-      // (tester finding F1), so silence now means "leave it as it is".
+
+
+
       if (options.locked === true) measureLockedFlag = true;
       else if (options.locked === false) measureLockedFlag = false;
       drawMeasure();
@@ -3849,8 +3849,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
 
     setLayoutOverlay(enabled) {
       layoutOverlayEnabled = enabled;
-      // The toggle lives in the pinned panel's head, which only exists while
-      // something is pinned; the drawing below is what the page actually sees.
+
+
       panel
         .querySelector('#panel-layout-overlay')
         ?.setAttribute('aria-pressed', enabled ? 'true' : 'false');
@@ -3895,8 +3895,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
       drawBox(pinnedElement ?? hoverElement);
       repositionLayoutOverlay();
       drawMeasure();
-      // A scroll moves the page under a fixed pointer, so the edges genuinely
-      // changed and the reading is taken again rather than translated.
+
+
       drawEdges();
       drawHighlights();
       drawRulers();
@@ -3925,8 +3925,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     },
 
     closeMenu() {
-      // A copy menu is the shallowest thing Escape can be holding, so it goes
-      // first, and one press never closes both it and the save form.
+
+
       if (closeCopyMenu()) {
         applyEscapeHint();
         return true;
@@ -3958,7 +3958,7 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     },
 
     hasTextSelection() {
-      // shadowRoot.getSelection is Chrome specific, so it is probed not assumed.
+
       const scoped = root as ShadowRoot & { getSelection?(): Selection | null };
       const selection = scoped.getSelection ? scoped.getSelection() : null;
       if (selection && !selection.isCollapsed) return true;
@@ -3974,8 +3974,8 @@ export function createOverlay(callbacks: OverlayCallbacks): Overlay {
     destroy() {
       window.removeEventListener('resize', syncBadgeToViewport);
       host.remove();
-      // The mockup host is ours too, and leaving it behind would leave an
-      // image floating over a page with no inspector to remove it.
+
+
       mockupLayer.destroy();
     },
   };

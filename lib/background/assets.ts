@@ -1,8 +1,8 @@
-// Page asset list plus best-effort metadata (PRD AST-04).
-//
-// The content script reports what the page rendered. File size and MIME type
-// are only knowable from the network, so the worker tries one cheap HEAD per
-// asset. A failure leaves the fields null: "Unknown" must never become 0.
+
+
+
+
+
 import type { AssetReading } from '@/lib/contracts';
 import type { BackgroundResponse } from '@/lib/messages';
 import { sendToTab } from '@/lib/messages';
@@ -11,7 +11,7 @@ import { ensureContentScript } from './inspector-control';
 const HEAD_TIMEOUT_MS = 3000;
 const MAX_IN_FLIGHT = 6;
 
-/** data: and blob: URLs carry no headers worth a request. */
+
 export function isFetchableAssetUrl(url: string | null): url is string {
   if (!url) return false;
   return !/^(data|blob|filesystem):/i.test(url);
@@ -29,7 +29,7 @@ function parseMime(value: string | null): string | null {
   return mime ? mime : null;
 }
 
-/** Fill fileSize and mimeType from response headers. Never throws. */
+
 export async function enrichAsset(asset: AssetReading): Promise<AssetReading> {
   if (!isFetchableAssetUrl(asset.url)) return asset;
   if (asset.fileSize !== null && asset.mimeType !== null) return asset;
@@ -55,7 +55,7 @@ export async function enrichAsset(asset: AssetReading): Promise<AssetReading> {
   }
 }
 
-/** Enrich in original order, at most MAX_IN_FLIGHT requests at a time. */
+
 export async function enrichAssets(assets: AssetReading[]): Promise<AssetReading[]> {
   const result: AssetReading[] = [...assets];
   let cursor = 0;
@@ -73,11 +73,11 @@ export async function enrichAssets(assets: AssetReading[]): Promise<AssetReading
   return result;
 }
 
-/**
- * The page's own asset list. Enrichment is opt-in because it contacts every
- * asset's host, which the user is told about before they ask for it
- * (PRD 17.1).
- */
+
+
+
+
+
 export async function requestAssets(tabId: number, enrich = false): Promise<BackgroundResponse> {
   const ready = await ensureContentScript(tabId);
   if (!ready.ok) return { ok: false, error: ready.reason };

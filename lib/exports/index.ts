@@ -1,6 +1,6 @@
-// Export adapters (PRD section 15). The implementations live next to this file,
-// one module per output format; this index is the only import surface the rest
-// of the extension uses.
+
+
+
 export type { StyleCategory } from './css';
 export { toCss } from './css';
 export type { TailwindOutput } from './tailwind';

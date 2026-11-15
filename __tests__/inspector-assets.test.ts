@@ -18,7 +18,7 @@ function domRect(width: number, height: number): DOMRect {
   } as DOMRect;
 }
 
-/** jsdom measures everything as zero, so sizes are stated per element here. */
+
 function sizeBy(sizes: (element: Element) => [number, number]): void {
   Element.prototype.getBoundingClientRect = function stub(this: Element) {
     const [width, height] = sizes(this);
@@ -81,7 +81,7 @@ describe('listAssets', () => {
   });
 });
 
-/** jsdom has no media pipeline, so currentSrc and the intrinsic size are set. */
+
 function media(element: Element, values: { currentSrc?: string; width?: number; height?: number }): void {
   if (values.currentSrc !== undefined) {
     Object.defineProperty(element, 'currentSrc', { value: values.currentSrc, configurable: true });
@@ -208,7 +208,7 @@ describe('listAssets with video', () => {
     const assets = listAssets(document);
     expect(assets).toHaveLength(2);
     expect(assets.every((asset) => asset.url === null)).toBe(true);
-    // A streamed video explains itself, so it is never also "not loaded yet".
+
     for (const asset of assets) {
       expect(asset.limitations).toEqual(['Streamed video, no downloadable file']);
     }

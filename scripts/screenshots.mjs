@@ -1,16 +1,16 @@
-// Store screenshots: five 1280x800 PNGs from the real extension, driven the way
-// a person drives it (PRD 20.3, store/LISTING.md).
-//
-// Nothing is overlaid, annotated, framed or composited. If a shot needs a
-// caption to make sense, the fix is the UI, not the caption.
-//
-// Usage:
-//   pnpm screenshots            fixtures only
-//   pnpm screenshots --live     also try one shot on a real site
-//
-// It builds the e2e bundle itself (that build keeps host_permissions so a tab
-// can be injected without a toolbar click) and serves the fixtures over plain
-// http, because extensions cannot inject into file:// without an extra grant.
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import { chromium } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
@@ -28,12 +28,12 @@ const outDir = path.join(root, 'store', 'screenshots');
 
 const WIDTH = 1280;
 const HEIGHT = 800;
-/** Where the design-pass review shots go. They are not store assets. */
+
 const REVIEW_DIR = process.env.CLAUDE_SCRATCH ?? path.join(root, 'test-results', 'screens');
-/** The width Chrome gives a comfortable side panel, and the narrow end of one. */
+
 const PANEL_WIDTH = 400;
 const PANEL_NARROW = 320;
-/** One real site, used only with --live, and only for a screenshot. */
+
 const LIVE_URL = 'https://developer.mozilla.org/en-US/';
 
 const argv = process.argv.slice(2);
@@ -45,7 +45,7 @@ const die = message => {
   process.exit(1);
 };
 
-// --- Build the bundle the screenshots are taken from ------------------------
+
 say('$ DI_E2E=1 wxt build');
 execFileSync('pnpm', ['exec', 'wxt', 'build'], {
   cwd: root,
@@ -55,7 +55,7 @@ execFileSync('pnpm', ['exec', 'wxt', 'build'], {
 
 mkdirSync(outDir, { recursive: true });
 
-// --- Serve the fixtures -----------------------------------------------------
+
 const server = createServer(async (request, response) => {
   const name = path.basename(new URL(request.url ?? '/', 'http://x').pathname);
   try {
@@ -71,7 +71,7 @@ await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const address = server.address();
 const baseUrl = `http://127.0.0.1:${address.port}`;
 
-// --- Launch Chromium with the extension loaded ------------------------------
+
 const profile = mkdtempSync(path.join(process.env.CLAUDE_SCRATCH ?? tmpdir(), 'di-shots-'));
 const context = await chromium.launchPersistentContext(profile, {
   channel: 'chromium',
@@ -84,7 +84,7 @@ let [worker] = context.serviceWorkers();
 if (!worker) worker = await context.waitForEvent('serviceworker');
 const extensionId = new URL(worker.url()).host;
 
-/** An extension page to send background messages from; a worker cannot message itself. */
+
 const control = await context.newPage();
 await control.goto(`chrome-extension://${extensionId}/popup.html`);
 
@@ -106,24 +106,24 @@ const shot = async (page, name) => {
   say(`  wrote store/screenshots/${name}`);
 };
 
-/** A review shot of a surface, at the size that surface really has. */
+
 const review = async (page, name, options = {}) => {
   const file = path.join(REVIEW_DIR, name);
   await page.screenshot({ path: file, ...options });
   say(`  wrote ${file}`);
 };
 
-/**
- * The toolbar popup as a page.
- *
- * `tabUrl` replaces the URL the popup reads for the active tab and `state`
- * replaces the answer to inspector.getState. Both exist for one shot: the
- * empty-tab case. A driven browser cannot grant activeTab, and without it
- * Chrome reports no URL at all for a new tab, so the background has nothing to
- * refuse and the real refusal never arrives. The substituted state is the exact
- * one unsupportedSchemeReason produces for chrome://newtab/, so the component,
- * the copy and the layout in the shot are the real ones.
- */
+
+
+
+
+
+
+
+
+
+
+
 const openPopup = async ({ tabId = null, tabUrl = null, state = null, scheme = 'light' } = {}) => {
   const page = await context.newPage();
   await page.setViewportSize({ width: PANEL_NARROW, height: 640 });
@@ -188,7 +188,7 @@ const openPanel = async (tabId, { width = WIDTH, scheme = 'light' } = {}) => {
 };
 
 try {
-  // 1. Pinned typography on the basic fixture.
+
   {
     const page = await context.newPage();
     await page.setViewportSize({ width: WIDTH, height: HEIGHT });
@@ -200,13 +200,13 @@ try {
     await page.waitForTimeout(400);
     await shot(page, '01-typography.png');
 
-    // 2. Layout outlines over the same page, still pinned.
+
     await send({ type: 'outlines.set', tabId, mode: 'tag' });
     await page.waitForTimeout(300);
     await shot(page, '02-layout-outlines.png');
     await send({ type: 'outlines.set', tabId, mode: 'off' });
 
-    // 5. Measurement: pinned heading, Alt held over a second element.
+
     await page.keyboard.down('Alt');
     await page.locator('#translucent-card').hover();
     await page.waitForTimeout(400);
@@ -217,7 +217,7 @@ try {
     await page.close();
   }
 
-  // 3. The side panel's page summary, with the palette clustered.
+
   {
     const page = await context.newPage();
     await page.setViewportSize({ width: WIDTH, height: HEIGHT });
@@ -230,9 +230,9 @@ try {
     await panel.waitForTimeout(400);
     await shot(panel, '03-summary-palette.png');
 
-    // 4. The Assets tab on the same page. The dedicated assets fixture is not
-    // used here: half of it is deliberately broken references, which is the
-    // right fixture for a failure test and the wrong one for a store shot.
+
+
+
     const assetsPanel = await openPanel(tabId);
     await assetsPanel.getByRole('tab', { name: 'Assets' }).click();
     await assetsPanel.getByRole('button', { name: 'List assets' }).click();
@@ -244,9 +244,9 @@ try {
     await page.close();
   }
 
-  // --- Design-pass review shots --------------------------------------------
-  // Not store assets: these are the surfaces at their real sizes, in both
-  // schemes and in every state the design pass had to answer for.
+
+
+
   mkdirSync(REVIEW_DIR, { recursive: true });
   {
     const page = await context.newPage();
@@ -260,7 +260,7 @@ try {
       await popup.close();
     }
 
-    // The empty-tab state: nothing to inspect, and the one thing to do about it.
+
     const blank = await openPopup({
       tabId,
       tabUrl: 'chrome://newtab/',
@@ -272,7 +272,7 @@ try {
     await review(blank, 'di-d-popup-off.png', { fullPage: true });
     await blank.close();
 
-    // The running state, with the inspector actually on this tab.
+
     await send({ type: 'inspector.toggle', tabId });
     const active = await openPopup({ tabId });
     await review(active, 'di-d-popup-active.png', { fullPage: true });
@@ -286,7 +286,7 @@ try {
       await panel.waitForTimeout(300);
       await review(panel, `di-d-sidepanel-summary-${scheme}.png`);
       if (scheme === 'light') {
-        // Saved, with something in it: one saved summary per capture.
+
         await panel.getByRole('button', { name: 'Save summary' }).click();
         await panel.getByText('Saved to your collection.').waitFor({ timeout: 10_000 });
         await panel.getByRole('tab', { name: 'Saved' }).click();
@@ -296,7 +296,7 @@ try {
       await panel.close();
     }
 
-    // The narrow end of the pane. Nothing may hang off the right of it.
+
     const narrow = await openPanel(tabId, { width: PANEL_NARROW });
     await narrow.getByRole('button', { name: /Scan this page/ }).first().click();
     await narrow.getByRole('heading', { name: 'Palette' }).waitFor({ timeout: 30_000 });
@@ -315,7 +315,7 @@ try {
     await page.close();
   }
 
-  // 6. Optional: the same first shot on a real site, if the network allows.
+
   if (live) {
     const page = await context.newPage();
     await page.setViewportSize({ width: WIDTH, height: HEIGHT });

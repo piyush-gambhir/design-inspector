@@ -1,4 +1,4 @@
-// Versioned JSON export and its validator (PRD EXP-03, EXP-04).
+
 import type { ExportEnvelope, SavedReference, SourceContext } from '@/lib/contracts';
 import { SCHEMA_VERSION } from '@/lib/contracts';
 
@@ -39,7 +39,7 @@ export function toJsonEnvelope(
   };
 }
 
-/** Validates a parsed JSON value as an ExportEnvelope. Returns errors, empty when valid. */
+
 export function validateEnvelope(value: unknown): string[] {
   const errors: string[] = [];
 
@@ -106,8 +106,8 @@ function validateReference(value: unknown, index: number): string[] {
     );
   }
 
-  // Palette clusters arrived after the first summaries were written, so a
-  // record without them is valid. A record with them must still carry a list.
+
+
   const clusters = snapshotRecord.paletteClusters;
   if (clusters !== undefined && !Array.isArray(clusters)) {
     errors.push(`${label}.snapshot.paletteClusters must be an array when present.`);

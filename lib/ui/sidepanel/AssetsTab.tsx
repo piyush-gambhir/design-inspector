@@ -1,7 +1,7 @@
-// Page assets (PRD 11).
-//
-// Inline SVG previews go through a data URL on an <img>, never
-// dangerouslySetInnerHTML: page markup is untrusted input (PRD 17.3).
+
+
+
+
 import { useMemo, useRef, useState } from 'react';
 import { Download, FileArchive, Gauge, ImageOff, ListTree, X } from 'lucide-react';
 import type { AssetKind, AssetReading } from '@/lib/contracts';
@@ -27,7 +27,7 @@ const KIND_LABELS: Record<AssetKind, string> = {
   video: 'Video',
 };
 
-/** The type filter chips (PRD AST-04 Phase 2). */
+
 export type AssetFilter = 'all' | 'images' | 'svg' | 'backgrounds' | 'video';
 
 const FILTERS: { id: AssetFilter; label: string; kinds: AssetKind[] | null }[] = [
@@ -169,7 +169,7 @@ function AssetRow({
             <Field label="File size">{formatBytes(asset.fileSize)}</Field>
             <Field label="MIME">{asset.mimeType ?? 'Unknown'}</Field>
             {asset.alt ? <Field label="Alt">{asset.alt}</Field> : null}
-            {/* A repeat reference is a fact about the page, not a caveat. */}
+            {                                                                }
             {(asset.usageCount ?? 1) > 1 ? (
               <Field label="Usage">Used {asset.usageCount} times</Field>
             ) : null}
@@ -238,7 +238,7 @@ export function AssetsTab({
   loading: boolean;
   error: string | null;
   onList: () => void;
-  /** Re-lists with file size and MIME type, which contacts each asset's host. */
+
   onEnrich?: () => void;
 }) {
   const [filter, setFilter] = useState<AssetFilter>('all');
@@ -269,7 +269,7 @@ export function AssetsTab({
     });
   };
 
-  // Select all means "all of what this filter shows", never the hidden rows.
+
   const toggleAll = (next: boolean) => {
     setSelected(current => {
       const updated = new Set(current);
@@ -312,9 +312,9 @@ export function AssetsTab({
         }
         setNotice({ text: parts.join(' '), tone: manifest.skipped.length > 0 ? 'neutral' : 'success' });
       } else {
-        // A cancelled run writes nothing: the archive is assembled in memory and
-        // only handed to downloads once it is complete. Saying so, with the next
-        // action, is better than letting the user look for a partial file (19.3).
+
+
+
         const cancelled = 'cancelled' in response && response.cancelled === true;
         setNotice({
           text: cancelled

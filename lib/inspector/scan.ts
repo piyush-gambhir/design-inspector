@@ -1,8 +1,8 @@
-// Page design summary scan (PRD SUM-01 to SUM-05).
-//
-// The scan is bounded, chunked, cancellable, and honest about what it left
-// out. It collects one record per eligible element and hands the whole set to
-// the pure aggregator, which owns the grouping rules.
+
+
+
+
+
 
 import type {
   ColorValue,
@@ -70,7 +70,7 @@ export class ScanCancelled extends Error {
   }
 }
 
-/** Collects candidate elements, descending into open shadow roots. */
+
 function collectCandidates(doc: Document): { elements: Element[]; shadowRoots: number } {
   const elements: Element[] = [];
   let shadowRoots = 0;
@@ -135,7 +135,7 @@ function nullWhenTransparent(color: ColorValue): ColorValue | null {
   return color.alpha === 0 ? null : color;
 }
 
-/** One record per eligible element, for the pure aggregator. */
+
 export function buildScanRecord(
   element: Element,
   style: CSSStyleDeclaration,
@@ -196,10 +196,10 @@ export function buildScanRecord(
   };
 }
 
-/**
- * Font inventory: declared faces from the document merged with the families
- * actually seen in the scanned content (PRD SUM-05).
- */
+
+
+
+
 export function buildFontRecords(
   fonts: DocumentFontsResult,
   records: ElementScanRecord[],
@@ -243,7 +243,7 @@ export function buildFontRecords(
 
   for (const [key, weights] of seenInContent) {
     if (byFamily.has(key)) continue;
-    // `sans-serif`, `monospace` and friends are CSS generics, not faces (SUM-05).
+
     if (isGenericFamily(key)) continue;
     const family =
       records.find((record) => record.typography?.familyReading.toLowerCase() === key)?.typography
@@ -279,19 +279,19 @@ interface ChunkHandle {
   kind: 'idle' | 'timer';
 }
 
-/**
- * The scan must never be the reason a frame is late, so a chunk runs in the
- * browser's idle time and stops as soon as the browser says the idle period is
- * over. `timeout` keeps it progressing on a page that is never idle, and a
- * hidden document (or a browser without the API) falls back to a macrotask,
- * where there are no frames to protect (PRD 19.1, PERF 3).
- */
+
+
+
+
+
+
+
 const IDLE_TIMEOUT_MS = 250;
-/** Time left in the idle period below which the chunk yields, in ms. */
+
 const IDLE_FLOOR_MS = 1;
-/** Elements between two checks of the deadline. */
+
 const DEADLINE_EVERY = 25;
-/** Elapsed-time budget for a fallback macrotask. */
+
 const FALLBACK_BUDGET_MS = 8;
 
 type IdleWindow = Window &
@@ -331,10 +331,10 @@ function cancelChunk(handle: ChunkHandle | null): void {
   if (typeof view.cancelIdleCallback === 'function') view.cancelIdleCallback(handle.id);
 }
 
-/**
- * Starts a chunked scan. Cancelling rejects the promise with ScanCancelled,
- * which callers treat as an ordinary outcome, not an error (PRD 19.1).
- */
+
+
+
+
 export function startScan(options: ScanOptions): ScanRun {
   const doc = options.doc ?? document;
   const cap = Math.max(1, options.cap);
@@ -350,7 +350,7 @@ export function startScan(options: ScanOptions): ScanRun {
     const { elements, shadowRoots } = collectCandidates(doc);
     const total = elements.length;
     const records: ElementScanRecord[] = [];
-    // Reuse sibling positions only within this scan's DOM snapshot.
+
     const locatorIndices = new WeakMap<Element, number>();
     const skipped = new Map<SkipReason, number>();
     const fonts = readDocumentFonts(doc);
@@ -473,9 +473,9 @@ export function startScan(options: ScanOptions): ScanRun {
           }
         }
 
-        // Yield the moment the browser wants the thread back, but never
-        // before some progress has been made: a page that is never idle
-        // still finishes, one deadline-sized bite at a time.
+
+
+
         if (processed % DEADLINE_EVERY === 0 && timeRemainingMs() <= IDLE_FLOOR_MS) break;
       }
 
@@ -498,8 +498,8 @@ export function startScan(options: ScanOptions): ScanRun {
       cancelled = true;
       cancelChunk(handle);
       handle = null;
-      // Settle immediately: the scheduled chunk that would have rejected has
-      // just been cancelled.
+
+
       abort?.(new ScanCancelled());
     },
   };

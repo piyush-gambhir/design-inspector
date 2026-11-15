@@ -1,13 +1,13 @@
-// Color parsing and conversion (PRD SUR-02). Pure, no DOM access.
-//
-// Design notes:
-// - Every input is normalised into non-linear sRGB floats that may fall
-//   outside 0..1, which losslessly represents any CSS color. hex and rgb()
-//   output clip that to the sRGB gamut, oklch() does not need to.
-// - `raw` always keeps the browser's own serialization. Rounding happens for
-//   display only, so a copied value stays faithful (PRD SUR-02).
-// - `lossy` is true when the source was not sRGB, or when the color sits
-//   outside the sRGB gamut and had to be clipped for hex and rgb().
+
+
+
+
+
+
+
+
+
+
 
 import type { ColorValue } from '../contracts';
 
@@ -18,11 +18,11 @@ export interface Rgb {
 }
 
 export interface Rgba extends Rgb {
-  /** 0..1 */
+
   a: number;
 }
 
-/** CSS named colors we may meet in authored stylesheets. Computed styles use rgb(). */
+
 const NAMED_COLORS: Record<string, [number, number, number]> = {
   black: [0, 0, 0],
   silver: [192, 192, 192],
@@ -47,8 +47,8 @@ const NAMED_COLORS: Record<string, [number, number, number]> = {
   rebeccapurple: [102, 51, 153],
 };
 
-// ---------------------------------------------------------------------------
-// Matrices (CSS Color 4 reference values)
+
+
 
 type Matrix = readonly [
   readonly [number, number, number],
@@ -128,8 +128,8 @@ function multiply(matrix: Matrix, vector: readonly [number, number, number]): [n
   return out;
 }
 
-// ---------------------------------------------------------------------------
-// Transfer functions. All sign preserving so out-of-gamut values survive.
+
+
 
 function srgbDecode(value: number): number {
   const abs = Math.abs(value);
@@ -163,8 +163,8 @@ function prophotoDecode(value: number): number {
   return sign * (abs <= 16 / 512 ? abs / 16 : abs ** 1.8);
 }
 
-// ---------------------------------------------------------------------------
-// Token parsing
+
+
 
 function parseNumberToken(token: string | undefined, percentBase: number): number {
   const text = (token ?? '').trim().toLowerCase();
@@ -193,7 +193,7 @@ function parseAngleToken(token: string | undefined): number {
   if (!text || text === 'none') return 0;
   const value = Number.parseFloat(text);
   if (!Number.isFinite(value)) return 0;
-  // `grad` must be tested before `rad`, which is its suffix.
+
   if (text.endsWith('grad')) return value * 0.9;
   if (text.endsWith('rad')) return (value * 180) / Math.PI;
   if (text.endsWith('turn')) return value * 360;
@@ -205,10 +205,10 @@ interface Args {
   alpha: string | null;
 }
 
-/**
- * Splits function arguments, accepting modern space syntax with `/ alpha` and
- * the legacy comma syntax where alpha is the fourth value.
- */
+
+
+
+
 function parseArgs(text: string): Args {
   const slash = text.indexOf('/');
   let head = text;
@@ -231,14 +231,14 @@ function parseArgs(text: string): Args {
   return { parts, alpha };
 }
 
-// ---------------------------------------------------------------------------
-// Internal representation
+
+
 
 interface Parsed {
-  /** Non-linear sRGB, 0..1 nominal, may fall outside for wide-gamut sources. */
+
   rgb: [number, number, number];
   alpha: number;
-  /** True when the authored space was not sRGB, so hex and rgb() are a conversion. */
+
   notSrgb: boolean;
 }
 
@@ -498,8 +498,8 @@ function parseInternal(text: string): Parsed | null {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Output formatting
+
+
 
 const GAMUT_EPSILON = 1e-4;
 
@@ -556,13 +556,13 @@ function unparseable(raw: string): ColorValue {
   return { raw, hex: null, rgb: null, oklch: null, alpha: 1, lossy: false };
 }
 
-// ---------------------------------------------------------------------------
-// Public API
 
-/**
- * Parses any computed or authored CSS color into a ColorValue. Unknown syntax
- * keeps `raw` and reports null conversions rather than guessing.
- */
+
+
+
+
+
+
 export function parseColor(raw: string): ColorValue {
   const text = (raw ?? '').trim();
   if (!text) return unparseable(raw ?? '');
@@ -572,10 +572,10 @@ export function parseColor(raw: string): ColorValue {
   return build(text, parsed);
 }
 
-/**
- * Parses a color to 0..255 sRGB channels for math such as contrast. Returns
- * null when the value cannot be parsed or declares no color (`none`).
- */
+
+
+
+
 export function parseRgba(raw: string): Rgba | null {
   const text = (raw ?? '').trim();
   if (!text) return null;
@@ -593,7 +593,7 @@ export function parseRgba(raw: string): Rgba | null {
   };
 }
 
-/** A stable comparison key for grouping colors (PRD SUM-03). */
+
 export function colorKey(color: ColorValue): string {
   return (color.hex ?? color.raw).toLowerCase();
 }

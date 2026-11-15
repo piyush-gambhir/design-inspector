@@ -78,7 +78,7 @@ describe('labelOf', () => {
     document.body.innerHTML =
       '<div role="tablist" aria-label="Views"></div><h2 role="heading">Title</h2>';
     expect(labelOf(pick('div'))).toBe('div[role="tablist"]');
-    // `heading` is what an h2 already is, so it adds nothing.
+
     expect(labelOf(pick('h2'))).toBe('h2 "Title"');
   });
 

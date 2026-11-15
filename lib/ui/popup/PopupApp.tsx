@@ -1,10 +1,10 @@
-// Toolbar popup: activation, the side panel, the shortcut, and settings
-// (PRD 6.1). Compact by design: everything page-level lives in the side panel.
-//
-// The shape is one decision per line, top to bottom: what this is and what it
-// is doing, the one action worth taking, anything blocking that action, the two
-// places to go next, then the settings. Nothing here is a form: a row is a
-// label and its control, and a row only explains itself when the label cannot.
+
+
+
+
+
+
+
 import { useState } from 'react';
 import { PanelRight, Power } from 'lucide-react';
 import type { Settings, ThemePreference } from '@/lib/contracts';
@@ -41,13 +41,13 @@ const COLORINGS: SegmentOption<NonNullable<Settings['outlineColoring']>>[] = [
 
 const SHORTCUTS_URL = 'chrome://extensions/shortcuts';
 
-/** The status pill's word. Kept exported: the tests read the modes by name. */
+
 export function statusText(
   mode: 'off' | 'active' | 'paused' | null,
   unsupportedReason: string | null,
 ): string {
-  // An unsupported page is not a state of the inspector. It is a fact about the
-  // tab, and it belongs in the notice below the button, not in this pill.
+
+
   if (unsupportedReason) return 'Off';
   return statusWord(mode);
 }
@@ -62,7 +62,7 @@ export function PopupApp() {
   const mode = state?.mode ?? null;
   const unsupported = state?.unsupportedReason ?? null;
   const inspecting = mode === 'active' || mode === 'paused';
-  // Outlines stand on their own: they do not need the inspector to be on.
+
   const outlinesOn = (state?.outlines ?? 'off') !== 'off';
   const notice = noticeText(tab?.url, unsupported);
   const blocked = busy || !tab || !!unsupported;
@@ -70,7 +70,7 @@ export function PopupApp() {
   const openSidePanel = () => {
     if (!tab) return;
     try {
-      // Opened straight from the click so the user gesture still counts.
+
       void chrome.sidePanel.open({ tabId: tab.id }).then(
         () => window.close(),
         (openError: unknown) =>
@@ -137,15 +137,15 @@ export function PopupApp() {
         </div>
       ) : null}
 
-      {/* A real failure, unlike an uninspectable page, is red and assertive. */}
+      {                                                                         }
       {error || panelError ? (
         <div className="mt-2">
           <Notice
             tone="error"
             action={
               error ? (
-                // A denied grant is fixed by asking again after the click that
-                // granted it, so retrying is the action, not a reload.
+
+
                 <Button
                   type="button"
                   size="sm"
@@ -202,8 +202,8 @@ export function PopupApp() {
               }
             />
           </div>
-          {/* The coloring only exists while the outlines are drawn, so it only
-              appears then, and inside the row it belongs to. */}
+          {
+                                                                }
           {outlinesOn ? (
             <div className="mt-1.5">
               <Segmented
@@ -212,7 +212,7 @@ export function PopupApp() {
                 value={settings.outlineColoring}
                 onSelect={value => {
                   update({ outlineColoring: value });
-                  // Switching coloring with outlines on re-applies at once.
+
                   setOutlines(value);
                 }}
               />
@@ -269,8 +269,8 @@ export function PopupApp() {
         </div>
 
         <div className="flex items-center justify-between gap-3">
-          {/* The stepper's own input carries the name, so this is the visible
-              label for it and not a second one to associate. */}
+          {
+                                                                }
           <span className="shrink-0 text-[13px] font-medium">Scan cap</span>
           <NumberStepper
             aria-label="Scan cap"

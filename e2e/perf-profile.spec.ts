@@ -1,15 +1,15 @@
-// Lightweight-by-measurement profile (spec PERF, PRD 19.1).
-//
-// Nine 10-second windows per target, measured with CDP Performance.getMetrics
-// and a main-world long-task observer. The engine is e2e/helpers/perf-profile.ts;
-// this file decides what to run, asserts the budgets, and writes store/PERF.md.
-//
-//   pnpm perf                     builds, runs all three targets, writes the file
-//   pnpm exec playwright test     fixture target only, budgets asserted
-//
-// The two real pages are network-dependent, so they run only under PERF_FULL=1
-// and a target that will not load is reported as skipped rather than failing a
-// performance budget on a DNS error.
+
+
+
+
+
+
+
+
+
+
+
+
 import { test, expect, type Page } from '@playwright/test';
 import { createServer, type Server } from 'node:http';
 import { readFile, writeFile, stat } from 'node:fs/promises';
@@ -38,15 +38,15 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 const FULL = process.env.PERF_FULL === '1';
 const WRITE = process.env.PERF_WRITE === '1';
 const WINDOW_MS = Number(process.env.PERF_WINDOW_MS ?? DEFAULT_WINDOW_MS);
-/**
- * The shipped content script must stay under this, gzip reported beside it.
- *
- * Raised from 200 KiB to 205 KiB by workstream FONT. The verified-rendering
- * canvas check and the font identity rows in the pinned panel cost 4.8 kB, and
- * the previous figure had only 4.0 kB of headroom left. What a page actually
- * feels is execution, not parse: every script, layout and long-task budget
- * above is unchanged, and the new work runs once per pinned element.
- */
+
+
+
+
+
+
+
+
+
 const BUNDLE_BUDGET_BYTES = 205 * 1024;
 
 let server: Server;
@@ -92,11 +92,11 @@ test.afterAll(async () => {
   await new Promise<void>((resolve) => server?.close(() => resolve()));
 });
 
-/**
- * The side panel reads the window's active tab, which a Playwright-driven
- * extension page cannot be, so the active-tab lookup is answered with the
- * target's tab. Everything downstream of that answer is the real panel.
- */
+
+
+
+
+
 async function openPanel(tabId: number): Promise<Page> {
   const page = await session.context.newPage();
   await page.setViewportSize({ width: 420, height: 960 });
@@ -206,8 +206,8 @@ test.describe('lightweight by measurement', () => {
         log(`[perf] SKIPPED ${target.label}: ${reason.split('\n')[0]}`);
       }
     }
-    // A real page the inspector is not activated on may still run its own
-    // timers, so only the extension-attributable budgets are asserted here.
+
+
     const failures = allFindings
       .filter((entry) => entry.label !== 'large.html (6,001 elements)')
       .flatMap((entry) =>

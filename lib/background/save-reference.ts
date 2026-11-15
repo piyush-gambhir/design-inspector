@@ -1,7 +1,7 @@
-// Saving a reference (PRD SAV-01, SAV-03).
-//
-// Order matters: persist first, respond second, broadcast third. Success is
-// never reported before IndexedDB accepted the record.
+
+
+
+
 import type { ElementSnapshot, PageSummary, SavedReference } from '@/lib/contracts';
 import { SCHEMA_VERSION } from '@/lib/contracts';
 import type { BackgroundResponse } from '@/lib/messages';
@@ -9,7 +9,7 @@ import { broadcast, sendToTab } from '@/lib/messages';
 import { listReferences, putReference, putScreenshot } from '@/lib/storage/references';
 import { captureElementScreenshot, dataUrlToBlob } from './screenshot';
 
-/** A snapshot with an `element` is an element capture; one with a `scope` is a summary. */
+
 export function inferKind(snapshot: ElementSnapshot | PageSummary): 'element' | 'summary' {
   if ('element' in snapshot) return 'element';
   if ('scope' in snapshot) return 'summary';
@@ -53,9 +53,9 @@ export async function saveReference(request: SaveRequest): Promise<BackgroundRes
   let warning: string | undefined;
   let screenshotBlob: Blob | null = null;
 
-  // Screenshot capture is optional and best-effort: the measurements are the
-  // reference, the image is context (PRD SAV-02). The user is told when it
-  // failed instead of silently getting a reference without an image.
+
+
+
   if (request.captureScreenshot && reference.kind === 'element') {
     if (request.tabId === null) {
       warning = 'Screenshot skipped: no tab to capture.';
@@ -85,7 +85,7 @@ export async function saveReference(request: SaveRequest): Promise<BackgroundRes
     }
   }
 
-  // Persist the reference first so a screenshot never outlives a failed save.
+
   try {
     await putReference(reference);
   } catch (error) {
@@ -103,8 +103,8 @@ export async function saveReference(request: SaveRequest): Promise<BackgroundRes
       try {
         await putReference(reference);
       } catch {
-        // The reference already exists with a dangling screenshotId; the panel
-        // treats a missing blob as "no image".
+
+
       }
     }
   }
@@ -112,7 +112,7 @@ export async function saveReference(request: SaveRequest): Promise<BackgroundRes
   try {
     broadcast({ type: 'event.savedChanged', references: await listReferences() });
   } catch {
-    // A broadcast failure does not undo a successful save.
+
   }
   return warning ? { ok: true, reference, warning } : { ok: true, reference };
 }

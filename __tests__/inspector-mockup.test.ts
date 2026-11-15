@@ -21,7 +21,7 @@ function mockupOf(overrides: Partial<MockupState> = {}): MockupState {
   };
 }
 
-/** jsdom reports a zero sized rect, so the painted box is stated outright. */
+
 function stubRect(image: HTMLImageElement, x: number, y: number, width: number, height: number): void {
   image.getBoundingClientRect = () =>
     ({
@@ -39,13 +39,13 @@ function stubRect(image: HTMLImageElement, x: number, y: number, width: number, 
 
 function cleanup(): void {
   const container = globalThis as unknown as Record<symbol, { api: InspectorApi } | undefined>;
-  // Switch the previous boot off before dropping it. The inspector intercepts
-  // clicks on `window` in the capture phase, and a listener that outlived its
-  // own overlay would swallow the next test's clicks as if they were the page's.
+
+
+
   try {
     container[INSPECTOR_KEY]?.api.setMode('off');
   } catch {
-    // A boot that never installed anything has nothing to switch off.
+
   }
   delete container[INSPECTOR_KEY];
   document.body.innerHTML = '';
@@ -56,8 +56,8 @@ function cleanup(): void {
 beforeEach(cleanup);
 afterEach(cleanup);
 
-// ---------------------------------------------------------------------------
-// The layer itself
+
+
 
 describe('createMockupLayer', () => {
   function layerHarness() {
@@ -70,7 +70,7 @@ describe('createMockupLayer', () => {
   it('hosts itself outside the inspector overlay so blending reaches the page', () => {
     const { layer } = layerHarness();
     expect(document.querySelectorAll(MOCKUP_HOST_TAG)).toHaveLength(1);
-    // A host that generates no box cannot become an isolated blending group.
+
     expect(layer.host.style.display).toBe('contents');
     layer.destroy();
     expect(document.querySelectorAll(MOCKUP_HOST_TAG)).toHaveLength(0);
@@ -118,7 +118,7 @@ describe('createMockupLayer', () => {
     );
     expect(layer.current()).toMatchObject({ x: 101, y: 110 });
 
-    // Each nudge is reported once, so the panel can persist it.
+
     expect(moves).toHaveLength(2);
     expect(moves[1]).toMatchObject({ x: 101, y: 110 });
   });
@@ -171,7 +171,7 @@ describe('createMockupLayer', () => {
     expect(layer.dragStart({ x: 150, y: 250 })).toBe(true);
     layer.dragMove({ x: 170, y: 280 });
     expect(layer.current()).toMatchObject({ x: 120, y: 230 });
-    // Nothing is reported while the pointer is still down.
+
     expect(moves).toHaveLength(0);
 
     layer.dragMove({ x: 180, y: 300 });
@@ -219,8 +219,8 @@ describe('createMockupLayer', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// The content script's handling of content.setMockup
+
+
 
 type Listener = (
   message: unknown,
@@ -288,7 +288,7 @@ describe('content.setMockup', () => {
       blend: 'normal',
       locked: false,
     });
-    // The image itself is far too large to echo in every state message.
+
     expect(state.mockup).not.toHaveProperty('dataUrl');
 
     const image = document
@@ -330,7 +330,7 @@ describe('content.setMockup', () => {
     expect(document.querySelectorAll(MOCKUP_HOST_TAG)).toHaveLength(1);
 
     const off = await send({ type: 'content.setMode', mode: 'off' });
-    // Hidden, because the host went with the overlay, but not forgotten.
+
     expect(document.querySelectorAll(MOCKUP_HOST_TAG)).toHaveLength(0);
     expect(stateOf(off).mockup).not.toBeNull();
 

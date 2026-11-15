@@ -1,8 +1,8 @@
-// Stack report rendering (PRD 13). Used by the Stack tab and inlined at the
-// end of the Summary tab.
-//
-// Weak hints stay collapsed and never read as detections. "Not detected" is
-// stated as insufficient evidence, not as absence.
+
+
+
+
+
 import type { StackCategory, StackEvidence, StackReport } from '@/lib/contracts';
 import {
   Collapsible,
@@ -122,8 +122,8 @@ export function StackReportView({ report }: { report: StackReport | null }) {
       ) : null}
 
       <StatusLine>
-        {/* The readable local stamp, like every other time in the panel. The
-            ISO string is what the exports carry. */}
+        {
+                                                    }
         Scope: {report.scope}. Observed at {formatCapturedAt(report.observedAt)}.
       </StatusLine>
     </div>

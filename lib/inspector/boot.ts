@@ -1,10 +1,10 @@
-// Boot, state, and messaging for the inspector content script
-// (PRD INS-01, INS-05, INS-06, section 17.3).
-//
-// The background worker injects this script with chrome.scripting.executeScript
-// and may inject it more than once, so boot is idempotent: it guards on a
-// well-known symbol on window. It also tolerates running with no extension
-// APIs at all, which is how the browser test harness drives it.
+
+
+
+
+
+
+
 
 import type {
   AssetReading,
@@ -55,7 +55,7 @@ import { COPY_QUIET_MS, createSelection, type SelectionController } from './sele
 
 export const INSPECTOR_KEY = Symbol.for('design-inspector');
 
-/** The surface the browser test harness drives when chrome APIs are absent. */
+
 export interface InspectorApi {
   setMode(mode: InspectorMode): void;
   setOutlines(mode: OutlineMode): void;
@@ -64,7 +64,7 @@ export interface InspectorApi {
   listAssets(): AssetReading[];
   detectStack(globals?: string[]): StackReport;
   overlayRoot(): ShadowRoot | null;
-  /** The live value of "prefer semantic parents", for tests and the harness. */
+
   semanticParents(): boolean;
 }
 
@@ -114,12 +114,12 @@ export function bootInspector(): InspectorApi {
     pinned: null,
     pageStale: false,
     unsupportedReason: detectUnsupported(document),
-    // Outlines are independent of the mode, so the field is always present.
+
     outlines: currentOutlineMode(),
-    // So is the mockup: it can exist before the inspector is ever switched on.
+
     mockup: null,
-    // The page tools the side panel mirrors, and whether the badge has stepped
-    // aside to its dot. Both are refreshed before every state leaves here (W2).
+
+
     tools: {
       rulers: currentRulers(),
       semanticParents: DEFAULT_SETTINGS.preferSemanticParents,
@@ -131,56 +131,56 @@ export function bootInspector(): InspectorApi {
   let overlay: Overlay | null = null;
   let selection: SelectionController | null = null;
   let pinnedElement: Element | null = null;
-  /** Breadcrumb targets, in the same order as snapshot.ancestors. */
+
   let pinnedAncestors: Element[] = [];
-  /** The inline wrapper the last click was promoted away from, if any. */
+
   let pinnedChild: Element | null = null;
-  /**
-   * The mockup for this page session. Kept here rather than in the overlay so
-   * that switching the inspector off hides it without forgetting it, and a
-   * fresh `content.setMockup` brings it straight back (competitive Tier 2).
-   */
+
+
+
+
+
   let mockup: MockupState | null = null;
-  /**
-   * "Prefer semantic parents". `Settings.preferSemanticParents` supplies the
-   * starting value and keeps supplying it while the user has not touched the
-   * badge: a change made in the side panel reaches a page that is already open.
-   * The badge toggle is a per-session override, so once it has been pressed the
-   * stored setting stops writing over the user's choice until the page reloads.
-   */
+
+
+
+
+
+
+
   let preferSemanticParents = DEFAULT_SETTINGS.preferSemanticParents;
   let semanticParentsOverridden = false;
   let scan: ScanRun | null = null;
   let fontsCache: DocumentFontsResult | null = null;
-  /**
-   * The page facts a snapshot carries. Only the scroll offset and the capture
-   * time change between two readings of the same page at the same size, and
-   * the rest costs a `getComputedStyle` on the root element, which a hover
-   * frame should not be paying sixty times a second (PERF 3).
-   */
+
+
+
+
+
+
   let sourceCache: SourceContext | null = null;
   let historyPatch: {
     push: History['pushState'];
     replace: History['replaceState'];
   } | null = null;
 
-  // -------------------------------------------------------------------------
-  // Messaging helpers. Every one of these tolerates a missing chrome.
+
+
 
   function emit(event: ContentEvent): void {
     if (!runtimeOrNull()) return;
     try {
       broadcast(event);
     } catch {
-      // A closed side panel and a sleeping worker are both normal.
+
     }
   }
 
-  /**
-   * The live value of every tool the badge and the side panel share. The
-   * overlay owns rulers and the layout overlay while it is on screen; with the
-   * inspector off, the page-session values are still the honest answer (W2).
-   */
+
+
+
+
+
   function readTools(): PageTools {
     return {
       rulers: overlay ? overlay.rulersOn() : currentRulers(),
@@ -189,7 +189,7 @@ export function bootInspector(): InspectorApi {
     };
   }
 
-  /** Refreshes the mirrored fields so no state leaves here out of date. */
+
   function syncTools(): void {
     state.tools = readTools();
     state.badgeCollapsed = overlay ? overlay.badgeCollapsed() : false;
@@ -210,8 +210,8 @@ export function bootInspector(): InspectorApi {
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Layout outlines
+
+
 
   function setOutlines(mode: OutlineMode): void {
     applyOutlines(mode);
@@ -219,11 +219,11 @@ export function bootInspector(): InspectorApi {
     overlay?.setOutlines(state.outlines);
   }
 
-  /**
-   * The coloring the user configured, read straight from storage. The content
-   * script can read chrome.storage.local itself, so the background is not in
-   * the way; an unavailable storage falls back to 'tag'.
-   */
+
+
+
+
+
   async function configuredColoring(): Promise<'tag' | 'depth'> {
     try {
       const settings = await getSettings();
@@ -233,14 +233,14 @@ export function bootInspector(): InspectorApi {
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Settings the content script follows
 
-  /**
-   * Take the stored preference, unless the badge has already overridden it for
-   * this page session. The badge is told whenever the value actually changes,
-   * so its pressed state always matches what the next click will do.
-   */
+
+
+
+
+
+
+
   function applySemanticParentsSetting(enabled: boolean): void {
     if (semanticParentsOverridden) return;
     preferSemanticParents = enabled;
@@ -252,7 +252,7 @@ export function bootInspector(): InspectorApi {
       const settings = await getSettings();
       applySemanticParentsSetting(settings.preferSemanticParents);
     } catch {
-      // Unreadable storage leaves the contract default in place.
+
     }
   }
 
@@ -260,19 +260,19 @@ export function bootInspector(): InspectorApi {
     try {
       onSettingsChanged((settings) => applySemanticParentsSetting(settings.preferSemanticParents));
     } catch {
-      // A page without chrome.storage simply keeps the value it booted with.
+
     }
   }
 
-  /** Badge button and Alt+O: off becomes the configured coloring, and back. */
+
   async function toggleOutlines(): Promise<void> {
     const next = state.outlines && state.outlines !== 'off' ? 'off' : await configuredColoring();
     setOutlines(next);
     emitState();
   }
 
-  // -------------------------------------------------------------------------
-  // Readings
+
+
 
   function getFonts(): DocumentFontsResult {
     if (!fontsCache) fontsCache = readDocumentFonts(document);
@@ -281,12 +281,12 @@ export function bootInspector(): InspectorApi {
 
   function invalidateFonts(): void {
     fontsCache = null;
-    // A face that finished loading after the first pin changes the answer to
-    // "did this family render", so the verified-rendering cache goes with it.
+
+
     resetRenderCheckCache();
   }
 
-  /** Rebuilt when the viewport changes; refreshed per reading where it must be. */
+
   function currentSource(): SourceContext {
     const width = window.innerWidth;
     const height = window.innerHeight;
@@ -310,8 +310,8 @@ export function bootInspector(): InspectorApi {
       deep,
       fonts: getFonts(),
       source: currentSource(),
-      // Only the pinned panel's breadcrumb reads the chain, and a hover card
-      // has no breadcrumb, so the hover path does not build one.
+
+
       ancestors: deep,
     });
   }
@@ -324,15 +324,15 @@ export function bootInspector(): InspectorApi {
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Selection
+
+
 
   function pin(
     element: Element,
     options: { focus?: boolean; child?: Element | null } = {},
   ): void {
     if (!overlay) return;
-    // A plain selection click releases a locked measurement (PRD LAY-02).
+
     overlay.setMeasure(null, { locked: false });
     pinnedElement = element;
     pinnedChild = options.child ?? null;
@@ -346,13 +346,13 @@ export function bootInspector(): InspectorApi {
     emitState();
   }
 
-  /**
-   * A click's real target. A click that lands on a transparent inline wrapper
-   * selects the semantic parent instead, and remembers the wrapper so the
-   * breadcrumb can offer it (competitive tester note, PRD INS-04). A click on a
-   * link the size of a tile selects the heading under the pointer, and the link
-   * stays in the breadcrumb as its parent (tester UX note 6).
-   */
+
+
+
+
+
+
+
   function selectFromClick(element: Element, point?: { x: number; y: number }): void {
     const { target, wrapper } = resolveSelection(element, preferSemanticParents, undefined, {
       point: point ?? null,
@@ -377,9 +377,9 @@ export function bootInspector(): InspectorApi {
       overlay.markPinnedMissing();
       return;
     }
-    // A pinned element that a breakpoint has hidden is still the user's
-    // selection, so the last readings stay on screen, dimmed, rather than
-    // being silently refreshed into nonsense (PRD 19.3).
+
+
+
     if (!isElementRendered(pinnedElement)) {
       overlay.setPinnedHidden(true);
       return;
@@ -404,8 +404,8 @@ export function bootInspector(): InspectorApi {
 
   function onEscape(): void {
     if (overlay?.closeMenu()) return;
-    // A locked edge reading and a locked measurement are both things Escape
-    // lets go of before it touches the selection.
+
+
     if (overlay?.edgesLocked()) {
       overlay.setEdges(null);
       return;
@@ -422,10 +422,10 @@ export function bootInspector(): InspectorApi {
     emitState();
   }
 
-  // -------------------------------------------------------------------------
-  // Mockup overlay (competitive Tier 2 item 1)
 
-  /** The state the side panel persists: everything but the image itself. */
+
+
+
   function mockupSettings(): Omit<MockupState, 'dataUrl'> | null {
     if (!mockup) return null;
     const { dataUrl: _dataUrl, ...settings } = mockup;
@@ -436,14 +436,14 @@ export function bootInspector(): InspectorApi {
     mockup = next;
     state.mockup = mockupSettings();
     if (next) {
-      // A mockup can be set before the inspector is ever switched on, so the
-      // surfaces are created for it without changing the mode.
+
+
       ensureSurfaces();
       overlay?.setMockup(next);
     } else {
       overlay?.setMockup(null);
-      // With the inspector off, the overlay only ever existed to carry the
-      // mockup, so removing the mockup leaves the page as we found it.
+
+
       if (state.mode === 'off') {
         overlay?.destroy();
         overlay = null;
@@ -452,7 +452,7 @@ export function bootInspector(): InspectorApi {
     emitState();
   }
 
-  /** The image moved on the page. The panel writes the new offset to storage. */
+
   function onMockupMoved(settings: Omit<MockupState, 'dataUrl'>): void {
     if (!mockup) return;
     mockup = { ...mockup, ...settings };
@@ -465,8 +465,8 @@ export function bootInspector(): InspectorApi {
     setMockup({ ...mockup, visible: !mockup.visible });
   }
 
-  // -------------------------------------------------------------------------
-  // Overlay and listener lifecycle
+
+
 
   function ensureSurfaces(): void {
     if (!overlay) {
@@ -484,7 +484,7 @@ export function bootInspector(): InspectorApi {
         },
         onToggleRulers: () => {
           overlay?.setRulers(!(overlay?.rulersOn() ?? false));
-          // The side panel mirrors these toggles, so a badge press is news (W3).
+
           emitState();
         },
         onToggleSemanticParents: () => {
@@ -531,8 +531,8 @@ export function bootInspector(): InspectorApi {
         onAssetDetails: async (url) => {
           if (!runtimeOrNull()) return 'The extension background is not available.';
           try {
-            // The content script does not know its own tab id; the worker
-            // fills it in from the sender when it is -1.
+
+
             const response = await sendToBackground({
               type: 'assets.request',
               tabId: state.tabId,
@@ -550,8 +550,8 @@ export function bootInspector(): InspectorApi {
         onIdentifyFont: async (url) => {
           if (!runtimeOrNull()) return 'The extension background is not available.';
           try {
-            // The worker does the fetch and the parsing: a page's own CSP has
-            // no say over it, and the decoder stays out of this bundle.
+
+
             const response = await sendToBackground({ type: 'font.identify', url });
             if (!response.ok) return response.error;
             if (!('identity' in response)) return 'The font file returned no identity.';
@@ -587,8 +587,8 @@ export function bootInspector(): InspectorApi {
         tailwindClosestFor: (category: StyleCategory) => {
           if (!state.pinned) return null;
           const snapshot = state.pinned;
-          // The adapter belongs to another workstream and currently throws;
-          // `exporter` turns that into a null the button reports honestly.
+
+
           const output = exporter(() => toTailwindClosest(snapshot, category));
           if (!output) return null;
           const deviations = output.deviations
@@ -639,7 +639,7 @@ export function bootInspector(): InspectorApi {
           overlay.setMeasure(element);
         },
         onMeasureEnd: () => {
-          // Releasing Alt returns to normal hover unless the user locked it.
+
           if (!overlay || overlay.measureLocked()) return;
           overlay.setMeasure(null, { locked: false });
         },
@@ -648,15 +648,15 @@ export function bootInspector(): InspectorApi {
         },
         onEdgeProbe: (point) => {
           if (!overlay) return;
-          // A locked reading is the user's; a null probe must not drop it.
+
           if (point === null && overlay.edgesLocked()) return;
           overlay.setEdges(point);
         },
         onEdgeLock: (point) => {
           overlay?.setEdges(point, { locked: true });
         },
-        // The mockup image takes no pointer events of its own, so its drag is
-        // offered every pointerdown and claims only the ones over it.
+
+
         mockupDragStart: (point) => overlay?.mockupDragStart(point) ?? false,
         mockupDragMove: (point) => overlay?.mockupDragMove(point),
         mockupDragEnd: () => overlay?.mockupDragEnd(),
@@ -672,19 +672,19 @@ export function bootInspector(): InspectorApi {
     }
   }
 
-  /**
-   * A same-document route change: the document is the same one, so the mode
-   * and the overlay stay, while every page-derived reading is stale and the
-   * old selection no longer means anything (PRD INS-01).
-   */
+
+
+
+
+
   function onPageChanged(): void {
     state.pageStale = true;
     if (pinnedElement) unpin();
     overlay?.setHover(null, null);
     overlay?.clearHighlight();
     invalidateFonts();
-    // A route change means a new url and title, so the cached page facts are
-    // about the page that just left.
+
+
     sourceCache = null;
     emit({ type: 'event.pageChanged', url: location.href });
     emitState();
@@ -748,9 +748,9 @@ export function bootInspector(): InspectorApi {
       overlay?.setMode('off');
       overlay?.destroy();
       overlay = null;
-      // Leaving the inspector leaves no trace in the page, outlines included.
-      // The mockup goes with the overlay, but it is not forgotten: it is still
-      // in `mockup`, and a fresh content.setMockup brings it back.
+
+
+
       setOutlines('off');
       return;
     }
@@ -758,33 +758,33 @@ export function bootInspector(): InspectorApi {
     ensureSurfaces();
     patchHistory();
     overlay?.setMode(mode);
-    // 'paused' keeps outlines on: the point of pausing is to scroll and click
-    // the page while still reading its skeleton.
+
+
     overlay?.setOutlines(state.outlines ?? 'off');
     selection?.setMode(mode);
     if (mode === 'paused') overlay?.setHover(null, null);
   }
 
-  // -------------------------------------------------------------------------
-  // Request handling
+
+
 
   function stateResponse(): ContentResponse {
     syncTools();
     return { ok: true, state: { ...state } };
   }
 
-  // -------------------------------------------------------------------------
-  // Page tools the side panel drives (W2)
 
-  /** A partial update: a tool the caller left out is not touched. */
+
+
+
   function setTools(tools: Partial<PageTools>): void {
     if (tools.rulers !== undefined) {
       if (overlay) overlay.setRulers(tools.rulers);
       else setRulersEnabled(tools.rulers);
     }
     if (tools.semanticParents !== undefined) {
-      // Same override rule as the badge button: once the choice is made here,
-      // the stored setting stops writing over it for this page session.
+
+
       semanticParentsOverridden = true;
       preferSemanticParents = tools.semanticParents;
       overlay?.setSemanticParents(preferSemanticParents);
@@ -797,8 +797,8 @@ export function bootInspector(): InspectorApi {
   }
 
   function setBadge(collapsed: boolean, reason: 'sidepanel' | 'user'): void {
-    // A page with no badge on it yet still records the decision, so a later
-    // activation starts in the state the side panel's presence asked for.
+
+
     if (overlay) overlay.setBadgeCollapsed(collapsed, reason);
     else recordBadgeCollapse(collapsed, reason);
     emitState();
@@ -903,7 +903,7 @@ export function bootInspector(): InspectorApi {
             const found = document.querySelector(locator);
             if (found && !overlay?.owns(found)) elements.push(found);
           } catch {
-            // An unusable locator is skipped rather than failing the batch.
+
           }
         }
         overlay?.highlight(elements);
@@ -923,13 +923,13 @@ export function bootInspector(): InspectorApi {
         }
         if (!element) return { ok: false, error: 'Element is no longer on the page' };
         if (isOffscreen(element)) {
-          // Scrolling the page is a side effect on the site, so it happens only
-          // when the caller asked for it (PRD INS-03).
+
+
           if (!request.scroll) return { ok: false, error: 'Element is offscreen' };
           try {
             element.scrollIntoView({ block: 'center' });
           } catch {
-            // A browser without the options form still scrolled, or could not.
+
           }
         }
         if (state.mode === 'off') applyMode('active');
@@ -956,8 +956,8 @@ export function bootInspector(): InspectorApi {
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Listener installation
+
+
 
   const runtime = runtimeOrNull();
   if (runtime) {
@@ -978,11 +978,11 @@ export function bootInspector(): InspectorApi {
   try {
     document.fonts?.addEventListener?.('loadingdone', invalidateFonts);
   } catch {
-    // Font load events are an optimisation, not a requirement.
+
   }
 
-  // A page leaving should not be able to take our stylesheet with it into a
-  // back/forward cache entry and come back outlined.
+
+
   window.addEventListener('pagehide', () => {
     applyOutlines('off');
     state.outlines = 'off';
@@ -1019,8 +1019,8 @@ export function bootInspector(): InspectorApi {
     },
   };
 
-  // The stored preference is read once at boot and then followed until the
-  // badge overrides it. Both are fire and forget: nothing below waits on them.
+
+
   void readSettings();
   watchSettings();
 

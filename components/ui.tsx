@@ -1,22 +1,22 @@
-// Native form controls keep the extension independent of Radix.
-//
-// Borderless by construction: nothing here draws a hairline. A control is told
-// apart from its background by a tonal step (--surface-2, --surface-3) or by an
-// accent fill, never by an outline, and the only outline any of these can carry
-// is the shared focus ring from assets/ui.css.
+
+
+
+
+
+
 
 import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from './cn';
 
-// ---------------------------------------------------------------------------
-// Button
-//
-// Four variants, and each one says what it is: `primary` is the single accent
-// action a view is allowed, `tonal` is every other real button, `text` is an
-// action that lives inside a reading and must not compete with it, and
-// `danger-text` is the same thing for something destructive. Heights are 28 /
-// 32 / 40 so a row of controls lines up with the switches and chips beside it.
+
+
+
+
+
+
+
+
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[8px] font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0",
@@ -47,8 +47,8 @@ export function Button({
   return <button className={cn(buttonVariants({ variant, size, className }))} {...props} />;
 }
 
-// ---------------------------------------------------------------------------
-// Badge
+
+
 
 const badgeVariants = cva(
   'inline-flex items-center justify-center rounded-[6px] px-1.5 py-0.5 text-[12px] font-medium w-fit whitespace-nowrap shrink-0 gap-1',
@@ -74,8 +74,8 @@ export function Badge({
   return <span className={cn(badgeVariants({ variant, className }))} {...props} />;
 }
 
-// ---------------------------------------------------------------------------
-// Progress
+
+
 
 export function Progress({
   value,
@@ -99,8 +99,8 @@ export function Progress({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Switch (native checkbox with a 34x20 track: --surface-3 off, --accent on)
+
+
 
 export function Switch({
   className,
@@ -128,9 +128,9 @@ export function Switch({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Checkbox: a native input with a tonal box. `indeterminate` is a DOM property
-// rather than an attribute, so it has to be assigned through a ref.
+
+
+
 
 export function Checkbox({
   className,
@@ -169,8 +169,8 @@ export function Checkbox({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Input
+
+
 
 export function Input({ className, ...props }: React.ComponentProps<'input'>) {
   return (
@@ -185,8 +185,8 @@ export function Input({ className, ...props }: React.ComponentProps<'input'>) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// NumberStepper: a compact tonal number field with -/+ controls.
+
+
 
 export function NumberStepper({
   value,
@@ -239,8 +239,8 @@ export function NumberStepper({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Alert
+
+
 
 const alertVariants = cva('relative w-full rounded-[10px] px-3 py-2 text-[13px] grid gap-0.5', {
   variants: {
@@ -269,8 +269,8 @@ export function AlertDescription({ className, ...props }: React.ComponentProps<'
   return <div data-slot="description" className={cn('text-[12px]', className)} {...props} />;
 }
 
-// ---------------------------------------------------------------------------
-// Label
+
+
 
 export function Label({ className, ...props }: React.ComponentProps<'label'>) {
   return (

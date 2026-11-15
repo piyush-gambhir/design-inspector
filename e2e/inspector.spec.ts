@@ -14,8 +14,8 @@ import {
 import { artifactPath } from './helpers/artifacts';
 import { waitForOverlayIdle } from './helpers/timing';
 
-// Extensions cannot inject into file:// pages without an extra grant, so the
-// fixtures are served over plain http from a throwaway local server.
+
+
 let server: Server;
 let baseUrl: string;
 let session: ExtensionSession;
@@ -23,7 +23,7 @@ let control: Page;
 
 const HOST = 'design-inspector-host';
 
-/** Text of every overlay node matching `selector` inside the shadow root. */
+
 async function shadowTexts(page: Page, selector: string): Promise<string[]> {
   return page.evaluate(
     ({ host, selector: sel }) => {
@@ -37,11 +37,11 @@ async function shadowTexts(page: Page, selector: string): Promise<string[]> {
   );
 }
 
-/**
- * The element the overlay currently has pinned, as the background reports it.
- * A click travels page -> content script -> worker, so the answer arrives a
- * moment after the click: every caller polls this rather than timing it.
- */
+
+
+
+
+
 async function pinnedElement(
   tabId: number,
 ): Promise<{ tag?: string; id?: string | null } | null> {
@@ -55,7 +55,7 @@ async function shadowText(page: Page): Promise<string> {
   return page.evaluate((host) => {
     const root = document.querySelector(host)?.shadowRoot;
     if (!root) return '';
-    // Skip the <style> so assertions run against visible copy only.
+
     return Array.from(root.children)
       .filter((n) => n.tagName !== 'STYLE')
       .map((n) => n.textContent ?? '')
@@ -112,15 +112,15 @@ test.describe('inspector on the basic fixture', () => {
     const text = await shadowText(page);
     expect(text).toMatch(/\d+px/);
     expect(text).toMatch(/\d+(\.\d+)?rem/);
-    // The fixture's first-choice family does not exist; it must never read as verified.
+
     expect(text).not.toMatch(/verified/i);
 
-    // Escape once clears the pin, twice exits.
+
     await page.keyboard.press('Escape');
     await waitForOverlayIdle(page);
     await page.keyboard.press('Escape');
-    // Exiting takes the host element with it, so its disappearance is the
-    // signal that the round trip has landed. Waiting for that beats guessing.
+
+
     await expect(page.locator(HOST)).toHaveCount(0);
     const state = await sendBackground<{ ok: boolean; state?: { mode: string } }>(control, {
       type: 'inspector.getState',
@@ -128,7 +128,7 @@ test.describe('inspector on the basic fixture', () => {
     });
     expect(state).toMatchObject({ ok: true, state: { mode: 'off' } });
 
-    // With the inspector off, the link works again.
+
     await heading.click();
     await expect.poll(() => page.url()).not.toBe(urlBefore);
     await page.close();
@@ -157,8 +157,8 @@ test.describe('inspector on the basic fixture', () => {
     expect(s.typography.length).toBeGreaterThan(1);
     expect(s.colors.length).toBeGreaterThan(1);
     expect(s.spacing.padding.length).toBeGreaterThan(0);
-    // A plain static fixture must not light up any framework, and must not even
-    // leave a hint behind: every marker probe is a miss on this page.
+
+
     expect(s.stack.detections.map((d) => d.name)).toEqual([]);
     expect(s.stack.hints.map((h) => h.name)).toEqual([]);
 
@@ -197,7 +197,7 @@ test.describe('inspector on the basic fixture', () => {
       (report.stack?.detections ?? []).map((detection) => [detection.id, detection]),
     );
 
-    // Strong markers, each from one attribute or element on the page.
+
     for (const id of [
       'gatsby',
       'qwik',
@@ -212,12 +212,12 @@ test.describe('inspector on the basic fixture', () => {
     ]) {
       expect({ id, confidence: found.get(id)?.confidence }).toEqual({ id, confidence: 'high' });
     }
-    // Two weak attributes, so Stimulus is likely rather than certain.
+
     expect(found.get('stimulus')?.confidence).toBe('likely');
-    // The generator meta carries a version, and only that one does.
+
     expect(found.get('hugo')?.version).toBe('0.128.0');
     expect(found.get('alpine')?.version).toBeNull();
-    // Every detection names the evidence it came from (PRD STK acceptance).
+
     for (const detection of report.stack?.detections ?? []) {
       expect({ id: detection.id, evidence: detection.evidence.length > 0 }).toEqual({
         id: detection.id,
@@ -297,7 +297,7 @@ test.describe('inspector on the basic fixture', () => {
     expect(on).toMatchObject({ ok: true, state: { outlines: 'tag' } });
     expect(await sheetCount()).toBe(1);
     expect(await outlineStyle('#flex-row')).toBe('solid');
-    // Outlines are their own control: the inspector itself is still off.
+
     expect(on.state?.mode).toBe('off');
 
     const depth = await sendBackground<{ ok: boolean; state?: { outlines: string } }>(control, {
@@ -318,7 +318,7 @@ test.describe('inspector on the basic fixture', () => {
     expect(await sheetCount()).toBe(0);
     expect(await outlineStyle('#flex-row')).toBe('none');
 
-    // Exiting the inspector removes the sheet too, wherever it came from.
+
     await sendBackground(control, { type: 'outlines.set', tabId, mode: 'tag' });
     await sendBackground(control, { type: 'inspector.setMode', tabId, mode: 'active' });
     expect(await sheetCount()).toBe(1);
@@ -341,25 +341,25 @@ test.describe('inspector on the basic fixture', () => {
     });
     expect(selected.ok).toBe(true);
     await waitForOverlayIdle(page);
-    // The layer is drawn from a rAF callback after the selection message, so
-    // the labels are waited for rather than read once and hoped for.
+
+
     await expect
       .poll(async () => (await shadowTexts(page, '#layout-layer .track-label')).length)
       .toBeGreaterThanOrEqual(5);
 
     const labels = await shadowTexts(page, '#layout-layer .track-label');
-    // The fixture's three columns resolve to equal px tracks, plus two rows.
+
     expect(labels.length).toBeGreaterThanOrEqual(5);
     expect(labels.every((label) => /^\d+(\.\d+)?px$/.test(label))).toBe(true);
     const lines = await shadowTexts(page, '#layout-layer .grid-line');
     expect(lines.length).toBeGreaterThan(0);
     const bands = await shadowTexts(page, '#layout-layer .tint-band');
-    // Two column gaps and one row gap.
+
     expect(bands).toHaveLength(3);
 
     await page.screenshot({ path: artifactPath('di-f-grid.png') });
 
-    // Unpinning clears the layer.
+
     await page.keyboard.press('Escape');
     await expect.poll(() => shadowTexts(page, '#layout-layer .track-label')).toEqual([]);
     await page.close();
@@ -383,8 +383,8 @@ test.describe('inspector on the basic fixture', () => {
       .poll(async () => (await shadowTexts(page, '#layout-layer .track-label')).length)
       .toBeGreaterThan(0);
 
-    // #flex-row sets `gap: 12px 20px` and `justify-content: space-between`, so
-    // each band reports the distance it actually paints plus that 20px gap.
+
+
     const labels = await shadowTexts(page, '#layout-layer .track-label');
     expect(labels.length).toBeGreaterThan(0);
     expect(labels.every((label) => /^\d+(\.\d+)?px( \(gap 20px\))?$/.test(label))).toBe(true);
@@ -407,8 +407,8 @@ test.describe('inspector on the basic fixture', () => {
 
     await page.keyboard.down('Alt');
     await page.locator('#translucent-card').hover();
-    // Alt plus a hover starts the measurement on the next frame, and the panel
-    // repaints with it. Both are waited for, not timed.
+
+
     await expect
       .poll(async () => (await shadowTexts(page, '#measure-layer .measure-label')).length)
       .toBeGreaterThan(0);
@@ -439,8 +439,8 @@ test.describe('inspector on the basic fixture', () => {
     await expect(page.locator(HOST)).toHaveCount(1);
     await waitForOverlayIdle(page);
 
-    // EyeDropper cannot be driven headlessly, so this only checks that the
-    // control follows the browser's own feature detection.
+
+
     const supported = await page.evaluate(() => 'EyeDropper' in window);
     const buttons = await shadowTexts(page, '#badge-pick');
     expect(buttons).toEqual(supported ? ['Pick color'] : []);
@@ -455,12 +455,12 @@ test.describe('inspector on the basic fixture', () => {
 
     const panel = await session.context.newPage();
     await panel.goto(`chrome-extension://${session.extensionId}/sidepanel.html`);
-    // The panel reads the active tab, so the fixture has to be the active one.
+
     await session.worker.evaluate(async (id) => {
       await chrome.tabs.update(id, { active: true });
     }, tabId);
-    // The panel offers its scan button once it has resolved that tab, so the
-    // button being there is the condition, not a guess at how long it takes.
+
+
     const scanButton = panel.getByRole('button', { name: /scan this page/i });
     await expect(scanButton).toBeEnabled();
 
@@ -472,7 +472,7 @@ test.describe('inspector on the basic fixture', () => {
     await expect(panel.getByText(/\d+ of \d+ shown/)).toBeVisible();
     await panel.screenshot({ path: artifactPath('di-f-filter.png') });
 
-    // Nothing matches this, so every filtered section says so.
+
     await filter.fill('zzzz');
     await expect(panel.getByText('No matches in Palette')).toBeVisible();
     await expect(panel.getByText('No matches in Spacing')).toBeVisible();
@@ -526,7 +526,7 @@ test.describe('inspector on the basic fixture', () => {
     await toggleInspector(control, tabId);
     await page.locator('#logo-svg').scrollIntoViewIfNeeded();
 
-    // The fixture's svg paints through <use>, so the click lands inside it.
+
     await page.locator('#logo-svg').click({ position: { x: 24, y: 36 } });
 
     await expect.poll(() => pinnedElement(tabId)).toMatchObject({ tag: 'svg', id: 'logo-svg' });
@@ -538,7 +538,7 @@ test.describe('inspector on the basic fixture', () => {
     await page.goto(`${baseUrl}/inspector-basic.html`);
     const tabId = await tabIdFor(session.worker, page);
 
-    // A 1x1 PNG is enough: this asserts the layer and its settings, not decode.
+
     const dataUrl =
       'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 
@@ -560,7 +560,7 @@ test.describe('inspector on the basic fixture', () => {
       },
     );
     expect(set.ok).toBe(true);
-    // The mockup needs no inspector: it went through the injection path.
+
     expect(set.state?.mode).toBe('off');
     expect(set.state?.mockup).toMatchObject({ opacity: 0.42, x: 40, y: 60, blend: 'difference' });
 
@@ -592,8 +592,8 @@ test.describe('inspector on the basic fixture', () => {
       tabindex: '0',
     });
 
-    // A 1x1 pixel proves the wiring but shows nothing, so the screenshot is
-    // taken over a comp with real dimensions.
+
+
     const comp =
       'data:image/svg+xml;charset=utf-8,' +
       encodeURIComponent(
@@ -618,7 +618,7 @@ test.describe('inspector on the basic fixture', () => {
         locked: false,
       },
     });
-    // The comp is an SVG data URL, so the layer paints once the image decodes.
+
     await page
       .locator('design-inspector-mockup')
       .evaluate(async (host) => {
@@ -630,7 +630,7 @@ test.describe('inspector on the basic fixture', () => {
     await waitForOverlayIdle(page);
     await page.screenshot({ path: artifactPath('di-q-mockup.png') });
 
-    // Clearing it takes the layer with it.
+
     const cleared = await sendBackground<{ ok: boolean; state?: { mockup: unknown } }>(control, {
       type: 'mockup.set',
       tabId,
@@ -649,7 +649,7 @@ test.describe('inspector on the basic fixture', () => {
 
     await page.locator('#padded-card').scrollIntoViewIfNeeded();
     await page.keyboard.down('Shift');
-    // Inside the padded card, off its inner box, so all four edges are real.
+
     await page.locator('#padded-card').hover({ position: { x: 20, y: 20 } });
     await expect
       .poll(async () => (await shadowTexts(page, '#edge-layer .edge-guide-label')).length)
@@ -661,7 +661,7 @@ test.describe('inspector on the basic fixture', () => {
     expect(await shadowTexts(page, '#edge-layer .edge-guide')).toHaveLength(4);
     expect(await shadowTexts(page, '#edge-layer .edge-dot')).toHaveLength(1);
 
-    // The method is stated wherever the numbers are.
+
     const text = await shadowText(page);
     expect(text).toContain('Nearest element edges, geometric');
 
@@ -681,7 +681,7 @@ test.describe('inspector on the basic fixture', () => {
     await expect(page.locator(HOST)).toHaveCount(1);
     await waitForOverlayIdle(page);
 
-    // The badge's Rulers toggle is the entry point.
+
     await page.evaluate((host) => {
       const root = document.querySelector(host)?.shadowRoot;
       (root?.getElementById('badge-rulers') as HTMLButtonElement | null)?.click();
@@ -697,7 +697,7 @@ test.describe('inspector on the basic fixture', () => {
     expect(labels.every((label) => Number(label) % 100 === 0)).toBe(true);
     expect((await shadowTexts(page, '#ruler-left .tick')).length).toBeGreaterThan(5);
 
-    // A click on the top ruler drops a vertical guide at that position.
+
     await page.mouse.click(300, 9);
     await expect
       .poll(() =>
@@ -743,8 +743,8 @@ test.describe('inspector on the basic fixture', () => {
         return root?.querySelectorAll('.page-guide').length ?? 0;
       }, HOST);
 
-    // A real double click on the guide: the layer captures the pointer, so the
-    // browser never delivers a dblclick and the two presses have to carry it.
+
+
     await page.mouse.click(300, 9);
     await expect.poll(guideCount).toBe(1);
 
@@ -758,7 +758,7 @@ test.describe('inspector on the basic fixture', () => {
     await page.mouse.dblclick(300, 400);
     await expect.poll(guideCount).toBe(0);
 
-    // A second guide, removed from the keyboard.
+
     await page.mouse.click(420, 9);
     await expect.poll(guideCount).toBe(1);
     await page.evaluate((host) => {
@@ -768,7 +768,7 @@ test.describe('inspector on the basic fixture', () => {
     await page.keyboard.press('Delete');
     await expect.poll(guideCount).toBe(0);
 
-    // And a third, removed from its own control.
+
     await page.mouse.click(520, 9);
     await expect.poll(guideCount).toBe(1);
     const control_ = await page.evaluate((host) => {
@@ -805,7 +805,7 @@ test.describe('inspector on the basic fixture', () => {
 
     await expect.poll(async () => (await read())?.collapsed).toBe('true');
     const collapsed = await read();
-    // A phone width viewport opens collapsed, and inside the viewport.
+
     expect(collapsed?.collapsed).toBe('true');
     expect(collapsed?.left ?? -1).toBeGreaterThanOrEqual(0);
 
@@ -817,7 +817,7 @@ test.describe('inspector on the basic fixture', () => {
 
     const expanded = await read();
     expect(expanded?.collapsed).toBe('false');
-    // Expanded it wraps rather than running off the left edge of the screen.
+
     expect(expanded?.left ?? -1).toBeGreaterThanOrEqual(0);
     expect(expanded?.right ?? 0).toBeLessThanOrEqual(390);
 
@@ -831,8 +831,8 @@ test.describe('inspector on the basic fixture', () => {
     const tabId = await tabIdFor(session.worker, page);
     await toggleInspector(control, tabId);
 
-    // A comp large enough to cover the hero, unlocked, the shape that used to
-    // swallow every click underneath it.
+
+
     const comp =
       'data:image/svg+xml;charset=utf-8,' +
       encodeURIComponent(
@@ -856,7 +856,7 @@ test.describe('inspector on the basic fixture', () => {
     await expect(page.locator('design-inspector-mockup')).toHaveCount(1);
     await waitForOverlayIdle(page);
 
-    // The image is never a pointer target, whatever its lock state is.
+
     const pointerEvents = await page.evaluate(() => {
       const image = document
         .querySelector('design-inspector-mockup')
@@ -884,12 +884,12 @@ test.describe('inspector on the basic fixture', () => {
       .poll(() => pinnedElement(tabId))
       .toMatchObject({ tag: 'h2', id: 'wrapped-heading' });
 
-    // The wrapper is still one click away, as the trailing breadcrumb chip.
+
     const crumbs = await shadowTexts(page, '[data-role="child-crumb"]');
     expect(crumbs).toHaveLength(1);
     expect(crumbs[0]).toContain('span');
 
-    // Turning the preference off on the badge selects exactly what is clicked.
+
     await page.evaluate((host) => {
       const root = document.querySelector(host)?.shadowRoot;
       (root?.getElementById('badge-semantic') as HTMLButtonElement | null)?.click();
@@ -911,7 +911,7 @@ test.describe('inspector on the basic fixture', () => {
 
     expect(await page.evaluate(() => window.scrollY)).toBe(0);
 
-    // Without the flag the offscreen element is refused, not scrolled to.
+
     const refused = await sendBackground<{ ok: boolean; error?: string }>(control, {
       type: 'element.select',
       tabId,
@@ -927,7 +927,7 @@ test.describe('inspector on the basic fixture', () => {
       scroll: true,
     });
     expect(selected.ok).toBe(true);
-    // The scroll is smooth, so the page keeps moving after the reply lands.
+
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
     await expect.poll(() => pinnedElement(tabId)).toMatchObject({ id: 'far-below' });
     await page.close();
@@ -958,8 +958,8 @@ test.describe('inspector on the basic fixture', () => {
     await expect(panel.getByLabel('Mockup image')).toBeVisible();
     await expect(panel.getByText('Drop a PNG, JPG, WebP or SVG here')).toBeVisible();
 
-    // The colour transition would otherwise be caught mid-flight by the shot.
-    // 150ms is the transition-colors duration the shared components use.
+
+
     await panel.waitForTimeout(300);
     await panel.screenshot({ path: artifactPath('di-q-tools.png') });
     await panel.close();
@@ -1005,15 +1005,15 @@ test.describe('inspector on the basic fixture', () => {
     const source = state.state!.pinned.source;
     expect(source.rootFontSizeFluid).toBe(true);
     expect(source.rootFontSizeAuthored).toContain('clamp(');
-    // 1vw of a 1200px viewport is 12px, which the clamp lifts to its 14px
-    // floor. The computed root is a whole number here and the reading is still
-    // fluid, because the authored value says so.
+
+
+
     expect(source.rootFontSize).toBeCloseTo(14, 1);
 
     const text = await shadowText(page);
     expect(text).toContain('scales with the viewport');
     expect(text).toContain('rem is the stable reading');
-    // rem first, px after it, said to be a reading at this width.
+
     expect(text).toMatch(/Size\s*3\.75rem · [\d.]+px at this width/);
     await page.screenshot({ path: artifactPath('di-v-fluid-typography.png') });
     await page.close();
@@ -1021,11 +1021,11 @@ test.describe('inspector on the basic fixture', () => {
 });
 
 test.describe('side panel presence and the page badge (W)', () => {
-  /**
-   * The panel page with its active-tab lookup answered by the fixture's tab.
-   * A Playwright-driven extension page cannot be the window's active tab, and
-   * everything downstream of that answer is the real thing.
-   */
+
+
+
+
+
   async function openPanel(fixtureTabId: number): Promise<Page> {
     const panel = await session.context.newPage();
     await panel.setViewportSize({ width: 420, height: 960 });
@@ -1045,7 +1045,7 @@ test.describe('side panel presence and the page badge (W)', () => {
     return panel;
   }
 
-  /** How the badge on the page is showing itself right now. */
+
   async function badgeState(page: Page): Promise<{ collapsed: string; title: string } | null> {
     return page.evaluate((host) => {
       const root = document.querySelector(host)?.shadowRoot;
@@ -1071,13 +1071,13 @@ test.describe('side panel presence and the page badge (W)', () => {
 
     await sendBackground(control, { type: 'sidepanel.presence', tabId, open: true });
     await expect.poll(async () => (await badgeState(page))?.collapsed).toBe('true');
-    // The dot says where the controls went rather than only how to undo this.
+
     expect((await badgeState(page))?.title).toBe(
       'Controls are in the side panel. Click to expand.',
     );
     await page.screenshot({ path: artifactPath('di-w-badge-collapsed.png') });
 
-    // A tool pressed in the panel acts on the page, exactly as the badge did.
+
     const rulers = panel.getByRole('button', { name: 'Rulers' });
     await expect(rulers).toHaveAttribute('aria-pressed', 'false');
     await rulers.click();
@@ -1091,7 +1091,7 @@ test.describe('side panel presence and the page badge (W)', () => {
     ).toBe(true);
     await expect(rulers).toHaveAttribute('aria-pressed', 'true');
 
-    // The row mirrors the page: the badge's own Rulers button agrees with it.
+
     expect(
       await page.evaluate((host) => {
         const root = document.querySelector(host)?.shadowRoot;
@@ -1099,12 +1099,12 @@ test.describe('side panel presence and the page badge (W)', () => {
       }, HOST),
     ).toBe('true');
 
-    // 150ms of transition-colors on the tool row, doubled so the shot is taken
-    // after it has settled rather than during it.
+
+
     await panel.waitForTimeout(300);
     await panel.screenshot({ path: artifactPath('di-w-panel-tools.png') });
 
-    // The panel closing gives the badge back.
+
     await sendBackground(control, { type: 'sidepanel.presence', tabId, open: false });
     await expect.poll(async () => (await badgeState(page))?.collapsed).toBe('false');
 

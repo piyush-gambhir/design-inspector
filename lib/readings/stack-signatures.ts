@@ -1,14 +1,14 @@
-// Pure technology detection from page evidence gathered by the content script
-// (DOM markers, URLs, meta tags) and by the background worker (main-world
-// globals). Consumers import only `detectStack` and `PageEvidence`.
-//
-// Evidence rules (PRD STK-03):
-// - Direct signatures only. A generic filename or class-name collision never
-//   produces a detection.
-// - One strong rule is enough for `high`. Two weak rules make `likely`. A
-//   single weak rule is a hint, and hints are never presented as detections.
-// - Version numbers appear only when a rule captures one from reliable text.
-// - No downloaded site code is executed or read.
+
+
+
+
+
+
+
+
+
+
+
 import type {
   StackCategory,
   StackConfidence,
@@ -19,32 +19,32 @@ import type {
 } from '@/lib/contracts';
 
 export interface PageEvidence {
-  /** Absolute URLs of <script src>. */
+
   scriptUrls: string[];
   /** Absolute URLs of <link rel=stylesheet> and @import. */
   stylesheetUrls: string[];
-  /** Absolute URLs of other <link> elements (preconnect, preload, icon). */
+
   linkUrls: string[];
-  /** <meta name|property, content> pairs. */
+
   meta: { name: string; content: string }[];
-  /** Selectors from a fixed probe list that matched at least one element. */
+
   domMarkers: string[];
-  /** Names from a fixed probe list found on the page's window object. Empty when not probed. */
+
   globals: string[];
-  /** Inline <script id> values, e.g. '__NEXT_DATA__'. */
+
   inlineScriptIds: string[];
-  /** HTML element attribute names, e.g. 'data-framer-hydrate-v2'. */
+
   htmlAttributes: string[];
-  /** Response headers when observed. Empty in V1. */
+
   headers: { name: string; value: string }[];
 }
 
-/**
- * Rule kinds cover every evidence channel in `PageEvidence`. Two of them
- * (`inline-script-id`, `html-attribute`) have no matching member in the
- * contract's `StackEvidenceKind`, so their evidence is reported as
- * `dom-marker` with a selector-shaped detail.
- */
+
+
+
+
+
+
 type RuleKind =
   | 'script-url'
   | 'stylesheet-url'
@@ -60,17 +60,17 @@ type RuleWeight = 'strong' | 'weak';
 
 interface Rule {
   kind: RuleKind;
-  /**
-   * A string test is a case-insensitive substring match for URL and meta
-   * channels, and a case-insensitive exact match for the identifier channels
-   * (dom markers, globals, inline script ids, html attributes, header names).
-   * A RegExp is applied as written.
-   */
+
+
+
+
+
+
   test: RegExp | string;
   weight: RuleWeight;
-  /** Meta rules only: the meta name or property to read. */
+
   name?: string;
-  /** Captures a version from the matched string, group 1. */
+
   version?: RegExp;
 }
 
@@ -79,10 +79,10 @@ interface Signature {
   name: string;
   category: StackCategory;
   rules: Rule[];
-  /**
-   * Ceiling for the reported confidence. Data sources cannot be distinguished
-   * from a hosted asset domain, so they never reach `high`.
-   */
+
+
+
+
   maxConfidence?: StackConfidence;
 }
 
@@ -95,28 +95,28 @@ const CATEGORY_ORDER: StackCategory[] = [
   'infra-analytics',
 ];
 
-/** URL and identifier channels behave differently for string tests. */
+
 const URL_KINDS = new Set<RuleKind>(['script-url', 'stylesheet-url', 'link-url']);
 
 const MAX_DETAIL = 160;
 
-// ---------------------------------------------------------------------------
-// V1 signature table (PRD STK-02: a small verified set)
-//
-// Deliberately absent:
-// - Tailwind from class names. Utility-looking classes are not evidence
-//   (PRD STK-03), and stylesheet contents are not available to this module,
-//   so only the CDN build is detectable.
-// - CSS Modules. Hashed-looking class names are explicitly forbidden evidence.
-// - Framer Motion. There is no reliable page-level signal without reading
-//   bundle contents, which this extension does not do.
-// - shadcn/ui. It is copied into a project as source, so a page built with it
-//   is indistinguishable from the same page written by hand.
-// - UnoCSS. The injected style element carries no stable attribute of its own,
-//   and utility-looking class names are not evidence (PRD STK-03).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export const SIGNATURES: Signature[] = [
-  // --- Frameworks -------------------------------------------------------
+
   {
     id: 'nextjs',
     name: 'Next.js',
@@ -177,8 +177,8 @@ export const SIGNATURES: Signature[] = [
     id: 'svelte',
     name: 'Svelte',
     category: 'framework',
-    // Compiled Svelte leaves only scoped class hashes behind, which are not
-    // usable evidence, so Svelte alone stays a hint unless SvelteKit is high.
+
+
     rules: [{ kind: 'dom-marker', test: '[data-svelte-h]', weight: 'weak' }],
   },
   {
@@ -211,8 +211,8 @@ export const SIGNATURES: Signature[] = [
     id: 'angular',
     name: 'Angular',
     category: 'framework',
-    // The ng-version attribute carries the version in the DOM, but the marker
-    // list only reports which selectors matched, so no version is available.
+
+
     rules: [
       { kind: 'dom-marker', test: '[ng-version]', weight: 'strong' },
       { kind: 'global', test: /^(?:ng|getAllAngularRootElements)$/, weight: 'strong' },
@@ -240,8 +240,8 @@ export const SIGNATURES: Signature[] = [
     id: 'qwik',
     name: 'Qwik',
     category: 'framework',
-    // `q:container` sits on the html element itself, which the marker probes
-    // cannot select, so it is read from the html attribute channel instead.
+
+
     rules: [{ kind: 'html-attribute', test: 'q:container', weight: 'strong' }],
   },
   {
@@ -305,9 +305,9 @@ export const SIGNATURES: Signature[] = [
     id: 'vitepress',
     name: 'VitePress',
     category: 'framework',
-    // A Vue app mounted on #app is all a VitePress page shows of itself, and a
-    // `/assets/` bundle path is far too common to count as evidence at all, so
-    // one weak rule is the honest reading: VitePress can only ever be a hint.
+
+
+
     rules: [{ kind: 'dom-marker', test: '#app[data-v-app]', weight: 'weak' }],
   },
   {
@@ -340,8 +340,8 @@ export const SIGNATURES: Signature[] = [
     id: 'stimulus',
     name: 'Stimulus',
     category: 'framework',
-    // Both attributes are plain enough that a hand-written page could use
-    // either one, so neither is strong and both together only make it likely.
+
+
     rules: [
       { kind: 'dom-marker', test: '[data-controller]', weight: 'weak' },
       { kind: 'dom-marker', test: '[data-action]', weight: 'weak' },
@@ -357,7 +357,7 @@ export const SIGNATURES: Signature[] = [
     ],
   },
 
-  // --- Builders and CMS -------------------------------------------------
+
   {
     id: 'webflow',
     name: 'Webflow',
@@ -433,8 +433,8 @@ export const SIGNATURES: Signature[] = [
     id: 'sanity',
     name: 'Sanity',
     category: 'builder-cms',
-    // A data source, not a rendering layer: capped so an asset CDN hit never
-    // reads as a confident statement about how the page is built.
+
+
     maxConfidence: 'likely',
     rules: [
       { kind: 'link-url', test: 'cdn.sanity.io', weight: 'weak' },
@@ -453,14 +453,14 @@ export const SIGNATURES: Signature[] = [
     ],
   },
 
-  // --- Styling ----------------------------------------------------------
+
   {
     id: 'tailwind',
     name: 'Tailwind',
     category: 'styling',
-    // URLs only. Class names that look like utilities are not evidence
-    // (PRD STK-03), and this module never sees stylesheet contents, so a
-    // compiled Tailwind build is simply not detectable in V1.
+
+
+
     rules: [{ kind: 'script-url', test: 'cdn.tailwindcss.com', weight: 'strong' }],
   },
   {
@@ -469,9 +469,9 @@ export const SIGNATURES: Signature[] = [
     category: 'styling',
     rules: [
       { kind: 'dom-marker', test: 'style[data-styled]', weight: 'strong' },
-      // The probe is one selector covering both positions of the class, and a
-      // marker is reported as the probe that matched, so the rule reads it
-      // whole rather than testing half of it and never firing.
+
+
+
       { kind: 'dom-marker', test: '[class^="sc-"], [class*=" sc-"]', weight: 'weak' },
     ],
   },
@@ -530,16 +530,16 @@ export const SIGNATURES: Signature[] = [
     id: 'chakra',
     name: 'Chakra UI',
     category: 'styling',
-    // A `chakra-` class prefix is the only thing a built page shows, and a
-    // class name is not evidence on its own (PRD STK-03), so this is a hint.
+
+
     rules: [{ kind: 'dom-marker', test: '[class*="chakra-"]', weight: 'weak' }],
   },
   {
     id: 'radix',
     name: 'Radix UI',
     category: 'styling',
-    // Radix writes its own data attributes onto the elements it portals and
-    // scrolls. Either one alone could be a coincidence; both together are not.
+
+
     rules: [
       { kind: 'dom-marker', test: '[data-radix-popper-content-wrapper]', weight: 'weak' },
       { kind: 'dom-marker', test: '[data-radix-scroll-area-viewport]', weight: 'weak' },
@@ -549,15 +549,15 @@ export const SIGNATURES: Signature[] = [
     id: 'mui',
     name: 'Material UI',
     category: 'styling',
-    // Mui-prefixed class names again: two different components carrying them
-    // is the point at which it stops reading as a naming coincidence.
+
+
     rules: [
       { kind: 'dom-marker', test: '[class*="MuiBox"]', weight: 'weak' },
       { kind: 'dom-marker', test: '[class*="MuiButton"]', weight: 'weak' },
     ],
   },
 
-  // --- Motion and 3D ----------------------------------------------------
+
   {
     id: 'gsap',
     name: 'GSAP',
@@ -630,8 +630,8 @@ export const SIGNATURES: Signature[] = [
     id: 'scrolltrigger',
     name: 'ScrollTrigger',
     category: 'motion-3d',
-    // A GSAP plugin, and worth naming separately: it is the difference between
-    // a page that animates and a page whose animation is driven by scrolling.
+
+
     rules: [
       { kind: 'script-url', test: 'ScrollTrigger', weight: 'strong' },
       { kind: 'global', test: 'ScrollTrigger', weight: 'strong' },
@@ -665,14 +665,14 @@ export const SIGNATURES: Signature[] = [
     rules: [{ kind: 'script-url', test: 'motion.dev', weight: 'strong' }],
   },
 
-  // --- Font providers ---------------------------------------------------
+
   {
     id: 'google-fonts',
     name: 'Google Fonts',
     category: 'font-provider',
     rules: [
-      // Only a requested stylesheet proves use. A bare preconnect/preload link
-      // (wordpress.org has one with every face self-hosted) is a weak hint.
+
+
       { kind: 'stylesheet-url', test: /fonts\.googleapis\.com|fonts\.gstatic\.com/i, weight: 'strong' },
       { kind: 'link-url', test: /fonts\.googleapis\.com\/css/i, weight: 'strong' },
       { kind: 'link-url', test: /fonts\.googleapis\.com|fonts\.gstatic\.com/i, weight: 'weak' },
@@ -700,13 +700,13 @@ export const SIGNATURES: Signature[] = [
     ],
   },
 
-  // --- Infrastructure and analytics -------------------------------------
+
   {
     id: 'vercel',
     name: 'Vercel',
     category: 'infra-analytics',
-    // Hosting cannot be proven from the page alone, so the insights script is
-    // only a weak signal and Vercel stays a hint until a header is observed.
+
+
     rules: [
       { kind: 'header', test: 'x-vercel-id', weight: 'strong' },
       { kind: 'script-url', test: '/_vercel/insights', weight: 'weak' },
@@ -731,8 +731,8 @@ export const SIGNATURES: Signature[] = [
     id: 'cloudflare',
     name: 'Cloudflare',
     category: 'infra-analytics',
-    // Rocket Loader, challenge scripts, and email decoding all live under
-    // /cdn-cgi/ on the site's own origin.
+
+
     rules: [
       { kind: 'header', test: 'cf-ray', weight: 'strong' },
       { kind: 'script-url', test: '/cdn-cgi/', weight: 'strong' },
@@ -748,9 +748,9 @@ export const SIGNATURES: Signature[] = [
     id: 'gtm',
     name: 'Google Tag Manager',
     category: 'infra-analytics',
-    // A container tells us nothing about what it loads, so the loader alone is
-    // weak and surfaces only as a hint. The no-script fallback frame is the
-    // second weak signal that makes the container itself worth reporting.
+
+
+
     rules: [
       { kind: 'script-url', test: 'googletagmanager.com/gtm.js', weight: 'weak' },
       {
@@ -785,10 +785,10 @@ export const SIGNATURES: Signature[] = [
     ],
   },
 
-  // --- Embeds and third-party services ----------------------------------
-  //
-  // `StackCategory` has no member for an embed or a paid service, so these are
-  // reported under infra-analytics and say what they are in the name instead.
+
+
+
+
   {
     id: 'youtube-embed',
     name: 'YouTube embed',
@@ -829,8 +829,8 @@ export const SIGNATURES: Signature[] = [
     id: 'segment',
     name: 'Segment',
     category: 'infra-analytics',
-    // `analytics` is a name plenty of sites define for themselves, so it is
-    // only a supporting signal next to the CDN script.
+
+
     rules: [
       { kind: 'script-url', test: 'cdn.segment.com', weight: 'strong' },
       { kind: 'global', test: 'analytics', weight: 'weak' },
@@ -870,13 +870,13 @@ export const SIGNATURES: Signature[] = [
   },
 ];
 
-/** Detections that follow from another detection rather than from direct evidence. */
+
 const IMPLICATIONS: { when: string[]; id: string; name: string; category: StackCategory }[] = [
   { when: ['nextjs', 'remix'], id: 'react', name: 'React', category: 'framework' },
   { when: ['sveltekit'], id: 'svelte', name: 'Svelte', category: 'framework' },
 ];
 
-// ---------------------------------------------------------------------------
+
 
 export function detectStack(evidence: PageEvidence): StackReport {
   const observedAt = new Date().toISOString();
@@ -941,11 +941,11 @@ export function detectStack(evidence: PageEvidence): StackReport {
   return { detections, hints: remainingHints, scope: 'page', observedAt };
 }
 
-/**
- * Adds the detections that follow from another one, for example React under a
- * high-confidence Next.js. An existing direct detection is left alone; a hint
- * is promoted to `likely` and keeps the evidence it already had.
- */
+
+
+
+
+
 function applyImplications(
   detections: StackDetection[],
   hints: { name: string; evidence: StackEvidence[] }[],
@@ -1001,9 +1001,9 @@ function matchRule(rule: Rule, evidence: PageEvidence): RuleMatch | null {
 }
 
 interface Candidate {
-  /** The string the rule's test runs against. */
+
   text: string;
-  /** What the user sees as evidence. */
+
   detail: string;
 }
 
@@ -1040,14 +1040,14 @@ function testMatches(rule: Rule, text: string): boolean {
   if (URL_KINDS.has(rule.kind) || rule.kind === 'meta') {
     return text.toLowerCase().includes(rule.test.toLowerCase());
   }
-  // Identifier channels report exact probe results, so an exact match keeps a
-  // near miss such as `[data-framer-name-extra]` from counting.
+
+
   return equalsIgnoreCase(text, rule.test);
 }
 
 function evidenceKind(kind: RuleKind): StackEvidenceKind {
-  // The contract has no member for the inline-script-id and html-attribute
-  // channels, so both are reported as selector-shaped dom markers.
+
+
   if (kind === 'inline-script-id' || kind === 'html-attribute') return 'dom-marker';
   return kind;
 }

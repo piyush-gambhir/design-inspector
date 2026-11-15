@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SavedReference } from '@/lib/contracts';
 import { SCHEMA_VERSION } from '@/lib/contracts';
 
-// A tiny in-memory stand-in for idb. fake-indexeddb is not a dependency, so the
-// store logic is exercised against this instead, including the upgrade path.
+
+
 const fake = vi.hoisted(() => {
   interface FakeStore {
     keyPath?: string;
@@ -146,7 +146,7 @@ describe('database shape', () => {
     await listReferences();
     const db = fake.state.db;
     expect(DB_NAME).toBe('design-inspector');
-    // 2 added the mockups store, which used to be a database of its own.
+
     expect(DB_VERSION).toBe(2);
     const references = db?.stores.get(REFERENCE_STORE);
     expect(references?.keyPath).toBe('id');

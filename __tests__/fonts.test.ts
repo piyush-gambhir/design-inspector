@@ -104,8 +104,8 @@ describe('classifyFontSource', () => {
       pageOrigin: 'https://example.com',
     });
     expect(source.kind).toBe('self-hosted');
-    // The host itself is named by the source line; the note carries the part
-    // that line cannot say, which is that the CDN is not the page's origin.
+
+
     expect(source.note).toContain("not this page's own origin");
     expect(fontSourceLine(source)).toContain('cdn.other.com');
   });
@@ -245,14 +245,14 @@ describe('identifyFamily', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Verified rendering (PRD TYP-02)
 
-/**
- * A canvas context that only knows how to measure. Widths are looked up by
- * whether the font shorthand names the family, which is exactly the signal the
- * real check reads.
- */
+
+
+
+
+
+
+
 function fakeMeasurer(widths: {
   withFamily: number;
   mono: number;
@@ -286,8 +286,8 @@ describe('renderCheck', () => {
   });
 
   it('reports fallback when both widths match and the font set says the face is missing', () => {
-    // Every measurement comes back the same width, so the family added nothing.
-    // The font set is the second witness that it is genuinely absent.
+
+
     const equal = {
       font: '',
       measureText(): { width: number } {
@@ -304,8 +304,8 @@ describe('renderCheck', () => {
         return { width: 500 };
       },
     } as TextMeasurer;
-    // A family whose metrics happen to match the fallback is a real case, and
-    // it is never reported as a fallback on that evidence alone.
+
+
     expect(renderCheck('Satoshi', 400, 'normal', fakeDoc(true), equal)).toBe('inconclusive');
   });
 
@@ -325,14 +325,14 @@ describe('renderCheck', () => {
     const afterFirst = measurer.calls;
     renderCheck('Satoshi', 700, 'italic', fakeDoc(true), measurer);
     expect(measurer.calls).toBe(afterFirst);
-    // A different weight is a different question and is measured again.
+
     renderCheck('Satoshi', 400, 'italic', fakeDoc(true), measurer);
     expect(measurer.calls).toBeGreaterThan(afterFirst);
   });
 });
 
-// ---------------------------------------------------------------------------
-// Presenting an identity
+
+
 
 function identity(overrides: Partial<FontIdentity> = {}): FontIdentity {
   return {
@@ -356,7 +356,7 @@ function identity(overrides: Partial<FontIdentity> = {}): FontIdentity {
 
 describe('formatFileSize', () => {
   it('reads in whole units', () => {
-    // No font is under a kilobyte, so KB is the smallest unit worth printing.
+
     expect(formatFileSize(512)).toBe('1 KB');
     expect(formatFileSize(49152)).toBe('48 KB');
     expect(formatFileSize(3 * 1024 * 1024)).toBe('3.0 MB');
@@ -417,7 +417,7 @@ describe('identity presentation', () => {
   it('shows the typeface name over the CSS alias, and keeps the alias', () => {
     expect(displayFamily('Nb international pro webfont', identity())).toBe('NB International Pro');
     expect(aliasDiffers('Nb international pro webfont', identity())).toBe(true);
-    // A site that names the family correctly has nothing extra to say.
+
     expect(aliasDiffers('NB International Pro', identity())).toBe(false);
     expect(displayFamily('Nb international pro webfont', null)).toBe('Nb international pro webfont');
   });

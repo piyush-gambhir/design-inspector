@@ -30,8 +30,8 @@ describe('referenceToMarkdown for an element', () => {
   });
 
   it('names the typeface rather than the CSS alias once the file has been read', () => {
-    // The superpower.com case: the site's @font-face nickname is not a
-    // typeface, and a reference read six months later needs the real name.
+
+
     const identified = referenceToMarkdown(
       elementReference({
         ...headingSnapshot,
@@ -203,12 +203,12 @@ describe('summaryToMarkdown', () => {
     const clusters = section(markdown, '## Palette clusters');
     expect(clusters).toContain('| Value | Roles | Total count | Label |');
     expect(clusters).toContain('| #0a0a0a | text | 42 | neutral (inferred) |');
-    // The near-white gradient stop reads as the same swatch as the background.
+
     expect(clusters).toContain('| #ffffff | background, gradient-stop | 34 | neutral (inferred) |');
     expect(clusters).toContain('| #4f46e5 | text | 3 | accent (inferred) |');
     expect(clusters).toContain('| #71717a | stroke | 2 |  |');
     expect(clusters.indexOf('| #0a0a0a |')).toBeLessThan(clusters.indexOf('| #ffffff |'));
-    // The flat table still carries every measured row.
+
     expect(markdown).toContain('| gradient-stop | #f4f4f5 | 1 | 4 |');
   });
 
@@ -290,7 +290,7 @@ function headings(markdown: string): string[] {
 }
 
 function section(markdown: string, heading: string): string {
-  // The whole heading line, so '## Palette' does not match '## Palette clusters'.
+
   const start = markdown.indexOf(`${heading}\n`);
   const rest = markdown.slice(start + heading.length);
   const end = rest.indexOf('\n## ');

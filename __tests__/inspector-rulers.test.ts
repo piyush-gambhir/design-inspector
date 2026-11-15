@@ -21,7 +21,7 @@ describe('rulerTicks', () => {
     const ticks = rulerTicks(0, 100);
     expect(ticks.map((tick) => tick.value)).toEqual([0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
     expect(ticks.filter((tick) => tick.major).map((tick) => tick.value)).toEqual([0, 100]);
-    // With no scroll, the document coordinate and the screen offset agree.
+
     expect(ticks.every((tick) => tick.position === tick.value)).toBe(true);
   });
 
@@ -34,8 +34,8 @@ describe('rulerTicks', () => {
 
   it('starts at the document grid, not at the scroll offset', () => {
     const ticks = rulerTicks(97, 30);
-    // 90 is the first multiple of the minor step at or before 97, so its line
-    // is drawn 7px off the leading edge rather than being dropped.
+
+
     expect(ticks[0]).toEqual({ position: -7, value: 90, major: false });
     expect(ticks.some((tick) => tick.major && tick.value === 100)).toBe(true);
   });

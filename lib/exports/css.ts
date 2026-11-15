@@ -1,6 +1,6 @@
-// Computed CSS export (PRD EXP-01). The output is honest about what it is:
-// computed values at one viewport, not authored CSS, with no responsive rules
-// and no interaction states.
+
+
+
 import type { ColorValue, ElementSnapshot, Sides } from '@/lib/contracts';
 import { collapseWhitespace, fontStack, isZeroLength, num, px, quoteFamily } from './format';
 
@@ -36,11 +36,11 @@ function headerComment(snapshot: ElementSnapshot): string {
   return `/* Design Inspector: computed styles for ${snapshot.element.label} at ${num(viewport.width)}x${num(viewport.height)}, root ${num(rootFontSize)}px. Not authored CSS; responsive rules and interaction states not included. */`;
 }
 
-/**
- * The label with every character outside `[a-z0-9_-]` replaced by a dash.
- * Runs of dashes collapse and the ends are trimmed so the result is a usable
- * class selector rather than something like `.h1--build-faster-`.
- */
+
+
+
+
+
 function cssSelector(label: string): string {
   const sanitized = label
     .toLowerCase()
@@ -70,7 +70,7 @@ function declarationsFor(
   }
 }
 
-// ---------------------------------------------------------------------------
+
 
 function typographyDeclarations(snapshot: ElementSnapshot): Declaration[] {
   const typography = snapshot.typography;
@@ -160,7 +160,7 @@ function surfaceDeclarations(snapshot: ElementSnapshot): Declaration[] {
   return declarations;
 }
 
-/** Visible sides only: a width above zero and a style that paints. */
+
 function borderDeclarations(snapshot: ElementSnapshot): Declaration[] {
   const { borderWidth, borderStyle, borderColor } = snapshot.surfaces;
   const sides: (keyof Sides<number>)[] = ['top', 'right', 'bottom', 'left'];
@@ -271,7 +271,7 @@ export function gapOf(snapshot: ElementSnapshot): { row: number; column: number 
   return null;
 }
 
-/** Mins drop `none` and zero, maxes drop `none`. */
+
 function isRealConstraint(value: string, isMin: boolean): boolean {
   if (!usable(value)) return false;
   if (isMin && isZeroLength(value)) return false;
@@ -291,11 +291,11 @@ export function sidesShorthand(sides: Sides<number>): string {
   return `${unit(top)} ${unit(right)} ${unit(bottom)} ${unit(left)}`;
 }
 
-/**
- * Colors are emitted raw so the copied value matches what the page declares.
- * A raw form that cannot be pasted into a stylesheet falls back to hex, and a
- * conversion that lost information is labelled rather than silently trusted.
- */
+
+
+
+
+
 function colorForCss(color: ColorValue): { value: string; comment?: string } {
   if (color.lossy) return { value: color.raw, comment: 'sRGB approximation' };
   if (!isCopyFriendly(color.raw) && color.hex) return { value: color.hex };
@@ -322,11 +322,11 @@ function dedupe(declarations: Declaration[]): Declaration[] {
   return result;
 }
 
-/**
- * Authored expressions are shown as trailing comments on the property they
- * belong to. An expression for a property this category does not emit is kept
- * as a standalone comment so nothing is lost.
- */
+
+
+
+
+
 function attachSourceExpressions(
   declarations: Declaration[],
   snapshot: ElementSnapshot,

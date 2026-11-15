@@ -12,10 +12,10 @@ beforeEach(() => {
   document.body.innerHTML = '';
 });
 
-/**
- * Every controller built by a test, so a failing assertion cannot leave its
- * window listeners behind to swallow the next test's events.
- */
+
+
+
+
 const controllers: { destroy(): void }[] = [];
 
 afterEach(() => {
@@ -114,7 +114,7 @@ describe('createSelection', () => {
     const events: string[] = [];
     let pinned: Element | null = options.pinned ?? null;
     let edgesLocked = false;
-    // Stands in for an unlocked mockup image painted under the pointer.
+
     const mockupTakesPointer = options.mockup === true;
     const controller = createSelection({
       owns: (node) => (node as Element | null)?.id === 'ours',
@@ -234,7 +234,7 @@ describe('createSelection', () => {
     expect(events).toContain('outlines');
     expect(pressed.defaultPrevented).toBe(true);
 
-    // A Mac layout reports 'ø' for Alt+O, so the physical code has to carry it.
+
     events.length = 0;
     window.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'ø', code: 'KeyO', altKey: true, bubbles: true }),
@@ -247,7 +247,7 @@ describe('createSelection', () => {
     );
     expect(events).toEqual([]);
 
-    // A plain o is still a plain o.
+
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'o', code: 'KeyO', bubbles: true }));
     expect(events).toEqual([]);
     controller.destroy();
@@ -316,7 +316,7 @@ describe('createSelection', () => {
     expect(events).toContain('measure-lock:b');
     expect(events.some((event) => event.startsWith('pin:'))).toBe(false);
 
-    // A plain click still pins, which is what releases a locked measurement.
+
     other.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     expect(events).toContain('pin:b');
     controller.destroy();
@@ -326,7 +326,7 @@ describe('createSelection', () => {
     document.body.innerHTML = '<p id="b">Anywhere</p>';
     const target = document.getElementById('b') as HTMLElement;
     stack(target);
-    // Point-to-edge needs nothing pinned, unlike Alt measurement.
+
     const { controller, events } = harness();
     controller.setMode('active');
 
@@ -335,7 +335,7 @@ describe('createSelection', () => {
       new KeyboardEvent('keydown', { key: 'Shift', shiftKey: true, bubbles: true }),
     );
     expect(events).toContain('edges:40,90');
-    // The hover card is cleared so it cannot sit over the guides.
+
     expect(events).toContain('hover:none');
 
     events.length = 0;
@@ -436,18 +436,18 @@ describe('createSelection', () => {
     const { controller, events } = harness({ pinned });
     controller.setMode('active');
 
-    // A move schedules a frame that has not run yet.
+
     window.dispatchEvent(
       new MouseEvent('pointermove', { clientX: 5, clientY: 5, altKey: true }),
     );
     expect(frames).toHaveLength(1);
 
-    // The click lands in the same frame.
+
     other.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, altKey: true }));
     expect(events).toContain('measure-lock:b');
     expect(cancelled).toBe(1);
 
-    // Nothing is left to run, so nothing can retarget the measurement.
+
     events.length = 0;
     frames.forEach((frame) => frame?.(0));
     expect(events).toEqual([]);
@@ -459,7 +459,7 @@ describe('createSelection', () => {
     const pinned = document.getElementById('a') as HTMLElement;
     const ours = document.getElementById('ours') as HTMLElement;
     const under = document.getElementById('b') as HTMLElement;
-    // Our own panel is on top; the page element under it is what is measured.
+
     stack(under);
     const { controller, events } = harness({ pinned });
     controller.setMode('active');
@@ -481,7 +481,7 @@ describe('createSelection', () => {
     expect(events).toContain('edges-lock:40,50');
     expect(shift.defaultPrevented).toBe(true);
 
-    // A plain click on our UI is still our UI's: buttons have to work.
+
     events.length = 0;
     const plain = new MouseEvent('click', { bubbles: true, cancelable: true });
     ours.dispatchEvent(plain);
@@ -508,7 +508,7 @@ describe('createSelection', () => {
     stack(target);
     const { controller, events } = harness({ mockup: true });
 
-    // Inspecting: the click belongs to the selection, mockup or no mockup.
+
     controller.setMode('active');
     target.dispatchEvent(
       new MouseEvent('pointerdown', { bubbles: true, cancelable: true, clientX: 30, clientY: 40 }),
@@ -517,7 +517,7 @@ describe('createSelection', () => {
     expect(events.some((event) => event.startsWith('mockup-'))).toBe(false);
     expect(events).toContain('pin:b');
 
-    // Paused: the same press moves the comp instead.
+
     events.length = 0;
     controller.setMode('paused');
     const down = new MouseEvent('pointerdown', {

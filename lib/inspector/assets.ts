@@ -1,9 +1,9 @@
-// Page asset list (PRD AST-04).
-//
-// Discovery is passive: nothing is scrolled, clicked, or fetched, so a lazy
-// image that has not loaded is reported as such instead of being forced into
-// existence. Repeated resources collapse into one row that carries its usage
-// count.
+
+
+
+
+
+
 
 import type { AssetCandidate, AssetReading } from '../contracts';
 import { extractUrls, splitCssList } from '../readings/units';
@@ -12,14 +12,14 @@ import { readAssets } from './readings';
 import { serializeInlineSvg } from './svg-export';
 
 const MAX_ELEMENTS_SCANNED = 8000;
-/** A rendered box of zero width or height means nothing is actually visible. */
+
 const NOT_VISIBLE = 'Not rendered at a visible size';
-/** PRD AST-01: a blob: or MediaSource-backed video has no file to offer. */
+
 export const STREAMED_VIDEO = 'Streamed video, no downloadable file';
-/** The poster is a real image asset, listed separately from the video. */
+
 export const POSTER_IMAGE = 'Poster image';
 
-/** Extensions that make a URL path look like an addressable video file. */
+
 const VIDEO_EXTENSION = /\.(mp4|m4v|webm|ogv|ogg|mov|mkv|avi)$/i;
 
 function hash(text: string): string {
@@ -50,13 +50,13 @@ function resolveUrl(url: string, baseUrl: string): string {
   }
 }
 
-/**
- * True for a URL we could actually hand to a download: an http(s) address whose
- * path looks like a file, or one whose declared type says it is video. A
- * playlist (`.m3u8`, `.mpd`) is deliberately excluded: it is a manifest, not a
- * file, and offering it as a download would be a promise we cannot keep
- * (PRD AST-01).
- */
+
+
+
+
+
+
+
 export function isAddressableVideoUrl(url: string, type: string | null): boolean {
   let parsed: URL;
   try {
@@ -70,11 +70,11 @@ export function isAddressableVideoUrl(url: string, type: string | null): boolean
   return (type ?? '').trim().toLowerCase().startsWith('video/');
 }
 
-/**
- * Assets for one `<video>`: the video itself, plus its poster as a separate
- * image row (PRD AST-01 Phase 2). A blob: or MediaSource-backed video is listed
- * with `url: null` and says so rather than pretending a file exists.
- */
+
+
+
+
+
 export function readVideoAssets(element: Element): AssetReading[] {
   const video = element as HTMLVideoElement;
   const baseUrl = element.ownerDocument?.baseURI ?? '';
@@ -90,21 +90,21 @@ export function readVideoAssets(element: Element): AssetReading[] {
     candidates.push({ url: resolved, descriptor: type && type.trim() !== '' ? type.trim() : null });
   };
 
-  // The declared sources come first so each candidate keeps its own type,
-  // then currentSrc is added if the browser chose something else entirely.
+
+
   consider(element.getAttribute('src'), element.getAttribute('type'));
   for (const source of Array.from(element.querySelectorAll('source'))) {
     consider(source.getAttribute('src'), source.getAttribute('type'));
   }
   const currentSrc = typeof video.currentSrc === 'string' ? video.currentSrc : '';
   consider(currentSrc, null);
-  // What the browser actually plays leads the list (PRD AST-01).
+
   const chosen = candidates.findIndex((candidate) => candidate.url === currentSrc);
   if (chosen > 0) candidates.unshift(...candidates.splice(chosen, 1));
 
   const limitations: string[] = [];
-  // currentSrc is empty until the browser selects a source (and always in
-  // jsdom), so the declared src attribute is checked as well.
+
+
   const declaredSrc = (element.getAttribute('src') ?? '').trim();
   const streamed = [currentSrc, declaredSrc].some(
     (value) => value.startsWith('blob:') || value.startsWith('mediastream:'),
@@ -146,8 +146,8 @@ export function readVideoAssets(element: Element): AssetReading[] {
       candidates: [{ url: poster, descriptor: null }],
       renderedWidth: rect.width,
       renderedHeight: rect.height,
-      // The poster is never decoded by the video element, so its own pixel
-      // dimensions are not observable from here.
+
+
       intrinsicWidth: null,
       intrinsicHeight: null,
       fileSize: null,
@@ -161,10 +161,10 @@ export function readVideoAssets(element: Element): AssetReading[] {
   return assets;
 }
 
-/**
- * Every discoverable image, inline SVG, and CSS background on the page,
- * deduplicated by resolved URL (inline SVG by serialized markup).
- */
+
+
+
+
 export function listAssets(doc: Document = document): AssetReading[] {
   const byKey = new Map<string, { asset: AssetReading; count: number }>();
 
@@ -202,8 +202,8 @@ export function listAssets(doc: Document = document): AssetReading[] {
     }
 
     if (tag === 'video') {
-      // A streamed video has no URL to key on, and two of them on one page are
-      // still two assets, so the element's position keeps them apart.
+
+
       videoIndex += 1;
       const readings = readVideoAssets(element);
       readings.forEach((asset, offset) => {
@@ -213,15 +213,15 @@ export function listAssets(doc: Document = document): AssetReading[] {
       continue;
     }
 
-    // A <source> is read through its parent <video> or <picture>.
+
     if (tag === 'source' || tag === 'track') continue;
     if (tag === 'symbol' || tag === 'defs' || tag === 'use') continue;
 
     if (tag === 'svg') {
-      // Top level only: a nested svg is part of its parent's markup.
+
       if (element.parentElement?.closest('svg')) continue;
       const rect = element.getBoundingClientRect();
-      // A zero sized svg is a <symbol> holder, not an asset on the page.
+
       if (rect.width === 0 && rect.height === 0) continue;
       const exported = serializeInlineSvg(element as SVGElement);
       const viewBox = (element.getAttribute('viewBox') ?? '').trim().split(/\s+/).map(Number);
@@ -260,16 +260,16 @@ export function listAssets(doc: Document = document): AssetReading[] {
 
   return Array.from(byKey.values()).map(({ asset, count }) => {
     const limitations = [...asset.limitations];
-    // A streamed video already explains why it has no URL, and an inline SVG
-    // never has one, so neither is "not loaded yet".
+
+
     const explained = limitations.length > 0 && asset.kind === 'video';
     const unloaded = !asset.url && asset.kind !== 'svg-inline' && !explained;
     if (unloaded && !limitations.some((note) => note.startsWith('Not loaded yet'))) {
       limitations.push('Not loaded yet');
     }
-    // A repeat reference is a fact about the page, not a caveat about the
-    // reading, so it travels in usageCount instead of the limitation list
-    // (PRD AST-04).
+
+
+
     if (
       !unloaded &&
       (asset.renderedWidth === 0 || asset.renderedHeight === 0) &&

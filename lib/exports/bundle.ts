@@ -1,15 +1,15 @@
-// Multi-reference export bundle (PRD EXP-03 Phase 2, EXP-04, AST-05 manifest).
-//
-// The bundle is one ZIP holding the machine-readable envelope, the same
-// references as Markdown, an optional taste-ledger fragment, and the screenshot
-// files the caller loaded. Two rules shape the whole file:
-//
-// - A Markdown screenshot link is only written when the file travels in this
-//   same archive (EXP-04). Screenshots are therefore added to the archive
-//   before the Markdown is generated, so a link can never point at a file that
-//   failed to go in.
-// - One bad reference never loses the batch. Anything that throws becomes a
-//   `skipped` entry with a readable reason (AST-05).
+
+
+
+
+
+
+
+
+
+
+
+
 import type { SavedReference } from '@/lib/contracts';
 import { toJsonEnvelope } from './json';
 import { referenceToMarkdown } from './markdown';
@@ -17,22 +17,22 @@ import { toTasteLedger } from './taste-ledger';
 import { ZIP_MAX_ENTRY_BYTES, ZipWriter } from './zip';
 
 export interface BundleOptions {
-  /** Screenshot blobs by reference id, when the caller loaded them. */
+
   screenshots?: Map<string, Blob>;
   extensionVersion: string;
-  /** Include the taste-ledger fragment as ledger.md. */
+
   includeLedger?: boolean;
 }
 
 export interface BundleResult {
   blob: Blob;
-  /** Suggested filename, e.g. design-inspector-bundle-2026-09-18.zip */
+
   filename: string;
-  /** Files written and files skipped, for the UI. */
+
   manifest: { written: string[]; skipped: { path: string; reason: string }[] };
 }
 
-/** The manifest.json that travels inside the archive. */
+
 interface BundleManifest {
   written: string[];
   skipped: { path: string; reason: string }[];
@@ -59,7 +59,7 @@ export async function buildReferenceBundle(
     else skipped.push({ path: pathFor(reference, index), reason: problem });
   });
 
-  // Screenshots first: the Markdown below only links to what actually landed.
+
   const screenshotPaths = new Map<string, string>();
   for (const reference of usable) {
     const blob = options.screenshots?.get(reference.id);
@@ -135,8 +135,8 @@ export async function buildReferenceBundle(
     zip.add('manifest.json', `${JSON.stringify(manifest, null, 2)}\n`, { mtime });
     written.push('manifest.json');
   } catch (error) {
-    // A manifest that cannot be written is worth reporting to the caller even
-    // though it never reaches the archive.
+
+
     skipped.push({ path: 'manifest.json', reason: reasonOf(error) });
   }
 
@@ -147,13 +147,13 @@ export async function buildReferenceBundle(
   };
 }
 
-// ---------------------------------------------------------------------------
 
-/**
- * The Markdown for one reference, with a screenshot link only when that file is
- * in this archive. Any link the adapter already wrote for the same screenshot
- * is repointed at the bundled copy so no absolute path survives the export.
- */
+
+
+
+
+
+
 function markdownFor(reference: SavedReference, screenshotPath: string | null): string {
   const base = referenceToMarkdown(reference);
   const rewritten = rewriteScreenshotLinks(base, reference, screenshotPath);
@@ -167,11 +167,11 @@ function markdownFor(reference: SavedReference, screenshotPath: string | null): 
   return `${rewritten}\n## Screenshot\n\n![${escapeAlt(alt)}](${screenshotPath})\n${crop}`;
 }
 
-/**
- * Rewrites any link that names this reference's stored screenshot. When the
- * file is not in the bundle the link is dropped instead of left broken
- * (EXP-04), keeping the surrounding text.
- */
+
+
+
+
+
 function rewriteScreenshotLinks(
   markdown: string,
   reference: SavedReference,
@@ -186,7 +186,7 @@ function rewriteScreenshotLinks(
   });
 }
 
-/** Why this reference cannot go into the bundle, or null when it can. */
+
 function unusableReason(reference: unknown): string | null {
   if (typeof reference !== 'object' || reference === null) {
     return 'The reference is not an object.';
@@ -210,11 +210,11 @@ function pathFor(reference: SavedReference | unknown, index: number): string {
   return typeof id === 'string' && id !== '' ? id : `references[${index}]`;
 }
 
-/** Keeps a page-supplied id from becoming a path segment of its own. */
+
 function safeSegment(id: string): string {
   const cleaned = id
     .replace(/[^A-Za-z0-9._-]/g, '-')
-    // A run of dots is the only thing that could still read as a traversal.
+
     .replace(/\.{2,}/g, '-')
     .replace(/-{2,}/g, '-')
     .replace(/^[.-]+|[.-]+$/g, '');

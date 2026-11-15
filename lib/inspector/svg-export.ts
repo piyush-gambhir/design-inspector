@@ -1,16 +1,16 @@
-// Standalone .svg export for an inline SVG (PRD AST-03).
-//
-// The exported file must render on its own, carry no executable content, and
-// be honest about anything it still depends on. We therefore inline the
-// computed paint properties, copy the targets of `<use href="#id">` into the
-// clone, strip scripts and event handlers, and report every reference that
-// still points outside the document.
+
+
+
+
+
+
+
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
 const XMLNS_NS = 'http://www.w3.org/2000/xmlns/';
 
-/** Elements whose paint we inline. Containers are covered through their children. */
+
 const PAINTED_TAGS = new Set([
   'path',
   'rect',
@@ -98,13 +98,13 @@ function serialize(clone: SVGElement): string {
     try {
       return new serializer().serializeToString(clone);
     } catch {
-      // Fall through to the HTML serializer.
+
     }
   }
   return clone.outerHTML;
 }
 
-/** Collapses the duplicate namespace declarations a serializer may emit. */
+
 function dedupeRootNamespaces(markup: string): string {
   const tagEnd = markup.indexOf('>');
   if (tagEnd < 0) return markup;
@@ -119,10 +119,10 @@ function dedupeRootNamespaces(markup: string): string {
   return tag + rest;
 }
 
-/**
- * Serializes an inline `<svg>` into standalone markup. Never throws: anything
- * it cannot resolve is reported in `limitations` instead (PRD AST-03).
- */
+
+
+
+
 export function serializeInlineSvg(
   svg: SVGElement,
   options: { getStyle?: StyleReader } = {},
@@ -137,7 +137,7 @@ export function serializeInlineSvg(
     return { markup: '', limitations: ['The SVG could not be copied for export.'] };
   }
 
-  // Inline computed paint. Originals and clones enumerate in the same order.
+
   const originals: Element[] = [svg, ...Array.from(svg.querySelectorAll('*'))];
   const clones: Element[] = [clone, ...Array.from(clone.querySelectorAll('*'))];
   for (let i = 0; i < originals.length && i < clones.length; i += 1) {
@@ -154,12 +154,12 @@ export function serializeInlineSvg(
       try {
         target.setAttribute(property, computed);
       } catch {
-        // An unusual value; leave the attribute as authored.
+
       }
     }
   }
 
-  // Copy <use> targets that live outside the selected subtree.
+
   const uses = Array.from(clone.querySelectorAll('use'));
   const copied = new Set<string>();
   for (const use of uses) {
@@ -195,7 +195,7 @@ export function serializeInlineSvg(
     limitations.push('Namespace attributes could not be set on the export.');
   }
 
-  // Give the standalone file a size when the markup has none.
+
   if (!clone.getAttribute('width') || !clone.getAttribute('height')) {
     try {
       const rect = svg.getBoundingClientRect();
@@ -204,13 +204,13 @@ export function serializeInlineSvg(
         clone.setAttribute('height', String(Math.round(rect.height)));
       }
     } catch {
-      // Geometry is optional for the export.
+
     }
   }
 
   const markup = dedupeRootNamespaces(serialize(clone));
 
-  // Anything still pointing outside the document is a real dependency.
+
   const external = new Set<string>();
   const urlPattern = /url\(\s*(?:"([^"]*)"|'([^']*)'|([^)\s]*))\s*\)/gi;
   let match = urlPattern.exec(markup);
@@ -233,7 +233,7 @@ export function serializeInlineSvg(
   return { markup, limitations };
 }
 
-/** A `data:` URL for downloading serialized SVG markup (PRD AST-02). */
+
 export function svgDataUrl(markup: string): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`;
 }

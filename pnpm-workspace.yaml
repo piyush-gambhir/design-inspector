@@ -1,10 +1,10 @@
-# Single-package repo. Keep allowBuilds explicit so pnpm does not skip esbuild.
+
 allowBuilds:
   esbuild: true
   spawn-sync: true
 pmOnFail: warn
 verifyDepsBeforeRun: false
-# Patched transitive versions for open advisories, each scoped to one major.
+
 overrides:
   esbuild@<0.28.1: ^0.28.1
   shell-quote@<1.11.0: ^1.11.0

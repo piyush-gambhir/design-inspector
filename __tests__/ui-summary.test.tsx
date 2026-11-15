@@ -304,7 +304,7 @@ describe('SummaryTab', () => {
     const sample = container.querySelector<HTMLElement>('.type-sample');
     expect(sample?.style.fontSize).toBe('28px');
     expect(sample?.textContent).toBe('Pricing that scales');
-    // A whole px size on a plain 16px root needs no rem to be unambiguous.
+
     expect(container.textContent).toContain('72 px');
     expect(container.textContent).not.toContain('4.5 rem');
     expect(container.textContent).toContain('Matched');
@@ -448,7 +448,7 @@ describe('SummaryTab', () => {
       button => button.textContent === 'Identify',
     ) as HTMLButtonElement;
     expect(identify).not.toBeUndefined();
-    // It says what pressing it does before it is pressed (PRD 17.1).
+
     expect(identify.title).toContain("Contacts the font's host");
 
     await act(async () => {
@@ -610,7 +610,7 @@ describe('SummaryTab', () => {
 });
 
 describe('SummaryTab filter', () => {
-  /** React tracks its own value, so the change has to go through the prototype setter. */
+
   function type(input: HTMLInputElement, value: string): void {
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
     setter?.call(input, value);
@@ -696,7 +696,7 @@ describe('AssetsTab', () => {
     );
     expect(container.textContent).toContain('640 x 360 px');
     expect(container.textContent).toContain('1280 x 720 px');
-    // Two decimals at most, trailing zeros stripped, like every other number.
+
     expect(container.textContent).toContain('200 KB');
     expect(container.textContent).toContain('image/png');
     expect(container.textContent).toContain('Not loaded yet');
@@ -711,7 +711,7 @@ describe('AssetsTab', () => {
       node => node.textContent?.startsWith('Usage'),
     );
     expect(usage?.textContent).toContain('Used 4 times');
-    // It is a detail row, not one of the caveat list items.
+
     const caveats = [...container.querySelectorAll('ul.mt-1 li')].map(node => node.textContent);
     expect(caveats).not.toContain('Used 4 times');
   });
@@ -762,8 +762,8 @@ describe('AssetsTab', () => {
     );
     const sources = [...container.querySelectorAll('img')].map(image => image.getAttribute('src'));
     expect(sources.some(source => source?.startsWith('data:image/svg+xml'))).toBe(true);
-    // The page's own markup is never parsed into this document, only encoded
-    // into an <img src>. The only live SVG nodes are our own icons.
+
+
     expect(container.querySelector('svg > title')).toBeNull();
     expect(container.innerHTML).not.toContain('<title>Icon</title>');
   });
@@ -816,7 +816,7 @@ describe('SummaryTab traceability (SUM-06)', () => {
     expect(steps[0]?.querySelector('summary')?.textContent).toContain('72 px');
     expect(steps[0]?.querySelector('summary')?.textContent).toContain('1 combination');
     expect(steps[0]?.querySelector('summary')?.textContent).toContain('x3');
-    // A scale this short is not worth a second click.
+
     expect(steps[0]?.open).toBe(true);
   });
 
@@ -828,10 +828,10 @@ describe('SummaryTab traceability (SUM-06)', () => {
     const row = show?.closest('div');
 
     expect(row?.className).toContain('opacity-0');
-    // The group is named, so an open section's own `group` cannot reveal every
-    // row at once.
+
+
     expect(row?.className).toContain('group-hover/row:opacity-100');
-    // Still in the DOM and still reachable: focus inside the row reveals it.
+
     expect(row?.className).toContain('group-focus-within/row:opacity-100');
     expect(row?.closest('li')?.className).toContain('group/row');
     expect(show?.hasAttribute('hidden')).toBe(false);
@@ -946,7 +946,7 @@ describe('SummaryTab keyboard navigation (UX note 3)', () => {
       const id = link.getAttribute('href')?.slice(1) ?? '';
       const section = container.querySelector(`#${id}`) as HTMLElement | null;
       expect(section, id).not.toBeNull();
-      // A landmark a keyboard can actually land on.
+
       expect(section?.getAttribute('tabindex')).toBe('-1');
     }
   });

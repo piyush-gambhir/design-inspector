@@ -71,7 +71,7 @@ describe('parseColor', () => {
     expect(color.hex).toMatch(/^#[0-9a-f]{6}$/);
     expect(color.lossy).toBe(true);
     const again = parseColor(color.rgb as string);
-    // The oklch lightness of the clipped sRGB value stays close to the source.
+
     expect(again.oklch?.slice(0, 10)).toBe(color.oklch?.slice(0, 10));
   });
 

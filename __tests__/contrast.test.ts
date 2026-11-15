@@ -15,7 +15,7 @@ const BLACK = { r: 0, g: 0, b: 0 };
 const WHITE_RGB = { r: 255, g: 255, b: 255 };
 const WHITE = { r: 255, g: 255, b: 255 };
 
-/** A style reader driven by a per element map, so no layout engine is needed. */
+
 function reader(styles: Map<Element, Record<string, string>>) {
   return (element: Element): CSSStyleDeclaration => {
     const declared = styles.get(element) ?? {};
@@ -187,7 +187,7 @@ describe('contrastAgainstPicked', () => {
     );
     expect(result?.foreground).toBe('#808080');
     expect(result?.background).toBe('#ffffff');
-    // The composited channel is 127.5; only the hex display rounds it.
+
     expect(result?.ratio).toBeCloseTo(
       Math.round(contrastRatio({ r: 127.5, g: 127.5, b: 127.5 }, WHITE_RGB) * 100) / 100,
       2,

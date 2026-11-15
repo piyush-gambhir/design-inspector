@@ -1,12 +1,12 @@
-// Font identification (PRD TYP-01, TYP-02, TYP-03).
-//
-// The hard rule from TYP-02: the first family in a CSS stack is never treated
-// as the verified rendered font on the strength of a CSS declaration.
-// `declared` is the stack alone, `matched` means a loaded @font-face covering
-// the computed weight exists for that family (or the family is a generic or
-// well-known system family), and `verified` is reserved for the one piece of
-// evidence that actually settles it: a canvas measurement showing the family
-// paints text at a different width than the fallbacks it would drop to.
+
+
+
+
+
+
+
+
+
 
 import type {
   FontConfidence,
@@ -17,7 +17,7 @@ import type {
 } from '../contracts';
 import { splitTopLevel } from './units';
 
-/** CSS generic families plus the system aliases that resolve without a download. */
+
 export const GENERIC_FAMILIES: readonly string[] = [
   'serif',
   'sans-serif',
@@ -36,7 +36,7 @@ export const GENERIC_FAMILIES: readonly string[] = [
   'blinkmacsystemfont',
 ];
 
-/** Families that ship with mainstream operating systems (PRD TYP-01 source: system). */
+
 export const SYSTEM_FAMILIES: readonly string[] = [
   'segoe ui',
   'roboto',
@@ -66,7 +66,7 @@ const PROVIDER_HOSTS: { kind: FontSource['kind']; hosts: readonly string[] }[] =
 
 const FONT_FILE_PATTERN = /\.(woff2|woff|ttf|otf|eot|svg)(\?|#|$)/i;
 
-/** Unquotes and trims one family token. */
+
 export function normalizeFamily(family: string): string {
   const text = family.trim();
   if (text.length >= 2) {
@@ -79,10 +79,10 @@ export function normalizeFamily(family: string): string {
   return text;
 }
 
-/**
- * Splits a computed font-family stack. Quoted names may contain commas, so the
- * split happens at top level only and quotes are then removed.
- */
+
+
+
+
 export function splitFontFamilyStack(stack: string | null | undefined): string[] {
   const text = (stack ?? '').trim();
   if (!text) return [];
@@ -95,7 +95,7 @@ export function isGenericFamily(family: string): boolean {
   return GENERIC_FAMILIES.includes(normalizeFamily(family).toLowerCase());
 }
 
-/** Generic or a well-known preinstalled family, so no web font is needed. */
+
 export function isSystemFamily(family: string): boolean {
   const key = normalizeFamily(family).toLowerCase();
   return GENERIC_FAMILIES.includes(key) || SYSTEM_FAMILIES.includes(key);
@@ -111,13 +111,13 @@ export function formatFromUrl(url: string): string | null {
   return null;
 }
 
-/** `format('woff2')` hints in a src descriptor, used when the URL has no extension. */
+
 export function formatFromSrcHint(src: string): string | null {
   const match = /format\(\s*["']?([a-z0-9-]+)["']?\s*\)/i.exec(src);
   return match ? (match[1] as string).toLowerCase() : null;
 }
 
-/** Extracts the `url()` targets from a `src` descriptor in declared order. */
+
 export function srcUrls(src: string, baseUrl?: string): string[] {
   const out: string[] = [];
   const pattern = /url\(\s*(?:"([^"]*)"|'([^']*)'|([^)\s]*))\s*\)/gi;
@@ -140,7 +140,7 @@ export function srcUrls(src: string, baseUrl?: string): string[] {
   return out;
 }
 
-/** The full Unicode range. Anything narrower means the file is a subset. */
+
 export function isSubsetRange(unicodeRange: string | null): boolean | null {
   if (!unicodeRange) return null;
   const normalized = unicodeRange.replace(/\s+/g, '').toLowerCase();
@@ -158,22 +158,22 @@ function hostOf(url: string): string | null {
 }
 
 export interface ClassifyOptions {
-  /** Origin of the inspected document, used to tell self-hosted from third party. */
+
   pageOrigin?: string;
-  /** Provider stylesheet links found on the page, used when no src URL is readable. */
+
   providerUrls?: string[];
 }
 
-/**
- * Classifies where a family comes from. URLs win over heuristics; a family
- * with no discoverable file falls back to `system` or `unknown`.
- */
+
+
+
+
 export function classifyFontSource(
   family: string,
   urls: string[],
   options: ClassifyOptions = {},
 ): FontSource {
-  // 1. The face's own src URLs are the only direct evidence.
+
   for (const provider of PROVIDER_HOSTS) {
     const hit = urls.find((url) => providerHostMatches(provider.hosts, url));
     if (hit) {
@@ -199,10 +199,10 @@ export function classifyFontSource(
     return { kind: 'system', url: null, format: null, subset: null };
   }
 
-  // 2. No readable src. A provider stylesheet on the page counts only when its
-  //    URL names this family (Google Fonts and Fontshare carry family names in
-  //    the query). Otherwise the honest answer is unknown, with the provider
-  //    mentioned as a possibility, never asserted (PRD TYP-03, 16.1).
+
+
+
+
   const providerUrls = options.providerUrls ?? [];
   for (const provider of PROVIDER_HOSTS) {
     const hit = providerUrls.find(
@@ -239,7 +239,7 @@ function providerHostMatches(hosts: readonly string[], url: string): boolean {
   return host ? hosts.some((known) => host === known || host.endsWith(`.${known}`)) : false;
 }
 
-/** True when a provider stylesheet URL requests this family by name. */
+
 export function urlNamesFamily(url: string, family: string): boolean {
   const wanted = normalizeFamily(family).toLowerCase().replace(/[^a-z0-9]+/g, '');
   if (!wanted) return false;
@@ -257,10 +257,10 @@ export function urlNamesFamily(url: string, family: string): boolean {
     .some((name) => name.toLowerCase().replace(/[^a-z0-9]+/g, '') === wanted);
 }
 
-// ---------------------------------------------------------------------------
-// Weight ranges
 
-/** Parses an `@font-face` weight descriptor into an inclusive range. */
+
+
+
 export function parseWeightRange(weight: string | null | undefined): [number, number] {
   const text = (weight ?? '').trim().toLowerCase();
   if (!text || text === 'normal') return [400, 400];
@@ -281,8 +281,8 @@ export function weightCovered(weight: string | null | undefined, computedWeight:
   return computedWeight >= min && computedWeight <= max;
 }
 
-// ---------------------------------------------------------------------------
-// Family identification
+
+
 
 export interface FamilyIdentification {
   familyReading: string;
@@ -290,10 +290,10 @@ export interface FamilyIdentification {
   source: FontSource;
 }
 
-/**
- * Identifies the family to show for a text element. Never returns `verified`
- * (PRD TYP-02): a loaded file does not prove it rendered the characters.
- */
+
+
+
+
 export function identifyFamily(
   stack: string[],
   computedWeight: number,
@@ -339,21 +339,21 @@ export function identifyFamily(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Verified rendering (PRD TYP-02)
+
+
 
 export type RenderCheck = 'rendered' | 'fallback' | 'inconclusive';
 
-/**
- * Wide enough that a substituted face almost always measures differently, and
- * short enough to measure in well under a millisecond.
- */
+
+
+
+
 export const RENDER_CHECK_TEXT = 'Sphinx of black quartz judge my vow 0123456789';
 
-/** The size the comparison is made at. Larger magnifies the width difference. */
+
 const RENDER_CHECK_PX = 32;
 
-/** Only the part of a 2D context this check touches, so a test can stand in for it. */
+
 export interface TextMeasurer {
   font: string;
   measureText(text: string): { width: number };
@@ -362,15 +362,15 @@ export interface TextMeasurer {
 const measurerByDocument = new WeakMap<Document, TextMeasurer | null>();
 const renderCheckCache = new Map<string, RenderCheck>();
 
-/** Test seam, and the page-session reset when a font finishes loading late. */
+
 export function resetRenderCheckCache(): void {
   renderCheckCache.clear();
 }
 
-/**
- * A CSS font shorthand at the comparison size. A family name is page data, so
- * `quoted` escapes it before it goes anywhere near a shorthand.
- */
+
+
+
+
 function shorthand(weight: number, style: string, family: string): string {
   return `${style && style !== 'normal' ? `${style} ` : ''}${weight} ${RENDER_CHECK_PX}px ${family}`;
 }
@@ -379,12 +379,12 @@ function quoted(family: string): string {
   return `"${family.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 }
 
-/** One detached canvas per document, created on the first deep reading and kept. */
+
 function measurerFor(doc: Document): TextMeasurer | null {
   if (!measurerByDocument.has(doc)) {
     let made: TextMeasurer | null = null;
     try {
-      // Never inserted into the document, so it costs no layout and is invisible.
+
       made = doc.createElement('canvas').getContext('2d') as unknown as TextMeasurer | null;
     } catch {
       made = null;
@@ -394,40 +394,40 @@ function measurerFor(doc: Document): TextMeasurer | null {
   return measurerByDocument.get(doc) ?? null;
 }
 
-/**
- * Did this family actually paint the text, or did the browser quietly fall
- * through to the next entry in the stack?
- *
- * The test is the oldest one there is: measure the string with the family in
- * front of a fallback, then measure the fallback alone. If the two agree, the
- * family contributed nothing. Two fallbacks are used because a face can
- * coincidentally match one of them, and a family that differs from both
- * monospace and serif is rendering. Equal widths are only called a fallback
- * when the font set agrees the face is absent: a family whose metrics happen to
- * match the fallback is a real case, and it reads as inconclusive (PRD 16.1).
- *
- * This is the evidence PRD TYP-02 reserves `verified` for, so it is deliberate
- * that it runs only on a pinned (deep) reading, never on hover.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 export function renderCheck(
   family: string,
   weight: number,
   style: string,
   doc: Document,
-  /** Test seam. Left out, the document's own canvas is used; `null` means none. */
+
   measurer?: TextMeasurer | null,
 ): RenderCheck {
   const name = normalizeFamily(family);
   if (!name) return 'inconclusive';
-  // A generic keyword is whatever the browser resolves it to, so there is no
-  // substitution to detect: it rendered, by definition.
+
+
   if (isGenericFamily(name)) return 'rendered';
 
   const key = `${name.toLowerCase()}|${weight}|${style}`;
   const cached = renderCheckCache.get(key);
   if (cached) return cached;
 
-  // Resolved after the cache, so a repeat reading costs nothing at all.
+
   const context = measurer === undefined ? measurerFor(doc) : measurer;
   const width = (of: string): number => {
     if (!context) return 0;
@@ -457,7 +457,7 @@ export function renderCheck(
   return result;
 }
 
-/** True when `document.fonts.check()` answers a definite no for this face. */
+
 function absent(doc: Document, family: string, weight: number, style: string): boolean {
   try {
     const set = doc.fonts;
@@ -471,12 +471,12 @@ function absent(doc: Document, family: string, weight: number, style: string): b
   }
 }
 
-// ---------------------------------------------------------------------------
-// Reading faces from the document
+
+
 
 export interface DocumentFontsResult {
   faces: FontFaceRecord[];
-  /** Provider stylesheet URLs found on the page (Google, Adobe, Fontshare). */
+
   providerUrls: string[];
   limitations: string[];
 }
@@ -485,12 +485,12 @@ function faceKey(family: string, weight: string, style: string): string {
   return `${normalizeFamily(family).toLowerCase()}|${weight.trim()}|${style.trim()}`;
 }
 
-/**
- * Collects @font-face records from `document.fonts` (for load status) merged
- * with CSSFontFaceRules (for src URLs, which FontFace objects do not expose).
- * Cross-origin stylesheets throw on `cssRules`; that is caught and reported as
- * a limitation so typography still works (PRD TYP-03).
- */
+
+
+
+
+
+
 export function readDocumentFonts(doc: Document = document): DocumentFontsResult {
   const limitations: string[] = [];
   const byKey = new Map<string, FontFaceRecord>();
@@ -506,7 +506,7 @@ export function readDocumentFonts(doc: Document = document): DocumentFontsResult
   };
 
   try {
-    // Only requested stylesheets count. A preconnect proves nothing (F10, F2).
+
     const links = doc.querySelectorAll('link[rel~="stylesheet"][href]');
     links.forEach((link) => {
       const href = (link as HTMLLinkElement).href;
@@ -516,7 +516,7 @@ export function readDocumentFonts(doc: Document = document): DocumentFontsResult
     limitations.push('Stylesheet links could not be listed.');
   }
 
-  // Pass 1: CSSFontFaceRule for src URLs and unicode-range.
+
   let sheets: StyleSheet[] = [];
   try {
     sheets = Array.from(doc.styleSheets);
@@ -573,7 +573,7 @@ export function readDocumentFonts(doc: Document = document): DocumentFontsResult
     );
   }
 
-  // Pass 2: document.fonts for load status, which the CSS rules do not carry.
+
   try {
     const set = doc.fonts;
     if (set && typeof set.forEach === 'function') {
@@ -612,14 +612,14 @@ export function readDocumentFonts(doc: Document = document): DocumentFontsResult
   return { faces: Array.from(byKey.values()), providerUrls, limitations };
 }
 
-// ---------------------------------------------------------------------------
-// Presenting an identity (shared by the on-page panel and the side panel)
 
-/**
- * The three hosted providers, in one table: their name is what the source line
- * prints and what the "Open on ..." link is labelled with, and the specimen
- * page is where a reader goes to see the whole family.
- */
+
+
+
+
+
+
+
 const PROVIDERS: Record<'google' | 'adobe' | 'fontshare', { name: string; page: (family: string) => string }> = {
   google: {
     name: 'Google Fonts',
@@ -640,7 +640,7 @@ function providerOf(kind: FontSourceKind): { name: string; page: (family: string
   return kind === 'google' || kind === 'adobe' || kind === 'fontshare' ? PROVIDERS[kind] : null;
 }
 
-/** File sizes read as whole units: a font is 48 KB, never 49152 bytes. */
+
 export function formatFileSize(bytes: number | null | undefined): string | null {
   if (typeof bytes !== 'number' || !Number.isFinite(bytes) || bytes < 0) return null;
   const kb = bytes / 1024;
@@ -652,11 +652,11 @@ export function hostnameOf(url: string | null): string | null {
 }
 
 
-/**
- * The one quiet line that replaces a seven-line CDN URL: where the file comes
- * from, what format it is, and how big it is. The URL itself stays behind the
- * Copy URL button, because nobody reads a hashed filename.
- */
+
+
+
+
+
 export function fontSourceLine(source: FontSource, fileSize?: number | null): string {
   const parts: string[] = [];
   const host = hostnameOf(source.url);
@@ -682,7 +682,7 @@ export interface ProviderLink {
   url: string;
 }
 
-/** Where to go and read the whole family, when a provider hosts it. */
+
 export function providerLink(kind: FontSourceKind, family: string): ProviderLink | null {
   const name = normalizeFamily(family).trim();
   const provider = providerOf(kind);
@@ -690,11 +690,11 @@ export function providerLink(kind: FontSourceKind, family: string): ProviderLink
   return { label: `Open on ${provider.name}`, url: provider.page(name) };
 }
 
-/**
- * What each confidence label is actually claiming. Shown as the badge's title,
- * because the difference between "matched" and "verified" is the whole of
- * PRD TYP-02 and a three-word badge cannot carry it.
- */
+
+
+
+
+
 export function confidenceEvidence(
   confidence: FontConfidence,
   check?: RenderCheck | null,
@@ -706,13 +706,13 @@ export function confidenceEvidence(
     : 'The first family in the CSS stack. Nothing confirms it was used.';
 }
 
-/** "wght 100 to 900". Variable axes as one short chip each. */
+
 export function axisChipText(axis: FontIdentity['axes'][number]): string {
   const round = (value: number): number => Math.round(value * 100) / 100;
   return `${axis.tag} ${round(axis.min)} to ${round(axis.max)}`;
 }
 
-/** "by Neubau Berlin", "by Rasmus Andersson for Inter Project". */
+
 export function designerLine(identity: FontIdentity): string | null {
   const designer = identity.designer?.trim() || null;
   const foundry = identity.manufacturer?.trim() || null;
@@ -721,7 +721,7 @@ export function designerLine(identity: FontIdentity): string | null {
   return one ? `by ${one}` : null;
 }
 
-/** The first sentence of a licence description, which is the part that says what you may do. */
+
 export function firstSentence(text: string | null): string | null {
   if (!text) return null;
   const trimmed = text.trim();
@@ -730,31 +730,31 @@ export function firstSentence(text: string | null): string | null {
   return stop ? trimmed.slice(0, stop.index + 1) : trimmed;
 }
 
-/**
- * The name to show: the typeface's own, when the file has been read, and the
- * CSS alias otherwise. A site calling Neue Haas "Nb international pro webfont"
- * is exactly the case this exists for.
- */
+
+
+
+
+
 export function displayFamily(cssFamily: string, identity?: FontIdentity | null): string {
   const real = identity?.family?.trim();
   return real ? real : cssFamily;
 }
 
-/** True when the CSS alias is worth printing beside the real name. */
+
 export function aliasDiffers(cssFamily: string, identity?: FontIdentity | null): boolean {
   const real = identity?.family?.trim();
   if (!real) return false;
   return normalizeFamily(real).toLowerCase() !== normalizeFamily(cssFamily).toLowerCase();
 }
 
-/**
- * One sentence naming the typeface, its designer, the alias the site uses for
- * it, and where the file came from. This is the line the exports carry, so a
- * saved reference says "NB International Pro Regular by Neubau Berlin
- * (declared as 'Nb international pro webfont'), self-hosted" rather than
- * repeating the nickname the CSS happened to use. Null with no identity: the
- * caller keeps whatever it printed before.
- */
+
+
+
+
+
+
+
+
 export function identityDescription(
   cssFamily: string,
   identity: FontIdentity | null | undefined,

@@ -1,20 +1,20 @@
 #!/usr/bin/env node
-// `pnpm perf`: build, profile, write store/PERF.md.
-//
-// Three things have to line up before a number means anything, so this script
-// does all three rather than leaving them to the reader:
-//
-//   1. A production build, because the bundle budget is about what ships.
-//   2. A DI_E2E=1 build, because the profiler drives the extension through the
-//      background worker and needs host permissions to inject without a
-//      toolbar click. That build is never shipped.
-//   3. The Playwright run, with PERF_FULL=1 so the two real pages are included
-//      and PERF_WRITE=1 so the report is written.
-//
-// Flags:
-//   --skip-build        reuse whatever is already in .output and .output-e2e
-//   --fixture-only      local fixture only, no network targets
-//   --window <ms>       window length, default 10000
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -32,7 +32,7 @@ const skipBuild = has('--skip-build');
 const fixtureOnly = has('--fixture-only');
 const windowMs = valueOf('--window', '10000');
 
-/** Run a command, inheriting stdio, and stop the script on a non-zero exit. */
+
 function run(command, commandArgs, env = {}) {
   const label = [command, ...commandArgs].join(' ');
   console.log(`\n> ${label}\n`);

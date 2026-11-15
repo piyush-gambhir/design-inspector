@@ -35,7 +35,7 @@ async function render(node: ReactNode): Promise<HTMLDivElement> {
   return container;
 }
 
-/** The fixture summary at a given viewport width, as a second capture. */
+
 function summaryAt(width: number, overrides: Partial<PageSummary> = {}): PageSummary {
   return {
     ...pageSummary,
@@ -147,7 +147,7 @@ describe('comparePalettes', () => {
       [colorGroup('#4f46e5', 'text', 9), colorGroup('#5248e8', 'background', 8)],
       [colorGroup('#4f46e5', 'text', 3)],
     );
-    // Both A entries cluster together, so exactly one row is a pair.
+
     expect(rows.filter(row => row.side === 'both')).toHaveLength(1);
   });
 });
@@ -229,9 +229,9 @@ describe('CompareView', () => {
     expect(container.textContent).toContain('1440 x 900 CSS px');
     expect(container.textContent).toContain('390 x 900 CSS px');
     expect(container.textContent).toContain('https://example.com/');
-    // The local, readable stamp, not the ISO string: that one is for exports.
+
     expect(container.textContent).toMatch(/Captured \d{1,2} \w{3} 2026, \d{2}:\d{2}/);
-    // The same URL twice is the responsive case, and the view says so.
+
     expect(container.textContent).toContain('The same URL at two captures');
   });
 

@@ -8,11 +8,9 @@ playwright-report/
 blob-report/
 *.log
 .DS_Store
-# Chrome Web Store API credentials from `wxt submit init`
 .env.submit
 .env
 
 *.tsbuildinfo
 
-# Agent-session state (checkpoints, delegate specs); not part of the product
 .claude/

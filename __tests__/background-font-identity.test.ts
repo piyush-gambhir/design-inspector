@@ -1,8 +1,8 @@
-// The opt-in font fetch (PRD TYP-01, 17.1).
-//
-// Everything here is the worker's side of one button press: what it will and
-// will not fetch, what it says when the host refuses, and the fact that the
-// second press on the same file costs no request at all.
+
+
+
+
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -15,8 +15,8 @@ import {
 
 const URL_A = 'https://cdn.example.invalid/fonts/nb-international-pro.woff2';
 
-// ---------------------------------------------------------------------------
-// A minimal sfnt with only a name table, built here so the test owns its bytes.
+
+
 
 function utf16be(value: string): Uint8Array {
   const out = new Uint8Array(value.length * 2);
@@ -69,8 +69,8 @@ function fontBytes(family: string): Uint8Array {
   return out;
 }
 
-// ---------------------------------------------------------------------------
-// Harness
+
+
 
 interface FetchCall {
   url: string;
@@ -124,7 +124,7 @@ afterEach(() => {
   resetFontIdentityCacheForTests();
 });
 
-// ---------------------------------------------------------------------------
+
 
 describe('isIdentifiableFontUrl', () => {
   it('accepts the addresses a page can actually serve a font from', () => {
@@ -153,7 +153,7 @@ describe('identifyFont', () => {
     expect(response.identity.designer).toBe('Stefan Gandl');
     expect(response.identity.url).toBe(URL_A);
     expect(calls).toHaveLength(1);
-    // The user's cookies have no business in a font request (PRD 17.3).
+
     expect(calls[0]?.init?.credentials).toBe('omit');
   });
 
@@ -170,7 +170,7 @@ describe('identifyFont', () => {
     await identifyFont(URL_A);
     expect(session.get('font.identity')).toBeDefined();
 
-    // A restarted worker has an empty Map and fills it from the mirror.
+
     resetFontIdentityCacheForTests();
     expect(cachedIdentity(URL_A)).toBeNull();
     await loadFontIdentities();

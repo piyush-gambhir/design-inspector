@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { serializeInlineSvg, svgDataUrl } from '../lib/inspector/svg-export';
 
-/** Fake computed paint, since jsdom does not resolve SVG presentation styles. */
+
 function paint(values: Record<string, string>) {
   return (): CSSStyleDeclaration =>
     ({

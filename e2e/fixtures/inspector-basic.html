@@ -4,12 +4,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Design Inspector fixture: basic page</title>
-    <!--
-      Static fixture. No build step, no network: every asset is a data URL so
-      the page behaves identically from file:// and from a server.
 
-      Ids are part of the test contract. Keep them stable and meaningful.
-    -->
+
+
+
+
+
     <style>
       :root {
         font-size: 16px;
@@ -255,7 +255,7 @@
     </style>
   </head>
   <body>
-    <!-- The <use> target lives outside #logo-svg so the SVG export has to copy it. -->
+
     <svg class="visually-hidden-holder" aria-hidden="true" focusable="false">
       <symbol id="logo-mark" viewBox="0 0 48 48">
         <path id="logo-mark-path" d="M8 40 L24 8 L40 40 Z" />
@@ -279,7 +279,7 @@
           <h1 id="hero-heading">Design that reads clearly</h1>
         </a>
         <p id="hero-sub">A fixture page for the inspector content script.</p>
-        <!-- The text lives in a child, as on real sites that wrap headings. -->
+
         <h2 id="wrapped-heading"><span id="wrapped-heading-text">Wrapped</span></h2>
       </section>
 
@@ -326,7 +326,7 @@
         <p id="gradient-text">Text over a gradient, where contrast is unavailable.</p>
       </section>
 
-      <!-- A generous padding box, so point-to-edge has real distances to find. -->
+
       <section id="padded-card">
         <div id="padded-inner">Padded inner box</div>
       </section>

@@ -1,20 +1,20 @@
-// Shared presentational pieces for the popup and the side panel.
-//
-// Every color is shown with its text value, every status is text and not just
-// a hue, and icon-only controls carry an aria-label (PRD 6.2, 19.2).
-//
-// The design invariants these pieces enforce: no borders, separation by tonal
-// surface steps and spacing only; 12px is the smallest type anywhere; a
-// selected state is a tonal step, never a saturated fill; and the accent is one
-// variable, so retheming is one line.
+
+
+
+
+
+
+
+
+
 import * as React from 'react';
 import { Check, ChevronDown, Copy } from 'lucide-react';
 import type { ColorValue, FontConfidence, StackConfidence } from '@/lib/contracts';
 import { cn } from '@/components/cn';
 import { Badge, Button } from '@/components/ui';
 
-// ---------------------------------------------------------------------------
-// Swatch
+
+
 
 export function Swatch({
   color,
@@ -42,7 +42,7 @@ export function Swatch({
   );
 }
 
-/** Swatch plus its text value and alpha, as one readable row item. */
+
 export function ColorValueLabel({ color }: { color: ColorValue }) {
   return (
     <span className="inline-flex items-center gap-2">
@@ -62,8 +62,8 @@ export function ColorValueLabel({ color }: { color: ColorValue }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Confidence
+
+
 
 const FONT_LABELS: Record<FontConfidence, string> = {
   declared: 'Declared',
@@ -95,8 +95,8 @@ export function ConfidenceBadge({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Status pill: a dot and one word, for the popup header and the panel strip.
+
+
 
 export type InspectorMode = 'off' | 'active' | 'paused' | null;
 
@@ -107,24 +107,24 @@ export function statusWord(mode: InspectorMode): string {
   return 'Checking';
 }
 
-/** The label on the one primary action, in the popup and in the panel strip. */
+
 export function actionLabel(mode: InspectorMode): string {
   if (mode === 'active') return 'Stop inspecting';
   if (mode === 'paused') return 'Resume inspecting';
   return 'Inspect this page';
 }
 
-/** A tab with nothing on it yet is not a failure, and is not told as one. */
+
 export function isBlankTab(url: string | undefined): boolean {
   const target = url ?? '';
   if (!target) return true;
   return /^(about:blank|about:newtab|chrome:\/\/newtab)/i.test(target);
 }
 
-/**
- * The one sentence shown when the page cannot be inspected. An empty tab gets
- * the plain instruction rather than Chrome's lecture about schemes.
- */
+
+
+
+
 export function noticeText(
   url: string | undefined,
   unsupportedReason: string | null,
@@ -157,12 +157,12 @@ export function StatusPill({ mode, className }: { mode: InspectorMode; className
   );
 }
 
-// ---------------------------------------------------------------------------
-// Keyboard chips: one chip per key, never a run of glyphs.
+
+
 
 export function Kbd({ keys, className }: { keys: string; className?: string }) {
-  // Chrome reports a binding as "Alt+Shift+I" or as glyphs on macOS. Either
-  // way each key becomes its own chip, so the shortcut reads as keys to press.
+
+
   const parts = keys.split(/\s*\+\s*/).flatMap(part => {
     const glyphs = part.match(/[⌘⌥⇧⌃]/g);
     if (!glyphs) return [part];
@@ -174,8 +174,8 @@ export function Kbd({ keys, className }: { keys: string; className?: string }) {
       {parts.filter(Boolean).map((part, index) => (
         <kbd
           key={`${part}-${index}`}
-          // --surface-3, not --surface-2: these chips sit on a tonal button,
-          // and a chip the same colour as the thing under it is not a chip.
+
+
           className="inline-flex h-5 min-w-5 items-center justify-center rounded-[4px] bg-surface-3 px-1 font-sans text-[12px] text-foreground tabular-nums"
         >
           {part}
@@ -185,9 +185,9 @@ export function Kbd({ keys, className }: { keys: string; className?: string }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Pill: a filter chip. Off is tonal, on is the quiet accent with accent text,
-// which is a tint rather than a fill, so a row of chips never shouts.
+
+
+
 
 export function Pill({
   selected,
@@ -210,13 +210,13 @@ export function Pill({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Segmented control: the one selection pattern in this UI.
-//
-// The track is a tonal step and the selected segment is another tonal step
-// toward the page, never a saturated fill (design invariant). It backs Theme,
-// the outline coloring, the blend mode and the side panel's tab strip, which is
-// why it can render as an APG tablist as well as a plain group.
+
+
+
+
+
+
+
 
 export interface SegmentOption<T extends string> {
   value: T;
@@ -239,14 +239,14 @@ export function Segmented<T extends string>({
   options: SegmentOption<T>[];
   value: T;
   onSelect: (value: T) => void;
-  /** 28px in the popup, 32px in the side panel tab strip. */
+
   size?: 'sm' | 'md';
   label?: string;
   labelledBy?: string;
   tablist?: boolean;
   trackRef?: React.Ref<HTMLDivElement>;
   onKeyDown?: React.KeyboardEventHandler<HTMLDivElement>;
-  /** Per-segment extras, which is how the tab strip adds its ARIA wiring. */
+
   segmentProps?: (option: SegmentOption<T>, selected: boolean) => React.ComponentProps<'button'>;
   className?: string;
 }) {
@@ -274,10 +274,10 @@ export function Segmented<T extends string>({
             {...(tablist ? {} : { 'aria-pressed': selected })}
             {...extra}
             className={cn(
-              // Five segments across a 320px pane are 58px each, and "Summary"
-              // is 55 of them: no gap, no padding of its own, and the regular
-              // weight until it is selected. Selection is carried by the tonal
-              // step and the text colour, which cost no width at all.
+
+
+
+
               'flex-1 truncate rounded-[6px] text-[12px] transition-colors',
               selected
                 ? 'bg-selected-surface font-medium text-foreground'
@@ -293,8 +293,8 @@ export function Segmented<T extends string>({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Layout
+
+
 
 export function Section({
   id,
@@ -305,22 +305,22 @@ export function Section({
   children,
   className,
 }: {
-  /**
-   * A stable id for the region, so a "Jump to" link can reach it. The region is
-   * focusable when it has one: a keyboard user skipping hundreds of swatches
-   * has to land somewhere, not just scroll (tester UX note 3).
-   */
+
+
+
+
+
   id?: string;
   title: string;
-  /** Shown beside the title in muted tabular numerals ("Palette · 12"). */
+
   count?: number;
   subtitle?: React.ReactNode;
   actions?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
 }) {
-  // The heading names the region, so screen-reader users can list the summary's
-  // sections and jump between them the way a sighted reader scans them (19.2).
+
+
   const headingId = React.useId();
   return (
     <section
@@ -353,7 +353,7 @@ export function Section({
   );
 }
 
-/** A heading inside a section, for a group that is not a section of its own. */
+
 export function GroupHeading({
   children,
   count,
@@ -398,17 +398,17 @@ export function Collapsible({
   );
 }
 
-/** How many rows a windowed list shows before it asks to be opened further. */
+
 export const LIST_PAGE_SIZE = 200;
 
-/**
- * A list that renders at most `page` rows at a time.
- *
- * A real page reports hundreds of measured values per group, and a summary that
- * builds every one of them up front pays for rows nobody scrolls to. Nothing is
- * hidden: the count is stated, the rest is one press away, and the order is
- * untouched (PERF 3).
- */
+
+
+
+
+
+
+
+
 export function WindowedList<T>({
   items,
   children,
@@ -419,13 +419,13 @@ export function WindowedList<T>({
   items: readonly T[];
   children: (item: T, index: number) => React.ReactNode;
   className?: string;
-  /** Plural noun for the button ("Show 200 more of 640 values"). */
+
   noun?: string;
   page?: number;
 }) {
   const [limit, setLimit] = React.useState(page);
-  // A shorter list than the window is passed straight through, so the common
-  // case allocates nothing.
+
+
   const shown = items.length > limit ? items.slice(0, limit) : items;
   const hidden = items.length - shown.length;
   return (
@@ -465,11 +465,11 @@ export function EmptyState({
   );
 }
 
-/**
- * A quiet notice. Informational lines are `role=status`, failures are
- * `role=alert` and the only thing in this UI allowed to be red: an unsupported
- * page or an empty tab is a fact, not a failure, and is told in muted text.
- */
+
+
+
+
+
 export function StatusLine({
   tone = 'neutral',
   children,
@@ -483,8 +483,8 @@ export function StatusLine({
       : tone === 'success'
         ? 'text-success'
         : 'text-muted-foreground';
-  // Errors are assertive, everything else is polite (PRD 19.2). Colour is never
-  // the only signal: the text itself carries the reason in both tones.
+
+
   return (
     <p role={tone === 'error' ? 'alert' : 'status'} className={cn('text-[12px]', toneClass)}>
       {children}
@@ -492,7 +492,7 @@ export function StatusLine({
   );
 }
 
-/** A one-sentence card for something the reader has to know but cannot act on. */
+
 export function Notice({
   children,
   action,
@@ -515,7 +515,7 @@ export function Notice({
   );
 }
 
-/** Label plus value, the unit of nearly every reading row. */
+
 export function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="field-row py-0.5">
@@ -525,8 +525,8 @@ export function Field({ label, children }: { label: string; children: React.Reac
   );
 }
 
-// ---------------------------------------------------------------------------
-// Copy
+
+
 
 export function CopyButton({
   value,

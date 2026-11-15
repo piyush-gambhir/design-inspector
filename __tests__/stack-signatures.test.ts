@@ -676,7 +676,7 @@ describe('detectStack evidence and versions', () => {
     const astro = detectStack(emptyEvidence({ meta: [{ name: 'generator', content: 'Astro v4.16.0' }] }));
     expect(astro.detections.find((entry) => entry.id === 'astro')?.version).toBe('4.16.0');
 
-    // The marker list cannot carry the ng-version attribute value.
+
     const angular = detectStack(emptyEvidence({ domMarkers: ['[ng-version]'] }));
     expect(angular.detections.find((entry) => entry.id === 'angular')?.version).toBeNull();
   });
@@ -778,8 +778,8 @@ describe('probe lists cover the signature table', () => {
           .map((rule) => String(rule.test)),
       ),
     );
-    // Probes exist that no rule reads yet, which is fine, but each one should be
-    // a deliberate choice rather than a leftover.
+
+
     const unused = DOM_PROBES.filter((probe) => !selectors.has(probe));
     expect(unused).toEqual([
       '[data-react-helmet]',

@@ -1,18 +1,18 @@
-// Distance measurement between two visible boxes (PRD LAY-02).
-//
-// Pure geometry over two `getBoundingClientRect` boxes in CSS px. Nothing here
-// touches the DOM, so the three cases and every number they report are unit
-// testable.
-//
-// Sign convention for `edges`: a positive value means b's edge sits inside a's
-// edge on that side. Containment is exactly the case where all four values are
-// non negative (b inside a) or all four are non positive (a inside b); the
-// reported insets then always run from the inner box outward, so they read as
-// positive distances whichever way round the pair was measured.
-//
-// These are geometric distances between painted boxes. They are never a margin
-// reading: a 24px gap can come from a margin, a gap, a flex justification, or
-// an absolute offset, and the overlay must not claim to know which (PRD LAY-02).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import type { Rect, Sides } from '../contracts';
 import { formatPx, roundTo } from '../readings/units';
@@ -21,16 +21,16 @@ export type MeasureCase = 'separated' | 'overlap' | 'containment';
 
 export interface BoxMeasurement {
   case: MeasureCase;
-  /** Nearest-edge distance on the x axis. Negative when the x spans overlap. */
+
   gapX: number;
-  /** Nearest-edge distance on the y axis. Negative when the y spans overlap. */
+
   gapY: number;
-  /**
-   * Four edge distances. For containment these are the insets from the inner
-   * box's edges out to the outer box's edges, all non negative.
-   */
+
+
+
+
   edges: Sides<number>;
-  /** Which box sits inside the other. Null unless the case is containment. */
+
   contains: 'a-in-b' | 'b-in-a' | null;
 }
 
@@ -38,7 +38,7 @@ function round(value: number): number {
   return roundTo(value, 2);
 }
 
-/** Positive where b's edge is inside a's edge on that side. */
+
 function edgesOf(a: Rect, b: Rect): Sides<number> {
   return {
     top: round(b.y - a.y),
@@ -61,12 +61,12 @@ function sidesList(sides: Sides<number>): number[] {
   return [sides.top, sides.right, sides.bottom, sides.left];
 }
 
-/**
- * The measurement between two boxes. Rounding happens before the case is
- * decided, so the numbers on screen are the ones that chose the case: two
- * boxes whose edges touch report a 0px gap and read as separated, not as an
- * overlap of nothing.
- */
+
+
+
+
+
+
 export function measureBoxes(a: Rect, b: Rect): BoxMeasurement {
   const gapX = round(Math.max(a.x - (b.x + b.width), b.x - (a.x + a.width)));
   const gapY = round(Math.max(a.y - (b.y + b.height), b.y - (a.y + a.height)));
@@ -87,11 +87,11 @@ export function measureBoxes(a: Rect, b: Rect): BoxMeasurement {
   return { case: 'separated', gapX, gapY, edges, contains: null };
 }
 
-/**
- * Per-axis labels for the guides. A separated pair whose spans overlap on one
- * axis reads 0px on that axis, which is the distance a user would measure with
- * a ruler; an intersecting pair reads `overlap Npx` on both axes.
- */
+
+
+
+
+
 export function measureAxisLabels(measurement: BoxMeasurement): { x: string; y: string } {
   if (measurement.case === 'overlap') {
     return {
@@ -105,7 +105,7 @@ export function measureAxisLabels(measurement: BoxMeasurement): { x: string; y: 
   };
 }
 
-/** The clipboard text for the panel's measure block. */
+
 export function measurementCopyText(measurement: BoxMeasurement): string {
   if (measurement.case === 'containment') {
     const { top, right, bottom, left } = measurement.edges;
@@ -123,7 +123,7 @@ export function measurementCopyText(measurement: BoxMeasurement): string {
 }
 
 export interface Guide {
-  /** Viewport-space box to draw the guide line in. */
+
   rect: Rect;
   orientation: 'horizontal' | 'vertical';
   label: string;
@@ -136,11 +136,11 @@ function span(aStart: number, aEnd: number, bStart: number, bEnd: number): numbe
   return ((aStart + aEnd) / 2 + (bStart + bEnd) / 2) / 2;
 }
 
-/**
- * The guide lines for a measurement, in viewport coordinates. Separated and
- * overlapping pairs get one guide per axis; containment gets one guide per
- * inset side.
- */
+
+
+
+
+
 export function measureGuides(a: Rect, b: Rect, measurement: BoxMeasurement): Guide[] {
   const labels = measureAxisLabels(measurement);
   const aRight = a.x + a.width;

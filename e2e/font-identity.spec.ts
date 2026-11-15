@@ -1,14 +1,14 @@
-// Real font identity, end to end (workstream FONT, PRD TYP-01 to TYP-03).
-//
-// The complaint this suite exists for: a pinned heading read its CSS alias
-// ("Nb international pro webfont"), "matched", and seven lines of hashed CDN
-// URL. What it should read is the typeface's own name, its designer, and one
-// quiet line for the source.
-//
-// The fixture server serves a real WOFF2 (e2e/fixtures/fonts, original work,
-// OFL, built by the script beside it), so the whole path is exercised: Chrome
-// loads the face, the canvas check measures it, the worker fetches the file and
-// brotli-decodes it, and the panel repaints with the name table's answer.
+
+
+
+
+
+
+
+
+
+
+
 import { test, expect, type Page } from '@playwright/test';
 import { createServer, type Server } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -41,7 +41,7 @@ test.beforeAll(async () => {
   server = createServer(async (req, res) => {
     const requested = new URL(req.url ?? '/', 'http://x').pathname;
     const name = path.basename(requested);
-    // Fonts live in their own directory, exactly as a site would serve them.
+
     const file = requested.includes('/fonts/')
       ? path.join(FIXTURES_DIR, 'fonts', name)
       : path.join(FIXTURES_DIR, name);
@@ -68,7 +68,7 @@ test.afterAll(async () => {
   await new Promise<void>((resolve) => server?.close(() => resolve()));
 });
 
-/** The whole pinned panel as one line of text. */
+
 async function panelText(page: Page): Promise<string> {
   return page.evaluate((host) => {
     const root = document.querySelector(host)?.shadowRoot;
@@ -77,7 +77,7 @@ async function panelText(page: Page): Promise<string> {
   }, HOST);
 }
 
-/** Press a panel button by its exact label. Returns false when it is not there. */
+
 async function pressPanelButton(page: Page, label: string): Promise<boolean> {
   return page.evaluate(
     ({ host, label: wanted }) => {
@@ -106,10 +106,10 @@ async function confidenceBadge(page: Page): Promise<{ text: string; title: strin
   }, HOST);
 }
 
-/**
- * The side panel as Chrome shows it: its own page, at roughly the width the
- * real panel gets, with the active-tab lookup pointed at the fixture tab.
- */
+
+
+
+
 async function openPanel(fixtureTabId: number): Promise<Page> {
   const page = await session.context.newPage();
   await page.setViewportSize({ width: 420, height: 960 });
@@ -129,12 +129,12 @@ async function openPanel(fixtureTabId: number): Promise<Page> {
   return page;
 }
 
-/**
- * Pin an element and wait until the panel has repainted for it. The panel names
- * the element it is reading, so its id appearing there is the signal that the
- * deep reading arrived; a fixed sleep here was only ever a guess at how long
- * that takes on the machine running the test.
- */
+
+
+
+
+
+
 async function pin(page: Page, selector: string): Promise<void> {
   const id = selector.replace(/^#/, '');
   await page.locator(selector).hover();
@@ -147,7 +147,7 @@ test.describe('font identity on a page that aliases its own font', () => {
   test('identifies the served woff2 and reaches the verified badge', async () => {
     const page = await session.context.newPage();
     await page.goto(`${baseUrl}/inspector-font.html`);
-    // font-display: block, so wait for the face before measuring anything.
+
     await page.evaluate(() => document.fonts.ready);
     const tabId = await tabIdFor(session.worker, page);
     await toggleInspector(control, tabId);
@@ -155,8 +155,8 @@ test.describe('font identity on a page that aliases its own font', () => {
 
     await pin(page, '#hero-heading');
 
-    // Before the press: the alias, and the rendering check has already earned
-    // `verified` because the face is loaded and measurably not the fallback.
+
+
     let text = await panelText(page);
     expect(text).toContain('Its webfont alias');
     expect(text).not.toContain('Inspector Test Sans');
@@ -164,7 +164,7 @@ test.describe('font identity on a page that aliases its own font', () => {
     expect(badge?.text).toBe('verified');
     expect(badge?.title).toContain('Measured');
 
-    // The source is one line and the hashed URL is not printed.
+
     expect(text).toContain('Self-hosted on 127.0.0.1');
     expect(text).toContain('woff2');
     expect(text).not.toContain('/fonts/inspector-test-sans.woff2');
@@ -175,20 +175,20 @@ test.describe('font identity on a page that aliases its own font', () => {
       .toContain('Inspector Test Sans');
 
     text = await panelText(page);
-    // The typeface's own name, its style, and its designer, from the file.
+
     expect(text).toContain('Inspector Test Sans');
     expect(text).toContain('Regular');
     expect(text).toContain('by Design Inspector Fixtures');
     expect(text).toContain('Version 1.000');
     expect(text).toContain('openfontlicense.org');
-    // The alias is kept, labelled as what it is.
+
     expect(text).toContain('Declared as');
     expect(text).toContain('Its webfont alias');
-    // The file size now appears on the source line.
+
     expect(text).toMatch(/\d+ KB/);
-    // The offer is gone once it has been taken.
+
     expect(await pressPanelButton(page, 'Identify font file')).toBe(false);
-    // Still verified: identifying a file never downgrades the evidence.
+
     expect((await confidenceBadge(page))?.text).toBe('verified');
 
     await page.screenshot({ path: artifactPath('di-font-fixture.png') });
@@ -205,11 +205,11 @@ test.describe('font identity on a page that aliases its own font', () => {
     await pin(page, '#system-heading');
     expect((await confidenceBadge(page))?.text).toBe('verified');
     expect(await panelText(page)).toContain('System font, nothing was downloaded');
-    // Nothing to identify: there is no file (PRD TYP-03).
+
     expect(await pressPanelButton(page, 'Identify font file')).toBe(false);
 
     await pin(page, '#missing-heading');
-    // A family nothing serves is `declared`, whatever it measures. TYP-02.
+
     expect((await confidenceBadge(page))?.text).toBe('declared');
     expect(await pressPanelButton(page, 'Identify font file')).toBe(false);
 
@@ -226,7 +226,7 @@ test.describe('font identity on a page that aliases its own font', () => {
     expect(first.ok).toBe(true);
     expect(first.identity?.family).toBe('Inspector Test Sans');
 
-    // Same URL again: answered from the worker's cache, same result.
+
     const second = await sendBackground<{ ok: boolean; identity?: { family: string } }>(control, {
       type: 'font.identify',
       url: fontUrl,
@@ -271,7 +271,7 @@ test.describe('font identity on a page that aliases its own font', () => {
 
     await expect(panel.getByText('Inspector Test Sans').first()).toBeVisible({ timeout: 10_000 });
     await expect(panel.getByText(/Design Inspector Fixtures/).first()).toBeVisible();
-    // One specimen row per loaded weight, set in the face the panel loaded.
+
     await expect(panel.getByText(/^Specimen /).first()).toBeVisible({ timeout: 10_000 });
     await expect(
       panel.getByText('The quick brown fox jumps over the lazy dog').first(),

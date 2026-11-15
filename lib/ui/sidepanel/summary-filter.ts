@@ -1,11 +1,11 @@
-// Text filter for the page summary (PRD SUM-06, competitive Tier 1 item 5).
-//
-// Pure over a PageSummary: the side panel already holds the whole summary, so
-// filtering is a local read and sends no new message to the page.
-//
-// Matching is a case-insensitive substring over the text each entry already
-// shows. Numbers are offered in both the spaced and unspaced spellings, so
-// "24px" and "24 px" both find a 24px value, and a bare "24" finds it too.
+
+
+
+
+
+
+
+
 
 import type {
   ColorGroup,
@@ -24,7 +24,7 @@ function round(value: number, places = 2): string {
   return String(Number(value.toFixed(places)));
 }
 
-/** Both spellings of a number plus its unit, so either query form matches. */
+
 function numberTokens(value: number, unit: string, places = 2): string[] {
   const text = round(value, places);
   return [text, `${text}${unit}`, `${text} ${unit}`];
@@ -72,7 +72,7 @@ export function stackTokens(report: StackReport): string[] {
   ];
 }
 
-/** Every term in the query has to appear somewhere in the entry's own text. */
+
 export function matchesQuery(tokens: string[], query: string): boolean {
   const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
   if (terms.length === 0) return true;
@@ -81,7 +81,7 @@ export function matchesQuery(tokens: string[], query: string): boolean {
 }
 
 export interface FilteredSummary {
-  /** False when the query is empty, which shows everything. */
+
   active: boolean;
   typography: TypographyGroup[];
   sizeScale: SizeScaleEntry[];
@@ -91,7 +91,7 @@ export interface FilteredSummary {
   shadows: ShadowGroup[];
   fonts: FontRecord[];
   stack: StackReport;
-  /** Entries still shown, and how many there were before filtering. */
+
   shown: number;
   total: number;
 }

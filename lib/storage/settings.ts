@@ -1,5 +1,5 @@
-// Settings persistence. Local only, never synced: saved research and its
-// settings stay on the device (PRD 1.2, 17.3).
+
+
 import { DEFAULT_SETTINGS, type Settings, type ThemePreference } from '@/lib/contracts';
 
 const SETTINGS_KEY = 'settings';
@@ -9,7 +9,7 @@ export const SCAN_CAP_MAX = 20_000;
 
 const THEMES: ThemePreference[] = ['system', 'light', 'dark'];
 
-/** Coerce an unknown stored value into a complete, in-range Settings object. */
+
 export function normalizeSettings(value: unknown): Settings {
   const raw = (typeof value === 'object' && value !== null ? value : {}) as Partial<Settings>;
   const theme =
@@ -48,7 +48,7 @@ export async function setSettings(partial: Partial<Settings>): Promise<Settings>
   return next;
 }
 
-/** Subscribe to settings writes from any extension surface. Returns an unsubscribe. */
+
 export function onSettingsChanged(callback: (settings: Settings) => void): () => void {
   const listener = (
     changes: Record<string, chrome.storage.StorageChange>,
@@ -64,7 +64,7 @@ export function onSettingsChanged(callback: (settings: Settings) => void): () =>
     try {
       chrome.storage.onChanged.removeListener(listener);
     } catch {
-      // The surface is closing. An unavailable API is not a failure here.
+
     }
   };
 }

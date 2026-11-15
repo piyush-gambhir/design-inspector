@@ -1,8 +1,8 @@
-// Page design summary (PRD 12).
-//
-// Section order matches the PRD. Every group is traceable back to the page,
-// every uncertain reading carries its evidence, and nothing here is presented
-// as the site's own token system.
+
+
+
+
+
 import { useEffect, useId, useMemo, useState } from 'react';
 import { Download, RefreshCw, Save, ScanLine } from 'lucide-react';
 import type {
@@ -59,14 +59,14 @@ import {
 import { filterSummary } from './summary-filter';
 
 const SAMPLE_DISPLAY_CAP_PX = 28;
-/** Long enough to stop filtering on every keystroke, short enough to feel live. */
+
 const FILTER_DEBOUNCE_MS = 100;
 
-/**
- * Ids for the summary's regions, so the "Jump to" row can reach them. A real
- * page's palette is hundreds of swatches, and tabbing through all of them to
- * reach Spacing is not navigation (tester UX note 3).
- */
+
+
+
+
+
 export const SECTION_IDS = {
   typeScale: 'summary-type-scale',
   typography: 'summary-typography',
@@ -89,11 +89,11 @@ const JUMP_TARGETS: { id: string; label: string }[] = [
   { id: SECTION_IDS.stack, label: 'Stack' },
 ];
 
-/**
- * Skip links for the summary. The href is what makes them links; the click
- * handler is what makes them work, because the side panel has no address bar
- * to hang a fragment on and focus has to land on the region itself.
- */
+
+
+
+
+
 function JumpTo() {
   return (
     <nav aria-label="Jump to a summary section" className="flex flex-wrap items-center gap-1">
@@ -132,7 +132,7 @@ function round(value: number, places = 2): string {
   return String(Number(value.toFixed(places)));
 }
 
-// ---------------------------------------------------------------------------
+
 
 function ScopeSection({ summary }: { summary: PageSummary }) {
   const { scope, source } = summary;
@@ -147,8 +147,8 @@ function ScopeSection({ summary }: { summary: PageSummary }) {
         <Field label="Cap">
           {scope.capped ? `Reached the ${scope.cap} element cap` : `${scope.cap}, not reached`}
         </Field>
-        {/* A capped scan is a partial summary, and the only way to widen it is
-            the scan cap in the toolbar popup, so the reading says so (19.3). */}
+        {
+                                                                                }
         {scope.capped ? (
           <StatusLine tone="error">
             Partial summary: the scan stopped at {scope.cap} elements. Raise the scan cap in the
@@ -191,7 +191,7 @@ function ScopeSection({ summary }: { summary: PageSummary }) {
   );
 }
 
-/** The one-line stand-in for a section the filter emptied. */
+
 function NoMatches({ section }: { section: string }) {
   return <StatusLine>No matches in {section}</StatusLine>;
 }
@@ -293,11 +293,11 @@ function TypographySection({
   tabId: number | null;
   filtering: boolean;
 }) {
-  // Folding the combinations under their size turns dozens of rows into the
-  // handful of steps the page's type scale actually has (PRD SUM-06).
-  // Grouping is O(n log n) over every measured combination; it depends on the
-  // summary alone, so it is computed once per summary rather than per render.
-  // It sits above the early return because a hook has to run every time.
+
+
+
+
+
   const steps = useMemo(
     () => groupTypographyByScale(summary.typography),
     [summary.typography],
@@ -314,8 +314,8 @@ function TypographySection({
       </Section>
     );
   }
-  // A filtered view has to show its matches without a second click, and a short
-  // scale is not worth collapsing at all.
+
+
   const openByDefault = filtering || steps.length <= 3;
 
   return (
@@ -583,13 +583,13 @@ function ShadowsSection({
 }
 
 const SPECIMEN_PANGRAM = 'The quick brown fox jumps over the lazy dog';
-/** One specimen per loaded weight, capped: a family with 18 faces is a download, not a panel. */
+
 const MAX_SPECIMEN_FACES = 4;
 const SPECIMEN_PX = 28;
 
 const FONT_FILE_URL = /\.(woff2|woff|ttf|otf)(\?|#|$)/i;
 
-/** The first loaded face URL for a family, which is what "Identify" reads. */
+
 function identifiableUrl(font: FontRecord): string | null {
   const loaded = font.faces.filter(face => face.status === 'loaded' && face.urls.length > 0);
   const pool = loaded.length > 0 ? loaded : font.faces.filter(face => face.urls.length > 0);
@@ -604,19 +604,19 @@ function identifiableUrl(font: FontRecord): string | null {
 interface SpecimenFace {
   key: string;
   label: string;
-  /** The local family name this file was registered under, never the page's own. */
+
   localFamily: string;
 }
 
-/**
- * Loads the family's own files into this panel so the reader sees the typeface
- * rather than a description of it.
- *
- * The bytes are fetched here rather than passed back from the worker because
- * extension messages are JSON: sending a megabyte of font through them would
- * base64 it twice. The browser has the file cached from the identify request a
- * moment earlier, so this is a second read of the same cache entry.
- */
+
+
+
+
+
+
+
+
+
 function useSpecimens(
   font: FontRecord,
   enabled: boolean,
@@ -661,7 +661,7 @@ function useSpecimens(
             localFamily,
           });
         } catch {
-          // One weight that will not load is not a reason to drop the rest.
+
         }
       }
       if (cancelled) return;
@@ -675,7 +675,7 @@ function useSpecimens(
         try {
           document.fonts.delete(fontFace);
         } catch {
-          // Already gone with the panel.
+
         }
       }
     };
@@ -771,8 +771,8 @@ function FontCard({
         ) : null}
       </div>
       {font.source.note ? <StatusLine>{font.source.note}</StatusLine> : null}
-      {/* An unlocatable source is a reading, not an error, but it still
-          owes the reader somewhere to go next (PRD 19.3). */}
+      {
+                                                             }
       {font.source.kind === 'unknown' && !font.source.note ? (
         <StatusLine>
           No download source was found for this family. Copy the family name and look it up, or read
@@ -782,7 +782,7 @@ function FontCard({
 
       {specimens.length > 0 ? (
         <div className="mt-2 grid gap-1.5">
-          {/* The point of the whole feature: what the typeface looks like. */}
+          {                                                                   }
           {specimens.map((face, index) => (
             <div key={face.key} className="grid gap-0.5">
               <span className="text-[12px] text-muted-foreground">Specimen {face.label}</span>
@@ -867,7 +867,7 @@ function FontCard({
   );
 }
 
-/** The largest text the page actually sets, used as the second specimen line. */
+
 export function largestHeadingSample(summary: PageSummary): string | null {
   let best: TypographyGroup | null = null;
   for (const group of summary.typography) {
@@ -887,8 +887,8 @@ function FontsSection({
   onDownload: (url: string, filename: string) => void;
   filtering: boolean;
 }) {
-  // Identities live here rather than in each card so a family identified once
-  // stays identified while the reader filters and scrolls.
+
+
   const [identities, setIdentities] = useState<Record<string, FontIdentity>>({});
   const headingSample = useMemo(() => largestHeadingSample(summary), [summary]);
 
@@ -928,7 +928,7 @@ function FontsSection({
   );
 }
 
-// ---------------------------------------------------------------------------
+
 
 export function SummaryTab({
   tabId,
@@ -949,12 +949,12 @@ export function SummaryTab({
   progress: { scanned: number; total: number } | null;
   stale: boolean;
   onScan: () => void;
-  /** Stops a running scan. The panel keeps whatever it already had. */
+
   onCancel?: () => void;
 }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [noticeTone, setNoticeTone] = useState<'neutral' | 'error' | 'success'>('neutral');
-  // `typed` is what the field shows; `query` is what the sections filter on.
+
   const [typed, setTyped] = useState('');
   const [query, setQuery] = useState('');
 
@@ -968,9 +968,9 @@ export function SummaryTab({
     () => (summary ? filterSummary(summary, query) : null),
     [summary, query],
   );
-  // Memoised on the summary's identity, not rebuilt per render: every section
-  // below takes this object as a prop, so a fresh one each time would make the
-  // whole summary reconcile whenever anything in the panel changed (PERF 3).
+
+
+
   const view: PageSummary | null = useMemo(
     () =>
       summary && filtered
@@ -1105,19 +1105,19 @@ export function SummaryTab({
     );
   }
 
-  // Both are non-null here: they are derived from `summary` above.
+
   const counts = filtered ?? { active: false, shown: 0, total: 0 };
   const filtering = counts.active;
   const shownSummary = view ?? summary;
 
   return (
-    // 16px between cards, 12px inside one, 8px inside a row: the panel's whole
-    // spacing rhythm, stated once here and once on the panel shell.
+
+
     <div className="grid gap-4">
       {stale ? (
         <div className="rounded-[10px] bg-surface p-3">
-          {/* A page that moved on is a fact about the page, not a failure of
-              the reading, so it is told in the quiet voice. */}
+          {
+                                                               }
           <StatusLine>Page changed. Refresh for a current reading.</StatusLine>
         </div>
       ) : null}

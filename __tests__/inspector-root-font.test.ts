@@ -1,8 +1,8 @@
-// Fluid root font size detection (workstream V1).
-//
-// A page whose root font size is written in viewport units makes every px
-// reading true at one window width only. The panel has to say so, which means
-// the reading has to know, which is what these rules do.
+
+
+
+
+
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
@@ -23,15 +23,15 @@ function styleSheet(css: string): HTMLStyleElement {
 afterEach(() => {
   document.head.querySelectorAll('style').forEach((node) => node.remove());
   document.documentElement.style.fontSize = '';
-  // The walk is cached per document while the sheet list is unchanged, and
-  // these fixtures swap sheets faster than any page would.
+
+
   resetRootFontSizeCache();
 });
 
 describe('readAuthoredRootFontSize', () => {
-  // jsdom's CSS parser drops clamp(), so these fixtures use the viewport-unit
-  // and calc() forms it keeps. The clamp() path is covered by the rule tests
-  // below and end to end in Chrome against e2e/fixtures/inspector-fluid.html.
+
+
+
   it('prefers the inline style on the root element', () => {
     styleSheet(':root { font-size: 16px; }');
     document.documentElement.style.fontSize = 'calc(14px + 0.5vw)';
@@ -96,7 +96,7 @@ describe('isFluidRootFontSize', () => {
   it('falls back to the computed root when nothing is readable', () => {
     expect(isFluidRootFontSize(null, 14.33)).toBe(true);
     expect(isFluidRootFontSize(null, 16)).toBe(false);
-    // Within the tolerance: a rounding artefact, not a fluid root.
+
     expect(isFluidRootFontSize(null, 16.004)).toBe(false);
     expect(isFluidRootFontSize('', 18.5)).toBe(true);
   });

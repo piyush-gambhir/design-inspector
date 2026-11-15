@@ -10,7 +10,7 @@ test.describe('extension package', () => {
     expect(manifest.permissions.sort()).toEqual(
       ['activeTab', 'downloads', 'scripting', 'sidePanel', 'storage'].sort(),
     );
-    // The e2e build keeps host_permissions on purpose; the shipped build is checked separately.
+
     const shipped = JSON.parse(
       readFileSync(path.join(EXTENSION_DIR, '..', '..', '.output', 'chrome-mv3', 'manifest.json'), 'utf8'),
     );

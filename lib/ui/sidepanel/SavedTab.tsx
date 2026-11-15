@@ -1,8 +1,8 @@
-// Saved references (PRD 14, 15).
-//
-// Titles and notes are editable in place and autosave on blur. The snapshot is
-// never touched by an edit. Deleting asks first, and clearing asks twice as
-// loudly, because this is the only copy of the research.
+
+
+
+
+
 import { useEffect, useMemo, useState } from 'react';
 import { Columns2, Package, Pencil, Trash2 } from 'lucide-react';
 import type { PageSummary, SavedReference } from '@/lib/contracts';
@@ -51,7 +51,7 @@ export function hostnameOf(url: string): string {
   }
 }
 
-/** Group by source hostname, keeping the incoming order inside each group. */
+
 export function groupByHost(
   references: SavedReference[],
 ): { host: string; references: SavedReference[] }[] {
@@ -73,10 +73,10 @@ export const SORT_LABELS: Record<SortOrder, string> = {
   site: 'By site',
 };
 
-/**
- * Orders the collection. Ties break on id so the list never reshuffles between
- * renders, and 'site' still reads newest first inside each hostname.
- */
+
+
+
+
 export function sortReferences(
   references: SavedReference[],
   order: SortOrder,
@@ -110,7 +110,7 @@ export function markdownFor(reference: SavedReference): string {
   return referenceToMarkdown(reference);
 }
 
-// ---------------------------------------------------------------------------
+
 
 function ScreenshotThumbnail({
   screenshotId,
@@ -205,9 +205,9 @@ function ReferenceCard({
         ) : null}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            {/* The title reads as text until it is clicked, and the pencil is
-                what says it can be. A field with a box around it would make
-                every card look like a form. */}
+            {
+
+                                               }
             <div className="group relative min-w-0 flex-1">
               <Input
                 value={title}
@@ -236,8 +236,8 @@ function ReferenceCard({
               : ''}
             {reference.screenshotId && reference.screenshotIsCrop ? ' · Visible crop' : ''}
           </p>
-          {/* One line, with the whole URL in the tooltip: a saved card is a row
-              in a list, and a wrapped URL makes three of them. */}
+          {
+                                                                  }
           <p
             className="truncate px-1 text-[12px] text-muted-foreground"
             title={reference.snapshot.source.url}
@@ -292,7 +292,7 @@ function ReferenceCard({
   );
 }
 
-// ---------------------------------------------------------------------------
+
 
 export function SavedTab({
   references,
@@ -412,12 +412,12 @@ export function SavedTab({
     );
   };
 
-  /**
-   * ZIP bundle for the selection (PRD EXP-03 Phase 2, AST-05). The screenshots
-   * are loaded here because only this surface can read the local blob store,
-   * and the download is started from this page because a blob URL belongs to
-   * the context that created it.
-   */
+
+
+
+
+
+
   const exportBundle = () => {
     if (!requireSelection()) return;
     setManifest(null);
@@ -636,7 +636,7 @@ export function SavedTab({
   );
 }
 
-/** Loads the collection and keeps it current from event.savedChanged. */
+
 export function useSavedReferences(): {
   references: SavedReference[];
   error: string | null;

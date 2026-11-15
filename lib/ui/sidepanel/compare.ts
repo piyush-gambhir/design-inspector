@@ -1,11 +1,11 @@
-// Diffing two saved page summaries (competitive Tier 2 item 5, PRD 4 Phase 3).
-//
-// Everything here is pure and total: two summaries in, rows out. A row always
-// says which side it came from, and a count is null when that side never
-// recorded the value, which is not the same as recording it zero times.
-//
-// The same site at two viewport widths is the case this exists for, so nothing
-// in here assumes the two summaries come from different URLs.
+
+
+
+
+
+
+
+
 import type { ColorGroup, PageSummary, SourceContext } from '@/lib/contracts';
 import {
   clusterPalette,
@@ -13,11 +13,11 @@ import {
   type PaletteCluster,
 } from '@/lib/readings/summary-aggregate';
 
-/** Which summary a row was found in. */
+
 export type Side = 'a' | 'b' | 'both';
 
 export interface CompareEntry {
-  /** Comparison key. Equal keys are the same value. */
+
   key: string;
   label: string;
   count: number;
@@ -26,7 +26,7 @@ export interface CompareEntry {
 export interface CompareRow {
   key: string;
   label: string;
-  /** Occurrences in A, or null when A never recorded this value. */
+
   a: number | null;
   b: number | null;
   side: Side;
@@ -37,10 +37,10 @@ export interface CompareSection {
   rows: CompareRow[];
 }
 
-/**
- * Pairs two lists by key. `order` ranks the merged rows; the default is by the
- * larger of the two counts, then by label, so the rows stay stable.
- */
+
+
+
+
 export function compareCounts(
   a: CompareEntry[],
   b: CompareEntry[],
@@ -54,7 +54,7 @@ export function compareCounts(
       row = { key: entry.key, label: entry.label, a: null, b: null, side };
       rows.set(entry.key, row);
     }
-    // Repeat keys inside one side add up rather than overwrite.
+
     row[side] = (row[side] ?? 0) + entry.count;
   };
 
@@ -70,8 +70,8 @@ export function compareCounts(
   return merged.sort((first, second) => rank(second) - rank(first) || cmp(first.label, second.label));
 }
 
-// ---------------------------------------------------------------------------
-// Section builders
+
+
 
 function round(value: number, places = 2): string {
   return String(Number(value.toFixed(places)));
@@ -85,11 +85,11 @@ export function typeScaleEntries(summary: PageSummary): CompareEntry[] {
   }));
 }
 
-/**
- * Families with the number of text elements set in them. A family that is
- * declared but never matched to content is listed with a count of zero, because
- * "declared" and "used" are different facts (PRD SUM-05).
- */
+
+
+
+
+
 export function familyEntries(summary: PageSummary): CompareEntry[] {
   const used = new Map<string, { label: string; count: number }>();
   for (const group of summary.typography) {
@@ -129,7 +129,7 @@ export function shadowEntries(summary: PageSummary): CompareEntry[] {
   }));
 }
 
-/** Detections only. A hint is not a detection and is not compared as one. */
+
 export function stackEntries(summary: PageSummary): CompareEntry[] {
   return summary.stack.detections.map((detection) => ({
     key: detection.id,
@@ -138,8 +138,8 @@ export function stackEntries(summary: PageSummary): CompareEntry[] {
   }));
 }
 
-// ---------------------------------------------------------------------------
-// Palette
+
+
 
 export interface PaletteCompareRow {
   key: string;
@@ -154,11 +154,11 @@ function clusterLabel(cluster: PaletteCluster): string {
   return color.hex ?? color.raw;
 }
 
-/**
- * Clusters each palette, then pairs the clusters that sit within the same oklch
- * distance a cluster itself spans. Each cluster on the right is claimed at most
- * once, so a row never reports a match that another row already used.
- */
+
+
+
+
+
 export function comparePalettes(a: ColorGroup[], b: ColorGroup[]): PaletteCompareRow[] {
   const left = clusterPalette(a);
   const right = clusterPalette(b);
@@ -195,8 +195,8 @@ export function comparePalettes(a: ColorGroup[], b: ColorGroup[]): PaletteCompar
   );
 }
 
-// ---------------------------------------------------------------------------
-// The whole comparison
+
+
 
 export interface SummaryComparison {
   sections: CompareSection[];
@@ -226,8 +226,8 @@ export function compareSummaries(a: PageSummary, b: PageSummary): SummaryCompari
   };
 }
 
-// ---------------------------------------------------------------------------
-// Markdown
+
+
 
 export function viewportLabel(source: SourceContext): string {
   return `${source.viewport.width} x ${source.viewport.height} CSS px`;
@@ -242,7 +242,7 @@ function cell(count: number | null): string {
   return count === null ? '-' : String(count);
 }
 
-/** Escapes the one character that would break a Markdown table cell. */
+
 function cellText(text: string): string {
   return text.replace(/\|/g, '\\|');
 }

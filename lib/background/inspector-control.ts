@@ -1,8 +1,8 @@
-// Activation and mode control (PRD INS-01, 17.2, 18.2).
-//
-// The content script is the single source of truth for a tab's mode. The
-// service worker can be killed at any moment, so nothing here caches per-tab
-// state: every request pings the tab and re-reads the mode.
+
+
+
+
+
 import type {
   ContentResponse,
   InspectorMode,
@@ -19,10 +19,10 @@ export function offState(tabId: number, unsupportedReason: string | null = null)
   return { tabId, mode: 'off', pinned: null, pageStale: false, unsupportedReason };
 }
 
-/**
- * Reason derived from the URL alone, when the URL is known. Null means the URL
- * gives no reason to expect a failure.
- */
+
+
+
+
 export function unsupportedSchemeReason(url: string | undefined): string | null {
   const target = url ?? '';
   if (!target) return null;
@@ -47,10 +47,10 @@ export function unsupportedSchemeReason(url: string | undefined): string | null 
   return null;
 }
 
-/**
- * Plain-language reason a page cannot host the inspector (PRD 19.3). Chrome's
- * own error strings are unhelpful, so the URL is consulted first.
- */
+
+
+
+
 export function unsupportedReasonFor(url: string | undefined, error: unknown): string {
   const byScheme = unsupportedSchemeReason(url);
   if (byScheme) return byScheme;
@@ -66,8 +66,8 @@ export function unsupportedReasonFor(url: string | undefined, error: unknown): s
     return 'Chrome does not allow extensions on this page.';
   }
   if (/cannot access|Extension manifest|Missing host permission/i.test(message)) {
-    // activeTab is granted only by a toolbar click or the keyboard shortcut on
-    // this tab. A side panel button after a fresh navigation has no grant yet.
+
+
     return 'Chrome has not granted access to this tab yet. Click the Design Inspector toolbar icon or press the shortcut on this tab, then try again.';
   }
   return message
@@ -84,10 +84,10 @@ async function tabUrl(tabId: number): Promise<string | undefined> {
   }
 }
 
-/**
- * Make sure the inspector is running in the tab. Pings first so an already
- * injected script is never loaded twice.
- */
+
+
+
+
 export async function ensureContentScript(
   tabId: number,
 ): Promise<{ ok: true } | { ok: false; reason: string }> {
@@ -112,11 +112,11 @@ function readState(response: ContentResponse, tabId: number): InspectorState | n
   return { ...response.state, tabId };
 }
 
-/**
- * Read the tab's mode without activating anything. A getState from the popup
- * or side panel must not inject the inspector: inspection starts only when the
- * user asks for it (PRD INS-01).
- */
+
+
+
+
+
 export async function getInspectorState(tabId: number): Promise<InspectorState> {
   const ping = await sendToTab(tabId, { type: 'content.ping' });
   if (!ping.ok) return offState(tabId, unsupportedSchemeReason(await tabUrl(tabId)));
@@ -132,9 +132,9 @@ export async function setInspectorMode(
   if (!ready.ok) return offState(tabId, ready.reason);
   const applied = await sendToTab(tabId, { type: 'content.setMode', mode });
   if (!applied.ok) return offState(tabId, applied.error);
-  // The badge this just put on the page would be a second copy of controls the
-  // side panel already shows, so on a tab with a panel open it starts as its
-  // dot (W1). The state is re-read afterwards so the answer says so.
+
+
+
   if (mode !== 'off' && hasSidePanel(tabId)) {
     await sendToTab(tabId, { type: 'content.setBadge', collapsed: true, reason: 'sidepanel' });
     const mirrored = readState(await sendToTab(tabId, { type: 'content.getState' }), tabId);
@@ -146,12 +146,12 @@ export async function setInspectorMode(
   return readState(fetched, tabId) ?? { ...offState(tabId), mode };
 }
 
-/**
- * Layout outlines are independent of the inspector mode, so this does not
- * change the mode: it only makes sure the content script is there to receive
- * the request. Turning outlines on from the popup on a fresh tab is a first
- * injection, which is why the same injection path is reused here.
- */
+
+
+
+
+
+
 export async function setOutlineMode(
   tabId: number,
   mode: OutlineMode,
@@ -166,12 +166,12 @@ export async function setOutlineMode(
   return readState(fetched, tabId) ?? { ...offState(tabId), outlines: mode };
 }
 
-/**
- * The mockup overlay is independent of the inspector mode, exactly as layout
- * outlines are: a designer comparing a page against a comp has no reason to
- * have the inspector on. That means setting one on a fresh tab is a first
- * injection, so the same injection path is reused (competitive Tier 2 item 1).
- */
+
+
+
+
+
+
 export async function setTabMockup(
   tabId: number,
   mockup: MockupState | null,
@@ -186,7 +186,7 @@ export async function setTabMockup(
   return readState(fetched, tabId) ?? offState(tabId);
 }
 
-/** Off becomes active; active and paused become off (PRD 7). */
+
 export function nextToggleMode(current: InspectorMode): InspectorMode {
   return current === 'off' ? 'active' : 'off';
 }

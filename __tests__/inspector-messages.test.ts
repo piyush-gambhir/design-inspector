@@ -34,7 +34,7 @@ function installChrome(): Harness {
   return { listeners, sent };
 }
 
-/** Dispatches one message and waits for the async sendResponse. */
+
 async function send(harness: Harness, message: unknown): Promise<{ kept: unknown; response: unknown }> {
   const listener = harness.listeners[0];
   if (!listener) throw new Error('no listener was installed');
@@ -51,18 +51,18 @@ function reset(): void {
     symbol,
     { api?: { setMode(mode: 'off'): void } } | undefined
   >;
-  // Deleting the symbol forgets the inspector but not its document listeners.
-  // A selection controller left in 'active' swallows clicks in the capture
-  // phase, including clicks meant for the next test's badge, so the previous
-  // boot is switched off before it is dropped.
+
+
+
+
   try {
     container[INSPECTOR_KEY]?.api?.setMode('off');
   } catch {
-    // A half-booted instance is still worth dropping.
+
   }
   delete container[INSPECTOR_KEY];
-  // Rulers, the layout overlay and the badge's collapse decision all live for
-  // the page session, so each test starts from a fresh one.
+
+
   resetOverlaySession();
   document.body.innerHTML = '';
   document.querySelectorAll('design-inspector-host').forEach((node) => node.remove());
@@ -256,7 +256,7 @@ describe('content message handling', () => {
   });
 
   it('refuses to scroll to an offscreen element unless asked', async () => {
-    // jsdom reports every rect as zero sized, which counts as offscreen.
+
     const { response } = await send(harness, { type: 'content.select', locator: '#hero-heading' });
     expect(response).toEqual({ ok: false, error: 'Element is offscreen' });
   });
@@ -315,7 +315,7 @@ describe('content message handling', () => {
     expect(typed.state?.pageStale).toBe(true);
     expect(typed.state?.mode).toBe('active');
     expect(api.getState().pinned).toBeNull();
-    // The side panel learns about it too.
+
     expect(
       harness.sent.some(
         (message) => (message as { type?: string }).type === 'event.pageChanged',
@@ -344,7 +344,7 @@ describe('page tools and the badge the side panel mirrors', () => {
     bootInspector();
   });
 
-  /** The tools on the state a request answered with. */
+
   function toolsOf(response: unknown): PageTools | undefined {
     return (response as { state?: { tools?: PageTools } }).state?.tools;
   }
@@ -385,7 +385,7 @@ describe('page tools and the badge the side panel mirrors', () => {
       harness.sent.some(message => (message as { type?: string }).type === 'event.state'),
     ).toBe(true);
 
-    // The tools left out of the update are the ones left alone.
+
     const semantic = await send(harness, {
       type: 'content.setTools',
       tools: { semanticParents: false },
@@ -436,7 +436,7 @@ describe('page tools and the badge the side panel mirrors', () => {
     expect(badge.dataset.collapsed).toBe('true');
     expect(dot.getAttribute('title')).toBe('Controls are in the side panel. Click to expand.');
 
-    // Closing the panel gives the badge back.
+
     await send(harness, { type: 'content.setBadge', collapsed: false, reason: 'sidepanel' });
     expect(badge.dataset.collapsed).toBe('false');
   });
@@ -459,11 +459,11 @@ describe('page tools and the badge the side panel mirrors', () => {
     dot.click();
     expect(badge.dataset.collapsed).toBe('false');
 
-    // The panel is still open: nothing else is allowed to collapse it back.
+
     await send(harness, { type: 'content.setTools', tools: { rulers: true } });
     expect(badge.dataset.collapsed).toBe('false');
 
-    // The panel closing is a presence change, which takes the decision back.
+
     await send(harness, { type: 'content.setBadge', collapsed: false, reason: 'sidepanel' });
     expect(badge.dataset.collapsed).toBe('false');
   });

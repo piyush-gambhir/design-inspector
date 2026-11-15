@@ -1,21 +1,21 @@
-// Performance evidence for PRD 19.1 and release gate 20.3 item 10.
-//
-// The budgets are measured on e2e/fixtures/large.html: 6,001 elements, all
-// local, nothing animating. What is measured here:
-//
-//   Activation      the inspector.toggle round trip, which covers injecting the
-//                   content script and getting a usable overlay back. Budget
-//                   300ms (PRD 19.1).
-//   Hover           20 pointer moves. Long tasks are not attributable to an
-//                   origin, so the same 20 moves run first with the inspector
-//                   off as a control, and the assertion is on the delta: at
-//                   most two more long tasks than the page produces by itself,
-//                   and no more tasks over 100ms than the control had.
-//   Scan            the summary.request round trip. Budget 3s, with the scope
-//                   capped at the default 5,000 and progress events observed.
-//
-// Numbers are printed as `[perf] ...` lines and transcribed into store/QA.md.
-// They are machine-specific; the assertions are the contract, not the numbers.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import { test, expect, type Page } from '@playwright/test';
 import { createServer, type Server } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -30,15 +30,15 @@ import {
   type ExtensionSession,
 } from './helpers/extension';
 
-/** PRD 19.1: activation to usable overlay. */
+
 const ACTIVATION_BUDGET_MS = 300;
-/** PRD 19.1 read against gate 10: the initial summary on a large page. */
+
 const SCAN_BUDGET_MS = 3_000;
-/** A task this long is a visible stall, whoever caused it. */
+
 const LONG_TASK_BUDGET_MS = 100;
-/** Extra long tasks the inspector may add over the control run. */
+
 const MAX_EXTRA_LONG_TASKS = 2;
-/** The shipped default scan cap (lib/contracts DEFAULT_SETTINGS). */
+
 const EXPECTED_CAP = 5_000;
 
 interface LongTask {
@@ -77,7 +77,7 @@ test.afterAll(async () => {
   await new Promise<void>(resolve => server?.close(() => resolve()));
 });
 
-/** Twenty pointer moves down the page, spaced so each one settles. */
+
 async function hoverTwentyTimes(page: Page): Promise<void> {
   const viewport = page.viewportSize() ?? { width: 1280, height: 800 };
   for (let step = 0; step < 20; step += 1) {
@@ -86,7 +86,7 @@ async function hoverTwentyTimes(page: Page): Promise<void> {
     await page.mouse.move(x, y);
     await page.waitForTimeout(60);
   }
-  // The observer reports a long task after the task ends; give the queue a beat.
+
   await page.waitForTimeout(250);
 }
 
@@ -113,7 +113,7 @@ test.describe('performance on a 6,000 element page', () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(`${baseUrl}/large.html`);
 
-    // The fixture has to be the page the budgets were written for.
+
     expect(
       await page.evaluate(
         () => (window as unknown as { __longTaskSupported: boolean }).__longTaskSupported,
@@ -127,12 +127,12 @@ test.describe('performance on a 6,000 element page', () => {
 
     const tabId = await tabIdFor(session.worker, page);
 
-    // --- Control: the same hover work with no inspector on the page. --------
+
     await resetLongTasks(page);
     await hoverTwentyTimes(page);
     const controlTasks = summarise(await readLongTasks(page));
 
-    // --- Activation --------------------------------------------------------
+
     await resetLongTasks(page);
     const startedAt = Date.now();
     const activated = await sendBackground<{ ok: boolean; state?: { mode: string } }>(control, {
@@ -144,7 +144,7 @@ test.describe('performance on a 6,000 element page', () => {
     await expect(page.locator('design-inspector-host')).toHaveCount(1);
     expect(activationMs, 'activation to usable overlay').toBeLessThan(ACTIVATION_BUDGET_MS);
 
-    // --- Hover with the inspector live -------------------------------------
+
     await resetLongTasks(page);
     await hoverTwentyTimes(page);
     const hoverTasks = summarise(await readLongTasks(page));
@@ -158,10 +158,10 @@ test.describe('performance on a 6,000 element page', () => {
       `tasks over ${LONG_TASK_BUDGET_MS}ms while inspecting (control had ${controlTasks.overBudget})`,
     ).toBeLessThanOrEqual(controlTasks.overBudget);
 
-    // --- Scan --------------------------------------------------------------
-    // Progress is a broadcast, so the control page listens for it the way the
-    // side panel does. A scan that reports nothing is a scan with no cancel
-    // affordance, which the PRD treats as a defect (19.1).
+
+
+
+
     await control.evaluate(() => {
       const holder = window as unknown as { __progress: { scanned: number; total: number }[] };
       holder.__progress = [];
@@ -199,7 +199,7 @@ test.describe('performance on a 6,000 element page', () => {
     expect(progress.length, 'scan progress events observed').toBeGreaterThan(0);
     expect(progress[progress.length - 1]?.total, 'progress reports a total').toBeGreaterThan(0);
 
-    // --- Evidence for store/QA.md ------------------------------------------
+
     // eslint-disable-next-line no-console
     console.log(
       [
@@ -214,7 +214,7 @@ test.describe('performance on a 6,000 element page', () => {
       ].join(' '),
     );
 
-    // Stopping cancels the work and takes the overlay off the page (PRD 19.1).
+
     await sendBackground(control, { type: 'inspector.toggle', tabId });
     await expect(page.locator('design-inspector-host')).toHaveCount(0);
 
@@ -230,8 +230,8 @@ test.describe('performance on a 6,000 element page', () => {
 
     await sendBackground(control, { type: 'inspector.toggle', tabId });
 
-    // Fire the scan and the cancel from the same page without awaiting the
-    // scan, which is how the panel's Cancel button behaves.
+
+
     const outcome = await control.evaluate(async (id: number) => {
       const scan = chrome.runtime.sendMessage({ type: 'summary.request', tabId: id });
       await new Promise(resolve => setTimeout(resolve, 60));
@@ -239,13 +239,13 @@ test.describe('performance on a 6,000 element page', () => {
       return (await scan) as { ok: boolean; error?: string };
     }, tabId);
 
-    // Either the scan finished before the cancel landed or it reports the
-    // cancellation. What must never happen is an unhandled failure.
+
+
     expect(typeof outcome.ok, 'cancel produced a well-formed response').toBe('boolean');
 
     await sendBackground(control, { type: 'inspector.toggle', tabId });
     await expect(page.locator('design-inspector-host')).toHaveCount(0);
-    // The page still answers after the inspector leaves.
+
     expect(await page.evaluate(() => document.querySelectorAll('main *').length)).toBeGreaterThan(
       5_000,
     );

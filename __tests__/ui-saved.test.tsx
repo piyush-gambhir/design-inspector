@@ -25,8 +25,8 @@ vi.mock('idb', () => ({
   openDB: async () => fakeIdb.db,
 }));
 
-// The export adapters belong to another workstream. Stubbing them keeps this a
-// test of the panel's wiring and its failure surface, not of their output.
+
+
 vi.mock('../lib/ui/sidepanel/exports', async () => {
   const actual = await vi.importActual<typeof import('../lib/ui/sidepanel/exports')>(
     '../lib/ui/sidepanel/exports',
@@ -41,8 +41,8 @@ vi.mock('../lib/ui/sidepanel/exports', async () => {
 });
 
 vi.mock('@/lib/exports', () => ({
-  // Workstream P owns the bundle adapter; until it lands it throws, and the
-  // Saved tab has to say so rather than appear to have started a download.
+
+
   buildReferenceBundle: async () => {
     throw new Error('buildReferenceBundle not implemented');
   },
@@ -206,8 +206,8 @@ describe('SavedTab', () => {
     expect(container.textContent).toContain('Summary');
     expect(container.textContent).toContain('Element');
 
-    // Newest first breaks its tie on id, exactly as the storage layer does, so
-    // 'b' leads and the element reference is the second card.
+
+
     const titles = [...container.querySelectorAll<HTMLInputElement>(
       'input[aria-label="Reference title"]',
     )].map(input => input.value);
@@ -295,9 +295,9 @@ describe('SavedTab', () => {
     expect(container.textContent).toContain('Markdown export is unavailable');
   });
 
-  // PRD 19.3 "storage full": the only copy of the research is local, so a full
-  // disk has to name the cause and the two ways out, and the edit the user made
-  // must stay in the field so it can be retried after clearing space.
+
+
+
   it('surfaces a storage quota failure on an inline edit with the way out', async () => {
     const saved = reference({ id: 'a', title: 'Hero heading' });
     const originalGet = fakeIdb.db.get;
@@ -305,7 +305,7 @@ describe('SavedTab', () => {
     fakeIdb.db.get = (async (name: string, key: string) =>
       name === 'references' && key === 'a' ? saved : originalGet(name, key)) as typeof originalGet;
     fakeIdb.db.put = (async () => {
-      // What IndexedDB actually throws when the origin is over quota.
+
       const error = new Error('The quota has been exceeded.');
       error.name = 'QuotaExceededError';
       throw error;
@@ -322,7 +322,7 @@ describe('SavedTab', () => {
         setter?.call(title, 'Hero heading, revised');
         title?.dispatchEvent(new Event('input', { bubbles: true }));
       });
-      // React maps onBlur onto the bubbling focusout event.
+
       await act(async () => {
         title?.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
         await Promise.resolve();
@@ -396,8 +396,8 @@ describe('SavedTab selection and sorting', () => {
       [...container.querySelectorAll<HTMLInputElement>('input[aria-label^="Select "]')].map(box =>
         box.getAttribute('aria-label'),
       );
-    // Grouping is by host, so the sort decides the order of the groups and of
-    // the cards inside them: b then a on example.com, then c on other.test.
+
+
     expect(ids()).toEqual(['Select Reference b', 'Select Reference a', 'Select Reference c']);
 
     await act(async () => {
@@ -506,7 +506,7 @@ describe('SavedTab compare', () => {
     await act(async () => {
       selectAll?.click();
     });
-    // One summary and one element is still not a pair of summaries.
+
     expect(
       ([...container.querySelectorAll('button')].find(
         button => button.textContent === 'Compare',

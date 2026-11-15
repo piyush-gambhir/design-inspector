@@ -3,7 +3,7 @@ import type { AssetReading, ElementSnapshot, PageSummary, StackReport } from '@/
 import { SCHEMA_VERSION } from '@/lib/contracts';
 import type { ContentRequest } from '@/lib/messages';
 
-// In-memory idb so reference.save can persist without a real IndexedDB.
+
 const fakeIdb = vi.hoisted(() => {
   const stores = new Map<string, Map<string, unknown>>();
   const db = {
@@ -39,8 +39,8 @@ const { presenceTabs, resetPresenceForTests } = await import(
   '@/lib/background/sidepanel-presence'
 );
 
-// ---------------------------------------------------------------------------
-// Fixtures
+
+
 
 const source = {
   url: 'https://example.com/pricing',
@@ -134,8 +134,8 @@ const assetsFixture: AssetReading[] = [
   },
 ];
 
-// ---------------------------------------------------------------------------
-// Fake chrome
+
+
 
 type Listener = (
   message: unknown,
@@ -151,7 +151,7 @@ interface Harness {
   executed: unknown[];
   sidePanelOpen: ReturnType<typeof vi.fn>;
   commandListeners: ((command: string) => void)[];
-  /** Ports opened with chrome.runtime.connect, so a close can be simulated. */
+
   connect: (name: string) => { disconnect: () => void };
   session: Map<string, unknown>;
 }
@@ -228,7 +228,7 @@ function install(): Harness {
   const commandListeners: ((command: string) => void)[] = [];
   let captured: Listener | null = null;
   const sidePanelOpen = vi.fn(async () => undefined);
-  // One connect listener, and a session store the presence set can survive in.
+
   const connectListeners: ((port: chrome.runtime.Port) => void)[] = [];
   const session = new Map<string, unknown>();
   const connect = (name: string) => {
@@ -353,7 +353,7 @@ beforeEach(() => {
   harness = install();
 });
 
-// ---------------------------------------------------------------------------
+
 
 describe('message handler dispatch', () => {
   it('ignores messages that are not extension messages', () => {
@@ -387,7 +387,7 @@ describe('message handler dispatch', () => {
       entry => entry.request.type === 'content.setOutlines',
     );
     expect(applied?.request).toEqual({ type: 'content.setOutlines', mode: 'depth' });
-    // The mode is untouched: outlines do not turn the inspector on.
+
     expect(response).toMatchObject({ state: { mode: 'off' } });
   });
 
@@ -514,7 +514,7 @@ describe('message handler dispatch', () => {
     });
     api.tabs.sendMessage = gone;
     await expect(notifyTabNavigation(1, 'https://example.com/other')).resolves.toBe(false);
-    // Only the ping was sent: there is nothing left to notify.
+
     expect(gone).toHaveBeenCalledTimes(1);
   });
 
@@ -551,7 +551,7 @@ describe('message handler dispatch', () => {
     })) as { ok: boolean; error?: string };
     expect(response.ok).toBe(false);
     expect(typeof response.error).toBe('string');
-    // The overlay is restored even when the capture fails.
+
     const restored = harness.contentRequests.filter(
       entry =>
         entry.request.type === 'content.setOverlayVisible' && entry.request.visible === true,
@@ -575,7 +575,7 @@ describe('message handler dispatch', () => {
     expect(response.reference).toMatchObject({
       kind: 'element',
       title: 'Hero heading',
-      // The screenshot fails in this environment; the save still succeeds.
+
       screenshotId: null,
     });
     expect(await listReferences()).toHaveLength(1);
@@ -651,7 +651,7 @@ describe('keyboard command', () => {
 });
 
 describe('side panel presence', () => {
-  /** Every content.setBadge the worker pushed, in order. */
+
   function badgePushes(): { tabId: number; collapsed: boolean; reason: string }[] {
     return harness.contentRequests
       .filter(entry => entry.request.type === 'content.setBadge')
@@ -702,8 +702,8 @@ describe('side panel presence', () => {
 
     const types = harness.contentRequests.map(entry => entry.request.type);
     expect(types).toContain('content.setBadge');
-    // The badge is only asked to step aside once the mode is applied: before
-    // that there is no badge on the page to collapse.
+
+
     expect(types.indexOf('content.setBadge')).toBeGreaterThan(types.indexOf('content.setMode'));
     expect(badgePushes()).toEqual([{ tabId: 1, collapsed: true, reason: 'sidepanel' }]);
   });

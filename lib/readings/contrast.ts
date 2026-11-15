@@ -1,18 +1,18 @@
-// Contrast reading (PRD SUR-03). The math is pure; the background resolution
-// walks ancestors and takes its style reader as a parameter so it can be
-// tested without a real layout engine.
-//
-// V1 only answers for text over a determinable solid background, including
-// composition of translucent ancestors. Anything that makes the effective
-// background undecidable (image, gradient, blend, filter, opacity, mask)
-// returns `unavailable` with the specific reason, never an invented ratio.
+
+
+
+
+
+
+
+
 
 import type { ColorValue, ContrastReading } from '../contracts';
 import { parseRgba, rgbToHex, type Rgb, type Rgba } from './color';
 
 export const WHITE: Rgb = { r: 255, g: 255, b: 255 };
 
-/** WCAG 2.x relative luminance from 0..255 sRGB channels. */
+
 export function relativeLuminance(color: Rgb): number {
   const channel = (value: number): number => {
     const c = Math.min(1, Math.max(0, value / 255));
@@ -21,7 +21,7 @@ export function relativeLuminance(color: Rgb): number {
   return 0.2126 * channel(color.r) + 0.7152 * channel(color.g) + 0.0722 * channel(color.b);
 }
 
-/** WCAG 2.x contrast ratio. Order of arguments does not matter. */
+
 export function contrastRatio(a: Rgb, b: Rgb): number {
   const la = relativeLuminance(a);
   const lb = relativeLuminance(b);
@@ -30,7 +30,7 @@ export function contrastRatio(a: Rgb, b: Rgb): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-/** Source-over composition of a translucent color onto an opaque one. */
+
 export function compositeOver(source: Rgba, backdrop: Rgb): Rgb {
   const alpha = Math.min(1, Math.max(0, source.a));
   return {
@@ -43,11 +43,11 @@ export function compositeOver(source: Rgba, backdrop: Rgb): Rgb {
 export type StyleReader = (element: Element) => CSSStyleDeclaration;
 
 export interface BackgroundResolution {
-  /** Composited opaque background, or null when undecidable. */
+
   color: Rgb | null;
-  /** The ancestor that supplied the opaque base, or null for the canvas. */
+
   baseElement: Element | null;
-  /** Set when the background could not be decided. */
+
   blocker: string | null;
   notes: string[];
 }
@@ -63,10 +63,10 @@ function describe(element: Element): string {
   return id ? `${tag}#${id}` : tag;
 }
 
-/**
- * Walks from `element` outward compositing background colors until an opaque
- * one is reached, or the document canvas (treated as white, and noted).
- */
+
+
+
+
 export function resolveBackground(element: Element, getStyle: StyleReader): BackgroundResolution {
   const notes: string[] = [];
   const layers: Rgba[] = [];
@@ -151,8 +151,8 @@ export function resolveBackground(element: Element, getStyle: StyleReader): Back
     notes.push('No opaque background was found, so the page canvas was treated as white.');
   }
 
-  // layers[0] is the innermost. Composite outermost first so the nearest
-  // background ends up on top.
+
+
   let composited: Rgb = base;
   for (let i = layers.length - 1; i >= 0; i -= 1) {
     composited = compositeOver(layers[i] as Rgba, composited);
@@ -181,13 +181,13 @@ function coveringMedia(wrapper: Element, x: number, y: number): Element | null {
 }
 const HOST_TAG = 'design-inspector-host';
 
-/**
- * Ancestors are not the whole story: a hero video or an absolutely positioned
- * image can sit behind text without being one of its ancestors (superpower.com
- * paints white text over a video that is a sibling). Samples the stack of
- * elements under the text's center and reports the first non-ancestor that
- * paints something before the opaque base is reached.
- */
+
+
+
+
+
+
+
 export function paintedBehind(
   element: Element,
   baseElement: Element | null,
@@ -216,8 +216,8 @@ export function paintedBehind(
     const tag = candidate.tagName.toLowerCase();
     if (tag === HOST_TAG || candidate.closest(HOST_TAG)) continue;
     if (PAINTED_TAGS.has(tag)) return `${describe(candidate)} is painted behind this text and is not one of its ancestors.`;
-    // Media with pointer-events: none never shows up in the hit-test stack, but
-    // its wrapper does. Look inside the wrapper for media covering the point.
+
+
     const media = coveringMedia(candidate, x, y);
     if (media) return `${describe(media)} is painted behind this text and is not one of its ancestors.`;
     let style: CSSStyleDeclaration;
@@ -238,28 +238,28 @@ export function paintedBehind(
 }
 
 export interface PickedContrast {
-  /** WCAG 2.x ratio between the text color and the picked pixel. */
+
   ratio: number;
-  /** The two colors used, after alpha composition. */
+
   foreground: string;
   background: string;
 }
 
-/**
- * Contrast against a pixel the user picked with the eyedropper (PRD SUR-03's
- * future case, competitive Tier 2 item 3).
- *
- * The picked pixel is what the screen already shows, so it is the backdrop:
- * the text color is composited over it with its own alpha before the ratio is
- * taken, exactly as `computeContrast` does for a derived background. A picked
- * value carrying alpha cannot happen with the native picker, which always
- * reports an opaque `sRGBHex`; if one arrives anyway it is composited over
- * white rather than treated as opaque.
- *
- * Returns null when either color cannot be parsed. This is panel state and not
- * a reading: the caller labels it as user supplied and leaves the snapshot's
- * own `contrast` field untouched.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 export function contrastAgainstPicked(
   text: ColorValue,
   picked: ColorValue,
@@ -283,10 +283,10 @@ export function contrastAgainstPicked(
 
 const UNAVAILABLE = 'Contrast unavailable for this background.';
 
-/**
- * Builds the contrast reading for text on `element`. `foreground` is the
- * element's own computed text color.
- */
+
+
+
+
 export function computeContrast(
   element: Element,
   foreground: ColorValue,

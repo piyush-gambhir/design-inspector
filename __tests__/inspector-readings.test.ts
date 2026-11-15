@@ -100,8 +100,8 @@ describe('buildSnapshot', () => {
   });
 
   it('upgrades a matched family to verified only when the canvas says it rendered (TYP-02)', () => {
-    // The weight is set explicitly: jsdom's default stylesheet makes an h1
-    // bold, and a 400 face does not cover 700.
+
+
     document.body.innerHTML =
       '<h1 id="heading" style="font-family: Satoshi, serif; font-weight: 400">Hi</h1>';
     const fonts: DocumentFontsResult = {
@@ -120,8 +120,8 @@ describe('buildSnapshot', () => {
       limitations: [],
     };
 
-    // A canvas that says the family paints at a different width than either
-    // fallback. That measurement is the whole of the evidence for `verified`.
+
+
     const original = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = function stub(this: HTMLCanvasElement) {
       return {
@@ -135,7 +135,7 @@ describe('buildSnapshot', () => {
     try {
       resetRenderCheckCache();
       const shallow = buildSnapshot(pick('#heading'), { deep: false, fonts });
-      // Hover never pays for the measurement, so it never claims verified.
+
       expect(shallow.typography?.renderCheck ?? null).toBeNull();
       expect(shallow.typography?.familyConfidence).toBe('matched');
 
@@ -181,7 +181,7 @@ describe('buildSnapshot', () => {
     document.body.innerHTML =
       '<h1 id="wrapped" style="font-size: 40px"><span id="inner" style="font-size: 12px">Wrapped</span></h1>';
     const snapshot = buildSnapshot(pick('#wrapped'), { deep: false });
-    // The reading is the container's own computed style, as selected.
+
     expect(snapshot.typography?.sizePx).toBe(40);
     expect(
       snapshot.limitations.some(
@@ -268,7 +268,7 @@ describe('findSourceExpressions', () => {
         item: (index: number) => properties[index] ?? null,
         getPropertyValue: (property: string) => declarations[property] ?? '',
       },
-      // Modern engines expose cssRules on style rules too, for CSS nesting.
+
       cssRules: { length: 0 },
     };
   }

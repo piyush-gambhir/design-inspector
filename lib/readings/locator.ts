@@ -1,15 +1,15 @@
-// Element identity: readable labels, roles, and best-effort CSS locators
-// (PRD INS-04, SUM-06).
-//
-// The locator is context, not a promise of rediscovery. Generated class names
-// are never used as the user-facing label, because they change between builds
-// (PRD INS-04).
+
+
+
+
+
+
 
 import type { ElementDescriptor } from '../contracts';
 
 const EXTENSION_HOST_TAG = 'design-inspector-host';
 
-/** Implied roles we are willing to state. Landmarks plus unambiguous widgets. */
+
 const IMPLIED_ROLES: Record<string, string> = {
   nav: 'navigation',
   main: 'main',
@@ -37,14 +37,14 @@ const IMPLIED_ROLES: Record<string, string> = {
   textarea: 'textbox',
 };
 
-/** Emotion, styled-components, CSS modules, and friends announce themselves. */
+
 const FRAMEWORK_PREFIX = /^(sc|css|jsx|svelte|emotion|chakra|mui|_)[-_]/i;
 
-/**
- * True when one alphanumeric run reads as a hash rather than a word: letters
- * mixed with digits, a long digit string, or case salad that is neither
- * camelCase nor PascalCase (`cVAQDa`, `MwJdiW`).
- */
+
+
+
+
+
 function looksHashed(run: string): boolean {
   if (run.length < 5) return false;
   const hasDigit = /[0-9]/.test(run);
@@ -58,23 +58,23 @@ function looksHashed(run: string): boolean {
   return !camel && !pascal;
 }
 
-/**
- * True when a class name looks build generated: a CSS-modules or styled hash,
- * or an Emotion/styled-components prefix. Such names are never shown as labels.
- */
+
+
+
+
 export function isGeneratedClass(className: string): boolean {
   const name = className.trim();
   if (!name) return true;
   if (name.startsWith('_')) return true;
   if (FRAMEWORK_PREFIX.test(name)) return true;
-  // CSS-modules output: `Block__element___hash` and `Name-module__part`.
+
   if (/__[A-Za-z0-9]{5,}/.test(name)) return true;
   if (/-module_/.test(name)) return true;
 
   return name.split(/[^A-Za-z0-9]+/).some(looksHashed);
 }
 
-/** True when an id looks build generated and should not anchor a label. */
+
 export function isGeneratedId(id: string): boolean {
   return isGeneratedClass(id);
 }
@@ -85,7 +85,7 @@ export function classList(element: Element): string[] {
   return attribute.split(/\s+/).filter((name) => name.length > 0);
 }
 
-/** The element's role: explicit attribute first, then a conservative implied role. */
+
 export function roleOf(element: Element): string | null {
   const explicit = element.getAttribute('role');
   if (explicit) {
@@ -113,14 +113,14 @@ export function roleOf(element: Element): string | null {
   return IMPLIED_ROLES[tag] ?? null;
 }
 
-/** Direct, non-whitespace text of the element, collapsed and capped. */
+
 export function textSample(element: Element, limit = 80): string | null {
   const text = (element.textContent ?? '').replace(/\s+/g, ' ').trim();
   if (!text) return null;
   return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
 }
 
-/** True when the element has a direct, non-whitespace text node child (PRD SUM-02). */
+
 export function hasOwnText(element: Element): boolean {
   for (const node of Array.from(element.childNodes)) {
     if (node.nodeType === 3 && (node.nodeValue ?? '').trim().length > 0) return true;
@@ -128,25 +128,25 @@ export function hasOwnText(element: Element): boolean {
   return false;
 }
 
-/** A label's text sample stays short so a sentence never becomes the label. */
+
 const LABEL_TEXT_SAMPLE = 12;
 
-/**
- * A short human label, in order of preference: an authored `#id`, a role the
- * tag does not already imply, `aria-label`, an authored class, then the tag
- * plus a short text sample: `h1#firstHeading`, `div[role="tablist"]`,
- * `nav[aria-label="Main"]`, `section.hero`, `button "Get started"`.
- *
- * Generated class names never become the label, because a hashed name is
- * meaningless to the reader and changes between builds (PRD INS-04).
- */
+
+
+
+
+
+
+
+
+
 export function labelOf(element: Element): string {
   const tag = element.tagName.toLowerCase();
 
   const id = element.getAttribute('id');
   if (id && !isGeneratedId(id)) return `${tag}#${id}`;
 
-  // Only an explicit role the tag does not already imply adds information.
+
   const explicitRole = (element.getAttribute('role') ?? '').trim().split(/\s+/)[0];
   if (explicitRole && explicitRole !== IMPLIED_ROLES[tag]) {
     return `${tag}[role="${explicitRole.slice(0, 40)}"]`;
@@ -168,8 +168,8 @@ export function labelOf(element: Element): string {
   const testId = element.getAttribute('data-testid');
   if (testId && !isGeneratedId(testId)) return `${tag}[data-testid="${testId.slice(0, 40)}"]`;
 
-  // Only an element that renders text of its own is labelled by that text; a
-  // wrapper is not named after whatever happens to sit inside it.
+
+
   if (hasOwnText(element)) {
     const text = textSample(element, LABEL_TEXT_SAMPLE);
     if (text) return `${tag} "${text}"`;
@@ -204,11 +204,11 @@ function nthOfType(element: Element, indices?: WeakMap<Element, number>): number
   return index;
 }
 
-/**
- * Best-effort CSS path. Prefers a unique `#id`, otherwise builds an
- * `:nth-of-type` chain back to the nearest ancestor with a usable id, or to
- * `body`. Optional sibling indices belong to one scan snapshot, never a global cache.
- */
+
+
+
+
+
 export function buildLocator(element: Element, indices?: WeakMap<Element, number>): string {
   const doc = element.ownerDocument;
   const id = element.getAttribute('id');
@@ -217,7 +217,7 @@ export function buildLocator(element: Element, indices?: WeakMap<Element, number
     try {
       if (doc && doc.querySelectorAll(selector).length === 1) return selector;
     } catch {
-      // Fall through to the structural path.
+
     }
   }
 
@@ -249,7 +249,7 @@ export function buildLocator(element: Element, indices?: WeakMap<Element, number
 
     const parent: Element | null = current.parentElement;
     if (!parent) {
-      // Detached, or the top of a shadow tree.
+
       break;
     }
     current = parent;
@@ -270,15 +270,15 @@ export function describeElement(element: Element): ElementDescriptor {
   };
 }
 
-/**
- * Ancestor chain from the element's parent up to `body`. Wrappers whose rect
- * matches their only element child are marked redundant so the breadcrumb can
- * hide them, while ArrowUp still walks through every level (PRD INS-04).
- */
+
+
+
+
+
 export interface AncestorEntry {
   element: Element;
   descriptor: ElementDescriptor;
-  /** True when the element has one element child with the same box. */
+
   redundant: boolean;
 }
 
@@ -298,8 +298,8 @@ export function collectAncestors(
       try {
         const own = measure(current);
         const child = measure(current.children[0] as Element);
-        // A collapsed box is not "the same box as its child" in any useful
-        // sense, and treating it as redundant would empty the breadcrumb.
+
+
         redundant =
           own.width > 0 &&
           own.height > 0 &&

@@ -1,4 +1,4 @@
-// Typed sample snapshots used by the export and aggregation tests.
+
 import type {
   ColorValue,
   Corners,
@@ -31,7 +31,7 @@ export const source: SourceContext = {
   scrollY: 240,
 };
 
-/** A hero heading: fallback stack, lossy oklch text color, no surfaces. */
+
 export const headingSnapshot: ElementSnapshot = {
   id: 'snapshot-heading',
   schemaVersion: SCHEMA_VERSION,
@@ -127,7 +127,7 @@ export const headingSnapshot: ElementSnapshot = {
   limitations: ['Pseudo-element styles were not read for this element.'],
 };
 
-/** A translucent card: two shadows, unequal radii, a filter, and a gradient. */
+
 export const cardSnapshot: ElementSnapshot = {
   id: 'snapshot-card',
   schemaVersion: SCHEMA_VERSION,
@@ -213,7 +213,7 @@ export const cardSnapshot: ElementSnapshot = {
   limitations: [],
 };
 
-/** A grid container with an authored max-width expression and negative margins. */
+
 export const gridSnapshot: ElementSnapshot = {
   id: 'snapshot-grid',
   schemaVersion: SCHEMA_VERSION,

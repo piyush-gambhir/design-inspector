@@ -1,11 +1,11 @@
-// Two saved summaries side by side (competitive Tier 2 item 5, PRD 4 Phase 3).
-//
-// The header states both sources, capture times and viewports, because the most
-// useful comparison is the same site at two widths and the only thing that
-// distinguishes those two readings is their viewport.
-//
-// Nothing here recomputes a reading: both sides are the snapshots exactly as
-// they were saved.
+
+
+
+
+
+
+
+
 import { useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import type { PageSummary, SavedReference } from '@/lib/contracts';
@@ -49,8 +49,8 @@ function SourceColumn({
         {reference.title || 'Untitled reference'}
       </p>
       <p className="mt-0.5 value-cell text-[12px] text-muted-foreground">{summary.source.url}</p>
-      {/* The same local, readable stamp the rest of the panel uses; the ISO
-          string is for exports, not for a 320px column. */}
+      {
+                                                           }
       <p className="text-[12px] text-muted-foreground">
         Captured {formatCapturedAt(summary.source.capturedAt)}
       </p>

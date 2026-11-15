@@ -13,7 +13,7 @@ import {
 import { artifactPath } from './helpers/artifacts';
 import { waitForOverlayIdle } from './helpers/timing';
 
-/** A 1x1 PNG, served for the two image paths the fixture references. */
+
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
   'base64',
@@ -25,8 +25,8 @@ let session: ExtensionSession;
 let control: Page;
 
 test.beforeAll(async () => {
-  // The fixture's own server: it serves the HTML and two real images, and
-  // answers everything else with 404 so the export has something to skip.
+
+
   server = createServer(async (request, response) => {
     const name = path.basename(new URL(request.url ?? '/', 'http://x').pathname);
     if (name === 'swatch.png' || name === 'tile.png') {
@@ -41,7 +41,7 @@ test.beforeAll(async () => {
         response.end(body);
         return;
       } catch {
-        // Fall through to the 404 below.
+
       }
     }
     response.statusCode = 404;
@@ -60,7 +60,7 @@ test.afterAll(async () => {
   await new Promise<void>((resolve) => server?.close(() => resolve()));
 });
 
-/** Reads an archive through its central directory, as an unzip tool would. */
+
 function readZip(bytes: Buffer): Map<string, Buffer> {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let end = bytes.byteLength - 22;
@@ -88,11 +88,11 @@ function readZip(bytes: Buffer): Map<string, Buffer> {
   return files;
 }
 
-/**
- * Where the browser put the last download. chrome.downloads.download is an API
- * call rather than a page navigation, so Playwright's own download event does
- * not always fire for it; the download manager always knows.
- */
+
+
+
+
+
 async function lastDownloadPath(worker: Worker): Promise<string> {
   const deadline = Date.now() + 20_000;
   for (;;) {
@@ -118,22 +118,22 @@ test.describe('assets tab', () => {
     const panel = await session.context.newPage();
     await panel.goto(`chrome-extension://${session.extensionId}/sidepanel.html`);
     await panel.setViewportSize({ width: 420, height: 900 });
-    // The panel reads the active tab, and opening it made the panel's own tab
-    // active, so the fixture has to be put back in front afterwards.
+
+
     await session.worker.evaluate(async (id) => {
       await chrome.tabs.update(id, { active: true });
     }, tabId);
-    // The panel renders its tab strip once it has resolved the active tab, so
-    // the Assets tab being there is the condition to wait for.
+
+
     await expect(panel.getByRole('tab', { name: /assets/i })).toBeEnabled();
 
     await panel.getByRole('tab', { name: /assets/i }).click();
     await panel.getByRole('button', { name: /list assets/i }).click();
 
-    // Every kind the fixture contains shows up, video and its poster included.
-    // The chip puts its count in its own element, so whether a space falls
-    // between the label and the number is a styling decision, not a claim this
-    // test should be making.
+
+
+
+
     const chips = panel.getByRole('group', { name: 'Filter assets by type' });
     await expect(chips.getByRole('button', { name: /^Images/ })).toHaveText(/^Images\s*3$/);
     await expect(chips.getByRole('button', { name: /^SVG/ })).toHaveText(/^SVG\s*1$/);
@@ -141,7 +141,7 @@ test.describe('assets tab', () => {
     await expect(chips.getByRole('button', { name: /^Video/ })).toHaveText(/^Video\s*1$/);
     await expect(panel.getByText('Used 3 times')).toBeVisible();
 
-    // Filtering to Images leaves only the three image rows.
+
     await chips.getByRole('button', { name: /^Images/ }).click();
     await expect(chips.getByRole('button', { name: /^Images/ })).toHaveAttribute(
       'aria-pressed',
@@ -159,8 +159,8 @@ test.describe('assets tab', () => {
     await waitForOverlayIdle(panel);
     await panel.screenshot({ path: artifactPath('di-p-assets.png') });
 
-    // Playwright's own download event is preferred; the download manager is
-    // the fallback because chrome.downloads.download is not page-initiated.
+
+
     const downloadEvent = panel
       .waitForEvent('download', { timeout: 15_000 })
       .catch(() => null);
@@ -171,11 +171,11 @@ test.describe('assets tab', () => {
     expect(file).toBeTruthy();
     const bytes = await readFile(file as string);
 
-    // A ZIP, byte for byte.
+
     expect([...bytes.subarray(0, 2)]).toEqual([0x50, 0x4b]);
-    // The archive travels as a blob URL, so the name Chrome offers the download
-    // layer is a generated one; the name the panel asked for is the one it
-    // reports, and chrome.downloads applies it when writing the file.
+
+
+
     const today = new Date().toISOString().slice(0, 10);
     await expect(panel.getByText(`design-inspector-assets-${today}.zip`)).toBeVisible();
 
@@ -186,7 +186,7 @@ test.describe('assets tab', () => {
     expect(manifest.skipped).toHaveLength(1);
     expect(manifest.skipped[0].source).toContain('missing.png');
     expect(manifest.skipped[0].reason).toContain('404');
-    // The two that worked are really in the archive.
+
     expect([...files.keys()]).toContain('1-swatch.png');
     expect(files.size).toBe(3);
 

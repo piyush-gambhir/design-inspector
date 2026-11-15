@@ -1,13 +1,13 @@
-// Stack evidence gathering (PRD STK-01, STK-03). The content script only
-// observes; the pure signature table decides what counts as a detection.
-//
-// The isolated world cannot read the page's own window object, so `globals`
-// arrives from the background worker's MAIN-world probe and is passed straight
-// through. Response headers are out of scope in V1.
+
+
+
+
+
+
 
 import type { PageEvidence } from '../readings/stack-signatures';
 
-/** Fixed probe list. Each selector that matches becomes one dom-marker. */
+
 export const DOM_PROBES: readonly string[] = [
   '#__next',
   '#__nuxt',
@@ -110,7 +110,7 @@ function importUrls(doc: Document): string[] {
   return out;
 }
 
-/** Observable evidence for stack detection. Never throws. */
+
 export function gatherEvidence(globals: string[] = [], doc: Document = document): PageEvidence {
   const baseUrl = doc.baseURI;
 
@@ -128,7 +128,7 @@ export function gatherEvidence(globals: string[] = [], doc: Document = document)
       if (id) inlineScriptIds.push(id);
     });
   } catch {
-    // Leave the lists as they are.
+
   }
 
   const stylesheetUrls: string[] = [];
@@ -142,7 +142,7 @@ export function gatherEvidence(globals: string[] = [], doc: Document = document)
       else linkUrls.push(resolved);
     });
   } catch {
-    // Leave the lists as they are.
+
   }
   stylesheetUrls.push(...importUrls(doc));
 
@@ -154,7 +154,7 @@ export function gatherEvidence(globals: string[] = [], doc: Document = document)
       if (name && content !== null) meta.push({ name, content });
     });
   } catch {
-    // Leave the list as it is.
+
   }
 
   const domMarkers: string[] = [];
@@ -162,7 +162,7 @@ export function gatherEvidence(globals: string[] = [], doc: Document = document)
     try {
       if (doc.querySelector(probe)) domMarkers.push(probe);
     } catch {
-      // An unsupported selector is simply not evidence.
+
     }
   }
 

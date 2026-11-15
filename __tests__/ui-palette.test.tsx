@@ -83,7 +83,7 @@ describe('PaletteView', () => {
   it('shows one row per cluster with its hex, count and roles as text', async () => {
     const container = await render(<PaletteView colors={colors} tabId={1} />);
 
-    // The two near-black values read as one swatch carrying both roles.
+
     expect(container.textContent).toContain('3 swatches from 4 measured values');
     expect(container.textContent).toContain('#0a0a0a');
     expect(container.textContent).toContain('x48');
@@ -149,7 +149,7 @@ describe('PaletteView', () => {
 
     expect(disclosure).toBeDefined();
     expect(disclosure?.open).toBe(false);
-    // Closed, but still rendered: the exact values are never thrown away.
+
     expect(disclosure?.textContent).toContain('#0b0b0c');
   });
 
@@ -162,8 +162,8 @@ describe('PaletteView', () => {
 
 describe('PaletteView with stored clusters (F11)', () => {
   it('uses the summary clusters as they are when no role is filtered', async () => {
-    // A stored answer that could not have been computed from `colors`, so the
-    // test can tell which one the view used.
+
+
     const stored = clusterPalette(colors).slice(0, 1);
     const container = await render(
       <PaletteView colors={colors} tabId={1} clusters={stored} />,
@@ -180,8 +180,8 @@ describe('PaletteView with stored clusters (F11)', () => {
     await act(async () => {
       chip(container, 'Background')?.click();
     });
-    // Filtered to one background value, which the stored clusters do not
-    // describe, so the view clustered the filtered list itself.
+
+
     expect(container.textContent).toContain('1 swatch from 1 measured value');
     expect(container.textContent).toContain('#e11d48');
   });

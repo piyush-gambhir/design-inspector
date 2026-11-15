@@ -1,34 +1,34 @@
-// The measurement engine behind e2e/perf-profile.spec.ts and `pnpm perf`.
-//
-// What it does, and why it is built this way:
-//
-//   CDP Performance.getMetrics is the only source that separates script time
-//   from style and layout time for a whole renderer, and the inspector's
-//   content script shares the page's renderer, so its cost lands in the same
-//   counters. Every window is a fixed wall-clock slice, and every number is
-//   reported as a rate per second so the windows compare directly.
-//
-//   Long tasks come from a PerformanceObserver installed in the page's main
-//   world before anything else. Long tasks are per-frame, not per-world, so a
-//   main-world observer sees the content script's tasks too.
-//
-//   Live timers are counted in BOTH worlds. The page's main world is wrapped
-//   from an init script; the extension's isolated world is wrapped by injecting
-//   the same wrapper through chrome.scripting.executeScript before the
-//   inspector is ever switched on, which lands in the very world the content
-//   script later boots into. The isolated-world numbers are the extension's
-//   alone, which is what the budget is about; the main-world numbers are the
-//   page's own noise and are reported only as context.
-//
-//   Heap is sampled after an explicit HeapProfiler.collectGarbage on both ends
-//   of a window, so a delta is a retained-bytes delta and not a GC artefact.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import type { BrowserContext, CDPSession, Page, Worker } from '@playwright/test';
 import { sendBackground, tabIdFor, type ExtensionSession } from './extension';
 
 export const DEFAULT_WINDOW_MS = 10_000;
 
-/** A 2x2 transparent PNG: enough to be a real mockup layer, no decode cost. */
+
 export const TINY_PNG =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAACZgbYnAAAAFElEQVR4' +
   'AWP8//8/AzJgYmBgYAAAHAAD/1lC1wAAAABJRU5ErkJggg==';
@@ -36,39 +36,39 @@ export const TINY_PNG =
 export interface WindowSample {
   id: string;
   name: string;
-  /** Wall-clock length of the window, in ms. */
+
   windowMs: number;
-  /** CDP renderer counters, in ms accumulated over the window. */
+
   taskMs: number;
   scriptMs: number;
   layoutMs: number;
   styleMs: number;
   layoutCount: number;
   styleCount: number;
-  /** Long tasks recorded by the page's PerformanceObserver during the window. */
+
   longTasks: number;
   maxLongTaskMs: number;
-  /** Heap retained at the end minus at the start, both after a forced GC. */
+
   heapDeltaMb: number;
   heapEndMb: number;
-  /** Extension isolated world: handles still alive when the window ended. */
+
   extLiveTimeouts: number;
   extLiveIntervals: number;
-  /** Extension isolated world: registrations made during the window. */
+
   extRafCalls: number;
   extTimeoutCalls: number;
-  /** Page main world, for context only. */
+
   pageLiveTimeouts: number;
   pageLiveIntervals: number;
   pageRafCalls: number;
-  /** Nodes added anywhere inside the inspector's shadow root during the window. */
+
   shadowNodesAdded: number;
-  /**
-   * Nodes added to the ruler tick strips specifically. This is the number the
-   * "transform only" budget is about: the box highlight and the ruler's accent
-   * marks legitimately follow the element as the page scrolls under them, so
-   * counting every node in the shadow root would conflate the two.
-   */
+
+
+
+
+
+
   tickNodesAdded: number;
 }
 
@@ -76,15 +76,15 @@ export interface TargetProfile {
   label: string;
   url: string;
   windows: WindowSample[];
-  /** Scan measurements, only taken on the fixture target. */
+
   scan: ScanSample | null;
-  /** What the side panel itself costs once its summary has arrived. */
+
   panel: PanelSample | null;
   teardown: TeardownCheck;
 }
 
 export interface PanelSample {
-  /** Elements in the panel document with the Summary tab rendered. */
+
   nodes: number;
   heapMb: number;
   summaryComplete: boolean;
@@ -96,7 +96,7 @@ export interface ScanSample {
   longTasks: number;
   maxLongTaskMs: number;
   scannedElements: number;
-  /** Heap after the summary was delivered, minus the idle-inspector baseline. */
+
   heapDeltaMb: number;
 }
 
@@ -108,19 +108,19 @@ export interface TeardownCheck {
   extLiveIntervals: number;
 }
 
-// ---------------------------------------------------------------------------
-// Probe source. One string, installed in both worlds.
 
-/**
- * Wraps the scheduling globals of whatever realm it runs in and records both
- * the handles still alive and the registrations made since the last reset.
- *
- * Written as a plain, self-contained function with no TypeScript in its body:
- * it is used three ways. Playwright serialises it for `addInitScript` (the
- * page's main world), and its `toString()` is inlined into the source that
- * `chrome.scripting.executeScript` injects (the extension's isolated world).
- * Nothing outside the body may be referenced.
- */
+
+
+
+
+
+
+
+
+
+
+
+
 export function installProbe(): string {
   const w = globalThis as unknown as Record<string, unknown> & typeof globalThis;
   if ((w as { __diPerfProbe?: unknown }).__diPerfProbe) return 'already';
@@ -213,7 +213,7 @@ export function installProbe(): string {
   return 'installed';
 }
 
-/** Long-task recorder and shadow-root mutation counter, page world only. */
+
 export function installObservers(): void {
   const w = window as unknown as Record<string, unknown>;
   if (w.__diPerfTasks) return;
@@ -259,8 +259,8 @@ export function installObservers(): void {
   };
 }
 
-// ---------------------------------------------------------------------------
-// CDP helpers
+
+
 
 interface Counters {
   timestamp: number;
@@ -278,7 +278,7 @@ async function readCounters(cdp: CDPSession, gc: boolean): Promise<Counters> {
     try {
       await cdp.send('HeapProfiler.collectGarbage');
     } catch {
-      // Without a forced GC the heap delta is noisier, not wrong.
+
     }
   }
   const { metrics } = await cdp.send('Performance.getMetrics');
@@ -314,7 +314,7 @@ const EMPTY_PROBE: ProbeReading = {
   rafCalls: 0,
 };
 
-/** Read the wrapper counters inside the extension's own isolated world. */
+
 async function readExtensionProbe(worker: Worker, tabId: number): Promise<ProbeReading> {
   const result = await worker.evaluate(async (id: number) => {
     try {
@@ -346,18 +346,18 @@ async function resetExtensionProbe(worker: Worker, tabId: number): Promise<void>
         },
       });
     } catch {
-      // A page the worker cannot script reports zeros, which the table shows.
+
     }
   }, tabId);
 }
 
-/**
- * Install the wrapper in the isolated world the content script will boot into.
- *
- * The installer's source is inlined into the expression the service worker
- * evaluates, so `chrome.scripting.executeScript` receives a real function
- * object and nothing anywhere calls eval: an MV3 worker's own CSP forbids it.
- */
+
+
+
+
+
+
+
 export async function installExtensionProbe(worker: Worker, tabId: number): Promise<boolean> {
   const expression = `(async () => {
     try {
@@ -374,8 +374,8 @@ export async function installExtensionProbe(worker: Worker, tabId: number): Prom
   return worker.evaluate(expression) as Promise<boolean>;
 }
 
-// ---------------------------------------------------------------------------
-// Window runner
+
+
 
 interface RunContext {
   page: Page;
@@ -392,10 +392,10 @@ async function readPageProbe(page: Page): Promise<ProbeReading> {
   }) as Promise<ProbeReading>;
 }
 
-/**
- * Run one measurement window. `during` is awaited inside the window; anything
- * it does not consume is spent idle, so a window is always `windowMs` long.
- */
+
+
+
+
 async function measureWindow(
   ctx: RunContext,
   id: string,
@@ -479,12 +479,12 @@ async function measureWindow(
   };
 }
 
-// ---------------------------------------------------------------------------
-// The nine windows
+
+
 
 const STILL_POINT = { x: 620, y: 420 };
 
-/** Pointer moves at 60 a second for the length of the window. */
+
 async function continuousHover(ctx: RunContext): Promise<void> {
   const cdp = ctx.cdp;
   const steps = Math.round((ctx.windowMs / 1000) * 60);
@@ -500,11 +500,11 @@ async function continuousHover(ctx: RunContext): Promise<void> {
   }
 }
 
-/**
- * Wheel scrolling at 60 steps a second, dispatched as real input so no page
- * script runs: a scroll driven by page.evaluate would charge its own cost to
- * the extension's column.
- */
+
+
+
+
+
 async function continuousScroll(ctx: RunContext): Promise<void> {
   const cdp = ctx.cdp;
   const steps = Math.round((ctx.windowMs / 1000) * 60);
@@ -531,9 +531,9 @@ export interface ProfileOptions {
   url: string;
   label: string;
   windowMs?: number;
-  /** Fixture targets also measure the scan; real pages do not. */
+
   measureScan?: boolean;
-  /** Opens a side panel page for window H. */
+
   openPanel: (tabId: number) => Promise<Page>;
   log?: (line: string) => void;
 }
@@ -551,7 +551,7 @@ export async function profileTarget(options: ProfileOptions): Promise<TargetProf
   await page.addInitScript(installObservers);
   await page.addInitScript(installProbe);
   await page.goto(url, { waitUntil: 'load' });
-  // Let the page's own load work drain before the baseline window opens.
+
   await page.waitForTimeout(2_000);
 
   const tabId = await tabIdFor(session.worker, page);
@@ -560,7 +560,7 @@ export async function profileTarget(options: ProfileOptions): Promise<TargetProf
   try {
     await cdp.send('HeapProfiler.enable');
   } catch {
-    // Forced GC is an accuracy aid, not a requirement.
+
   }
   await cdp.send('Input.dispatchMouseEvent', {
     type: 'mouseMoved',
@@ -591,20 +591,20 @@ export async function profileTarget(options: ProfileOptions): Promise<TargetProf
     return sample;
   };
 
-  // --- A: nothing activated -------------------------------------------------
+
   await record('A', 'Idle, extension never activated');
 
-  // The wrapper goes into the extension's isolated world before the content
-  // script has ever run there, so it sees every handle the inspector opens.
+
+
   const installed = await installExtensionProbe(session.worker, tabId);
   if (!installed) log(`[perf] ${label} WARNING: isolated-world probe not installed`);
 
-  // --- B: inspector active, pointer still ----------------------------------
+
   await sendBackground(control, { type: 'inspector.toggle', tabId });
   await page.waitForTimeout(500);
   const idleB = await record('B', 'Inspector active, pointer still, nothing pinned');
 
-  // --- C: element pinned ----------------------------------------------------
+
   await cdp.send('Input.dispatchMouseEvent', {
     type: 'mousePressed',
     x: STILL_POINT.x,
@@ -624,24 +624,24 @@ export async function profileTarget(options: ProfileOptions): Promise<TargetProf
   await page.waitForTimeout(500);
   await record('C', 'Inspector active, element pinned, pointer still');
 
-  // Unpin: hover is suppressed while something is pinned, so window D needs
-  // the selection released first.
+
+
   await page.keyboard.press('Escape');
   await page.waitForTimeout(300);
 
-  // --- D: continuous hover --------------------------------------------------
+
   await record('D', 'Continuous hover, 60 pointer moves a second', continuousHover, {
     watchShadowTag: HOST_TAG,
   });
 
-  // --- E: layout outlines on ------------------------------------------------
+
   await sendBackground(control, { type: 'outlines.set', tabId, mode: 'tag' });
   await page.waitForTimeout(500);
   await record('E', 'Layout outlines on, pointer still');
   await sendBackground(control, { type: 'outlines.set', tabId, mode: 'off' });
   await page.waitForTimeout(300);
 
-  // --- F: rulers on, page scrolling ----------------------------------------
+
   await sendBackground(control, { type: 'tools.set', tabId, tools: { rulers: true } });
   await page.waitForTimeout(500);
   await record('F', 'Rulers on, scrolling 60 steps a second', continuousScroll, {
@@ -650,7 +650,7 @@ export async function profileTarget(options: ProfileOptions): Promise<TargetProf
   await sendBackground(control, { type: 'tools.set', tabId, tools: { rulers: false } });
   await page.waitForTimeout(300);
 
-  // --- G: mockup on, unlocked ----------------------------------------------
+
   await sendBackground(control, {
     type: 'mockup.set',
     tabId,
@@ -670,7 +670,7 @@ export async function profileTarget(options: ProfileOptions): Promise<TargetProf
   await sendBackground(control, { type: 'mockup.set', tabId, mockup: null });
   await page.waitForTimeout(300);
 
-  // --- H: side panel open with a completed summary -------------------------
+
   const panel = await openPanel(tabId);
   let panelReady = false;
   try {
@@ -691,8 +691,8 @@ export async function profileTarget(options: ProfileOptions): Promise<TargetProf
       : 'Side panel open (summary did not complete), pointer still',
   );
 
-  // The panel runs in its own renderer, so its cost never shows up in the
-  // page's counters. It is measured separately rather than left unmeasured.
+
+
   let panelSample: PanelSample | null = null;
   try {
     const panelCdp = await session.context.newCDPSession(panel);
@@ -701,7 +701,7 @@ export async function profileTarget(options: ProfileOptions): Promise<TargetProf
       await panelCdp.send('HeapProfiler.enable');
       await panelCdp.send('HeapProfiler.collectGarbage');
     } catch {
-      // Forced GC is an accuracy aid, not a requirement.
+
     }
     const { metrics } = await panelCdp.send('Performance.getMetrics');
     const heap = metrics.find((metric) => metric.name === 'JSHeapUsedSize')?.value ?? 0;
@@ -719,7 +719,7 @@ export async function profileTarget(options: ProfileOptions): Promise<TargetProf
   await panel.close();
   await page.waitForTimeout(300);
 
-  // --- Scan on the fixture --------------------------------------------------
+
   let scan: ScanSample | null = null;
   if (options.measureScan) {
     await page.evaluate(() => {
@@ -733,7 +733,7 @@ export async function profileTarget(options: ProfileOptions): Promise<TargetProf
       summary?: { scope: { durationMs: number; scannedElements: number } };
     }>(control, { type: 'summary.request', tabId });
     const roundTripMs = Date.now() - startedAt;
-    // Records are released on the next turn; give the heap a beat to settle.
+
     await page.waitForTimeout(1_500);
     const after = await readCounters(cdp, true);
     const tasks = await page.evaluate(
@@ -754,7 +754,7 @@ export async function profileTarget(options: ProfileOptions): Promise<TargetProf
     );
   }
 
-  // --- I: teardown ----------------------------------------------------------
+
   await sendBackground(control, { type: 'inspector.setMode', tabId, mode: 'off' });
   await page.waitForTimeout(500);
   await record('I', 'After setMode off, pointer still (teardown)');
@@ -780,8 +780,8 @@ export async function profileTarget(options: ProfileOptions): Promise<TargetProf
   return { label, url, windows, scan, panel: panelSample, teardown };
 }
 
-// ---------------------------------------------------------------------------
-// Budgets
+
+
 
 export interface BudgetFinding {
   window: string;
@@ -797,7 +797,7 @@ function rate(sample: WindowSample, value: number): number {
   return value / sample.windowMs;
 }
 
-/** Every budget in the spec, evaluated against one target's samples. */
+
 export function checkBudgets(profile: TargetProfile): BudgetFinding[] {
   const findings: BudgetFinding[] = [];
   const byId = new Map(profile.windows.map((sample) => [sample.id, sample]));
@@ -979,8 +979,8 @@ export function checkBudgets(profile: TargetProfile): BudgetFinding[] {
   return findings;
 }
 
-// ---------------------------------------------------------------------------
-// Reporting
+
+
 
 export function windowTable(profile: TargetProfile): string {
   const baseline = profile.windows.find((sample) => sample.id === 'A');

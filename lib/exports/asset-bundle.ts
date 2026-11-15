@@ -1,22 +1,22 @@
-// Bulk asset export (PRD AST-05).
-//
-// The bytes are fetched by whoever calls this, in an extension page that has
-// `chrome.downloads`, and every request goes out with `credentials: 'omit'` so
-// a bulk download never carries the user's cookies to an asset host (PRD 17.1
-// tells the user that downloading contacts each host; it must not do more).
-//
-// Three promises AST-05 makes and this module keeps: one failed asset never
-// loses the batch, every skipped item carries a reason, and the size cap stops
-// the run instead of exhausting memory.
+
+
+
+
+
+
+
+
+
+
 import type { AssetReading } from '@/lib/contracts';
 import { ZIP_MAX_ENTRY_BYTES, ZipWriter } from './zip';
 
 const MIB = 1024 * 1024;
 
-/** PRD AST-05 documented per-batch limit. */
+
 export const ASSET_BATCH_MAX_BYTES = 200 * MIB;
 
-/** Longest filename we put in the archive, extension included. */
+
 const MAX_BASENAME_LENGTH = 80;
 
 export interface AssetBundleManifest {
@@ -30,25 +30,25 @@ export interface AssetBundleResult {
   blob: Blob;
   filename: string;
   manifest: AssetBundleManifest;
-  /** True when the batch cap stopped the run before every asset was tried. */
+
   stoppedAtCap: boolean;
-  /** How many assets actually went into the archive. */
+
   writtenCount: number;
 }
 
 export interface AssetBundleOptions {
   extensionVersion: string;
   signal?: AbortSignal;
-  /** Called after each asset is handled, successfully or not. */
+
   onProgress?: (done: number, total: number) => void;
-  /** Injected by tests. Defaults to the global fetch. */
+
   fetchAsset?: (url: string, init: RequestInit) => Promise<Response>;
-  /** Lower than ASSET_BATCH_MAX_BYTES only. */
+
   maxBytes?: number;
   now?: Date;
 }
 
-/** Thrown when the caller's AbortController fires. Callers show it as a cancel. */
+
 export class AssetBundleCancelled extends Error {
   constructor() {
     super('The download was cancelled.');
@@ -56,12 +56,12 @@ export class AssetBundleCancelled extends Error {
   }
 }
 
-/**
- * One archive path per asset: `<index>-<basename>`, so the order in the panel
- * survives into the ZIP and two assets that share a basename never collide.
- * The numeric suffix is a second guard for the case where sanitizing two
- * different names produces the same text.
- */
+
+
+
+
+
+
 export function assetFilenames(assets: AssetReading[]): string[] {
   const used = new Set<string>();
   return assets.map((asset, index) => {
@@ -127,8 +127,8 @@ export async function buildAssetBundle(
       continue;
     }
     if (usedBytes + bytes.byteLength > maxBytes) {
-      // Stop rather than drop this one and carry on: the user asked for a
-      // batch, and a cap that silently skipped the big files would be a lie.
+
+
       stoppedAtCap = true;
       skipped.push({ path, source, reason: capReason(maxBytes) });
       options.onProgress?.(index + 1, assets.length);
@@ -162,7 +162,7 @@ export async function buildAssetBundle(
   };
 }
 
-// ---------------------------------------------------------------------------
+
 
 async function bytesFor(
   asset: AssetReading,
@@ -232,7 +232,7 @@ function lastSegment(url: string): string {
   }
 }
 
-/** Page-supplied text becomes one safe path segment, never a directory. */
+
 function sanitize(name: string): string {
   const flat = name.split(/[\\/]/).pop() ?? '';
   const cleaned = flat

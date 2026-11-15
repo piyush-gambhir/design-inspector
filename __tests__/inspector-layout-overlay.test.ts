@@ -86,7 +86,7 @@ describe('flexGapBands', () => {
   });
 
   it('skips a pair that does not share a line, and touching children', () => {
-    // Two wrapped lines: the second child starts a new row.
+
     const wrapped = [rect(0, 0, 100, 40), rect(0, 60, 100, 40)];
     expect(flexGapBands(wrapped, 'horizontal')).toEqual([]);
 

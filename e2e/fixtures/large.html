@@ -4,18 +4,18 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Design Inspector fixture: large DOM</title>
-    <!--
-      Performance fixture for PRD 19.1 and release gate 20.3 item 10.
 
-      The DOM is generated rather than written out: 6,000 elements of literal
-      markup is an unreviewable file, and the generator states the shape of the
-      page in ten lines. It runs synchronously in <body>, so the document is
-      complete before load fires and the scan sees the same page every run.
 
-      Everything is local. The images are data URLs, the type is a system stack,
-      and nothing animates: the only main-thread work during a measurement is
-      the extension's.
-    -->
+
+
+
+
+
+
+
+
+
+
     <script>
       // Installed before anything else so a long task during page construction
       // is recorded too, and the control run can subtract it.

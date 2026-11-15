@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ScanCancelled, startScan } from '../lib/inspector/scan';
 
-// jsdom computes no layout, so visibility and geometry are stubbed. Every
-// element with data-hidden="true" plays the part of a hidden element and every
-// element with data-empty="true" the part of a zero sized one.
+
+
+
 const originalCheckVisibility = (
   Element.prototype as unknown as { checkVisibility?: () => boolean }
 ).checkVisibility;

@@ -22,8 +22,8 @@ from fontTools.pens.ttGlyphPen import TTGlyphPen
 UPM = 1000
 ASCENT = 800
 DESCENT = -200
-# Wide on purpose: a face whose advances match the fallback measures the same
-# and would read as inconclusive rather than rendered.
+
+
 ADVANCE = 820
 
 HERE = Path(__file__).resolve().parent
@@ -83,8 +83,8 @@ def main() -> None:
         if name in glyphs:
             continue
         pen = TTGlyphPen(None)
-        # A plain stem, its height varying with the character so a line of this
-        # font is visibly a font and not a row of identical bars.
+
+
         top = 300 + (ord(character) % 5) * 100
         box(pen, 90, ADVANCE - 160, 0, top)
         glyphs[name] = pen.glyph()

@@ -5,10 +5,10 @@ import { buildReferenceBundle } from '@/lib/exports/bundle';
 import { cardSnapshot, elementReference, headingSnapshot } from './fixtures/snapshots';
 import { summaryReference } from './fixtures/summary';
 
-/**
- * Reads an archive through its central directory, the same way an unzip tool
- * does, so these tests check the bundle as a consumer would see it.
- */
+
+
+
+
 async function readZip(blob: Blob): Promise<Map<string, string>> {
   const bytes = new Uint8Array(await blob.arrayBuffer());
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -122,7 +122,7 @@ describe('buildReferenceBundle', () => {
     ]);
     const markdown = (await readZip(bundle.blob)).get('references.md') as string;
     expect(markdown).not.toContain('screenshots/');
-    // A failed screenshot must not cost the reference itself.
+
     expect(markdown).toContain('# Reference: Hero typography');
   });
 

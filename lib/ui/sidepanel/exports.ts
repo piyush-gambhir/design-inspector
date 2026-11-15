@@ -1,8 +1,8 @@
-// Export plumbing for the side panel (PRD 15).
-//
-// The adapters in lib/exports are written by another workstream and may throw
-// while unimplemented. Every call goes through `runExport` so a missing adapter
-// becomes a visible message instead of a blank panel.
+
+
+
+
+
 
 import type { AssetReading, SavedReference } from '@/lib/contracts';
 import type { AssetBundleOptions, AssetBundleResult } from '@/lib/exports/asset-bundle';
@@ -32,12 +32,12 @@ export function extensionVersion(): string {
   }
 }
 
-/** Date stamp for export filenames, e.g. 2026-09-18. */
+
 export function exportDateStamp(now: Date = new Date()): string {
   return now.toISOString().slice(0, 10);
 }
 
-/** chrome.downloads accepts data URLs, which keeps blob lifetimes out of it. */
+
 export function jsonDataUrl(text: string): string {
   return `data:application/json;charset=utf-8,${encodeURIComponent(text)}`;
 }
@@ -46,7 +46,7 @@ export function svgDataUrl(markup: string): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`;
 }
 
-/** Last path segment of a URL, for download filenames. */
+
 export function filenameFromUrl(url: string, fallback: string): string {
   try {
     const parsed = new URL(url);
@@ -57,14 +57,14 @@ export function filenameFromUrl(url: string, fallback: string): string {
   }
 }
 
-/**
- * Hands a Blob to chrome.downloads. The side panel is an extension page, so it
- * owns both the object URL and the downloads API; the background worker is not
- * involved because a blob URL created there would not resolve here.
- *
- * The URL is revoked once the download settles, with a timer as the backstop
- * for a download that never reports a final state.
- */
+
+
+
+
+
+
+
+
 export async function downloadBlob(
   blob: Blob,
   filename: string,
@@ -95,7 +95,7 @@ export async function downloadBlob(
   }
 }
 
-/** A blob URL kept alive past this has already failed to download. */
+
 const REVOKE_TIMEOUT_MS = 60_000;
 
 function revokeWhenSettled(url: string, downloadId: number): void {
@@ -106,7 +106,7 @@ function revokeWhenSettled(url: string, downloadId: number): void {
     try {
       chrome.downloads.onChanged.removeListener(listener);
     } catch {
-      // The listener was never attached; nothing to remove.
+
     }
     revoke(url);
   };
@@ -118,7 +118,7 @@ function revokeWhenSettled(url: string, downloadId: number): void {
   try {
     chrome.downloads.onChanged.addListener(listener);
   } catch {
-    // Without the event we still have the timer below.
+
   }
   setTimeout(finish, REVOKE_TIMEOUT_MS);
 }
@@ -127,14 +127,14 @@ function revoke(url: string): void {
   try {
     URL.revokeObjectURL(url);
   } catch {
-    // Already revoked, or no URL support in this context.
+
   }
 }
 
-/**
- * Builds the multi-reference bundle and downloads it, returning the manifest so
- * the Saved tab can show what was written and what was skipped (PRD EXP-03).
- */
+
+
+
+
 export async function downloadBundle(
   references: SavedReference[],
   screenshots: Map<string, Blob>,
@@ -159,11 +159,11 @@ export async function downloadBundle(
   return { ok: true, filename: bundle.filename, manifest: bundle.manifest };
 }
 
-/**
- * Fetches the selected assets, zips them with a manifest, and downloads the
- * archive (PRD AST-05). Cancellation and progress belong to the caller through
- * `options`, so the button can stay responsive.
- */
+
+
+
+
+
 export async function downloadAssetBundle(
   assets: AssetReading[],
   options: Omit<AssetBundleOptions, 'extensionVersion'> & { extensionVersion?: string } = {},

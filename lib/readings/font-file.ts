@@ -1,33 +1,33 @@
-// Real font identity, read from the font file itself (PRD TYP-01, TYP-03).
-//
-// A site's CSS alias is whatever the person who wrote the @font-face block
-// typed: "Nb international pro webfont" is not a typeface, it is a nickname.
-// The typeface's own name lives in the OpenType `name` table inside the served
-// woff2/woff/ttf, next to its designer, foundry, version, and licence. This
-// module opens the container, finds `name` and `fvar`, and reads them.
-//
-// Pure: no chrome APIs, no fetch. The caller supplies the bytes. The only
-// runtime dependency is `brotli`, reached through a dynamic import in the
-// WOFF2 branch so it lands in the chunk of whoever actually parses a file
-// (the background worker) rather than in every bundle that imports a type.
+
+
+
+
+
+
+
+
+
+
+
+
 
 import type { FontIdentity } from '../contracts';
 
-/** Refuse anything larger than this before spending time on it. */
+
 export const MAX_FONT_BYTES = 20 * 1024 * 1024;
 
-/** name id 13 is a whole licence agreement in some fonts. */
+
 const MAX_LICENSE_CHARS = 300;
 
-const SIG_WOFF2 = 0x774f4632; // 'wOF2'
-const SIG_WOFF = 0x774f4646; // 'wOFF'
-const SIG_TTCF = 0x74746366; // 'ttcf'
-const SIG_TRUE = 0x74727565; // 'true'
-const SIG_OTTO = 0x4f54544f; // 'OTTO'
-const SIG_TYP1 = 0x74797031; // 'typ1'
+const SIG_WOFF2 = 0x774f4632;
+const SIG_WOFF = 0x774f4646;
+const SIG_TTCF = 0x74746366;
+const SIG_TRUE = 0x74727565;
+const SIG_OTTO = 0x4f54544f;
+const SIG_TYP1 = 0x74797031;
 const SIG_SFNT = 0x00010000;
 
-/** WOFF2 table tags 0 to 62; index 63 means an arbitrary 4-byte tag follows. */
+
 const WOFF2_KNOWN_TAGS: readonly string[] = [
   'cmap', 'head', 'hhea', 'hmtx', 'maxp', 'name', 'OS/2', 'post',
   'cvt ', 'fpgm', 'glyf', 'loca', 'prep', 'CFF ', 'VORG', 'EBDT',
@@ -39,10 +39,10 @@ const WOFF2_KNOWN_TAGS: readonly string[] = [
   'trak', 'Zapf', 'Silf', 'Glat', 'Gloc', 'Feat', 'Sill',
 ];
 
-/** Only these two tables are ever needed, so only these are ever inflated. */
+
 const WANTED_TAGS: readonly string[] = ['name', 'fvar'];
 
-/** A font file that does not parse is a readable failure, not a crash. */
+
 export class FontFileError extends Error {
   constructor(message: string) {
     super(message);
@@ -50,8 +50,8 @@ export class FontFileError extends Error {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Byte readers
+
+
 
 class Reader {
   readonly view: DataView;
@@ -90,7 +90,7 @@ class Reader {
     return value;
   }
 
-  /** 16.16 signed fixed point, as fvar uses for axis bounds. */
+
   fixed(what = 'axis'): number {
     this.require(4, what);
     const value = this.view.getInt32(this.offset) / 65536;
@@ -108,13 +108,13 @@ class Reader {
     return out;
   }
 
-  /** WOFF2 UIntBase128: up to five 7-bit groups, high bit continues. */
+
   base128(what = 'table directory'): number {
     let value = 0;
     for (let index = 0; index < 5; index += 1) {
       const byte = this.u8(what);
-      // A leading zero byte is not a canonical encoding, and neither is a
-      // value that would overflow 32 bits. Both mean the file is not one.
+
+
       if (index === 0 && byte === 0x80) {
         throw new FontFileError('This font file has a malformed table directory.');
       }
@@ -135,12 +135,12 @@ function sliceOrThrow(bytes: Uint8Array, start: number, length: number, tag: str
   return bytes.subarray(start, start + length);
 }
 
-// ---------------------------------------------------------------------------
-// Containers
+
+
 
 type TableMap = Map<string, Uint8Array>;
 
-/** sfnt table directory at `base`, which is 0 for a bare font and the font's own offset in a collection. */
+
 function readSfntTables(bytes: Uint8Array, base: number): TableMap {
   const reader = new Reader(bytes);
   reader.offset = base + 4;
@@ -149,7 +149,7 @@ function readSfntTables(bytes: Uint8Array, base: number): TableMap {
   const tables: TableMap = new Map();
   for (let index = 0; index < numTables; index += 1) {
     const tag = reader.tag();
-    reader.u32('table directory'); // checksum
+    reader.u32('table directory');
     const offset = reader.u32('table directory');
     const length = reader.u32('table directory');
     if (!WANTED_TAGS.includes(tag)) continue;
@@ -162,8 +162,8 @@ async function inflateZlib(bytes: Uint8Array): Promise<Uint8Array> {
   if (typeof DecompressionStream !== 'function') {
     throw new FontFileError('This browser cannot decompress WOFF tables.');
   }
-  // WOFF compresses each table as a complete zlib stream, so 'deflate' (which
-  // expects the zlib header) is correct and 'deflate-raw' is not.
+
+
   const stream = new Blob([bytes as BlobPart]).stream().pipeThrough(new DecompressionStream('deflate'));
   const buffer = await new Response(stream).arrayBuffer();
   return new Uint8Array(buffer);
@@ -180,27 +180,27 @@ async function readWoffTables(bytes: Uint8Array): Promise<TableMap> {
     const offset = reader.u32('table directory');
     const compLength = reader.u32('table directory');
     const origLength = reader.u32('table directory');
-    reader.u32('table directory'); // checksum
+    reader.u32('table directory');
     if (WANTED_TAGS.includes(tag)) wanted.push({ tag, offset, compLength, origLength });
   }
 
   const tables: TableMap = new Map();
   for (const entry of wanted) {
     const raw = sliceOrThrow(bytes, entry.offset, entry.compLength, entry.tag);
-    // Per the WOFF spec a table is stored uncompressed when compressing it
-    // would not have helped, and that is signalled by equal lengths.
+
+
     tables.set(entry.tag, entry.compLength < entry.origLength ? await inflateZlib(raw) : raw);
   }
   return tables;
 }
 
-/**
- * WOFF2 is one Brotli stream holding every table back to back, in directory
- * order, with no padding. The directory gives each table's length in that
- * stream, so the two tables we want are found by adding up the ones before
- * them. `glyf` and `loca` may be transformed; their transformed lengths are
- * simply skipped over, because neither is read here.
- */
+
+
+
+
+
+
+
 async function readWoff2Tables(bytes: Uint8Array): Promise<TableMap> {
   const reader = new Reader(bytes);
   reader.offset = 12;
@@ -216,9 +216,9 @@ async function readWoff2Tables(bytes: Uint8Array): Promise<TableMap> {
     const transform = (flags >> 6) & 0x03;
     const tag = tagIndex === 63 ? reader.tag() : (WOFF2_KNOWN_TAGS[tagIndex] ?? '????');
     const origLength = reader.base128();
-    // The null transform is version 3 for glyf and loca, version 0 for every
-    // other table. A transformed table carries its transformed length too, and
-    // that is the length it occupies in the decompressed stream.
+
+
+
     const nullTransform = tag === 'glyf' || tag === 'loca' ? 3 : 0;
     const transformed = transform !== nullTransform;
     const length = transformed ? reader.base128() : origLength;
@@ -243,7 +243,7 @@ async function readWoff2Tables(bytes: Uint8Array): Promise<TableMap> {
 async function brotliDecompress(input: Uint8Array, outputSize: number): Promise<Uint8Array> {
   let decoded: Uint8Array | null | undefined;
   try {
-    // Dynamic so the decoder is only pulled into the bundle that parses files.
+
     const { decompress } = await import('brotli/decompress');
     decoded = decompress(input, outputSize);
   } catch (error) {
@@ -257,8 +257,8 @@ async function brotliDecompress(input: Uint8Array, outputSize: number): Promise<
   return decoded;
 }
 
-// ---------------------------------------------------------------------------
-// name table
+
+
 
 interface NameEntry {
   platformID: number;
@@ -268,11 +268,11 @@ interface NameEntry {
   value: string;
 }
 
-/**
- * MacRoman bytes 0x80 to 0xFF, 128 characters exactly. Below 0x80 it is ASCII.
- * The dashes at 0xD0 and 0xD1 are written as escapes so this character table
- * is not mistaken for prose punctuation by a search over the source.
- */
+
+
+
+
+
 const MAC_ROMAN_HIGH =
   'ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûü' +
   '†°¢£§•¶ß®©™´¨≠ÆØ∞±≤≥¥µ∂∑∏π∫ªºΩæø' +
@@ -297,7 +297,7 @@ function decodeMacRoman(bytes: Uint8Array): string {
 
 export function parseNameTable(table: Uint8Array): NameEntry[] {
   const reader = new Reader(table);
-  reader.u16('name table'); // version
+  reader.u16('name table');
   const count = reader.u16('name table');
   const storageOffset = reader.u16('name table');
 
@@ -310,11 +310,11 @@ export function parseNameTable(table: Uint8Array): NameEntry[] {
     const length = reader.u16('name record');
     const stringOffset = reader.u16('name record');
     const start = storageOffset + stringOffset;
-    if (start + length > table.byteLength) continue; // Tolerate one bad record.
+    if (start + length > table.byteLength) continue;
     const raw = table.subarray(start, start + length);
-    // Platform 3 (Windows) and platform 0 (Unicode) are UTF-16BE. Platform 1
-    // (Mac) with encoding 0 is MacRoman; other Mac encodings are rare enough
-    // that reading them as MacRoman is better than dropping the record.
+
+
+
     const value =
       platformID === 3 || platformID === 0 ? decodeUtf16Be(raw) : decodeMacRoman(raw);
     entries.push({ platformID, encodingID, languageID, nameID, value: value.trim() });
@@ -322,11 +322,11 @@ export function parseNameTable(table: Uint8Array): NameEntry[] {
   return entries;
 }
 
-/**
- * The best record for one name id. Windows English (3, 1, 0x409) is the record
- * every foundry fills in; Mac English (1, *, 0) is the fallback; anything else
- * is better than nothing.
- */
+
+
+
+
+
 export function pickName(entries: NameEntry[], nameID: number): string | null {
   const candidates = entries.filter((entry) => entry.nameID === nameID && entry.value !== '');
   if (candidates.length === 0) return null;
@@ -341,15 +341,15 @@ export function pickName(entries: NameEntry[], nameID: number): string | null {
   return [...candidates].sort((a, b) => rank(a) - rank(b))[0]?.value ?? null;
 }
 
-// ---------------------------------------------------------------------------
-// fvar table
+
+
 
 export function parseFvar(table: Uint8Array, entries: NameEntry[]): FontIdentity['axes'] {
   const reader = new Reader(table);
-  reader.u16('fvar table'); // majorVersion
-  reader.u16('fvar table'); // minorVersion
+  reader.u16('fvar table');
+  reader.u16('fvar table');
   const axesArrayOffset = reader.u16('fvar table');
-  reader.u16('fvar table'); // reserved
+  reader.u16('fvar table');
   const axisCount = reader.u16('fvar table');
   const axisSize = reader.u16('fvar table');
 
@@ -362,17 +362,17 @@ export function parseFvar(table: Uint8Array, entries: NameEntry[]): FontIdentity
     const min = reader.fixed();
     const value = reader.fixed();
     const max = reader.fixed();
-    reader.u16('fvar axis'); // flags
+    reader.u16('fvar axis');
     const axisNameID = reader.u16('fvar axis');
     axes.push({ tag: tag.trim(), name: pickName(entries, axisNameID), min, max, default: value });
   }
   return axes;
 }
 
-// ---------------------------------------------------------------------------
-// Entry point
 
-/** "Version 1.004; ttfautohint ..." reads better as "1.004". */
+
+
+
 export function cleanVersion(raw: string | null): string | null {
   if (raw === null) return null;
   const trimmed = raw.replace(/^\s*version\s+/i, '').trim();
@@ -384,10 +384,10 @@ function truncate(value: string | null, limit: number): string | null {
   return value.length <= limit ? value : `${value.slice(0, limit - 1).trimEnd()}…`;
 }
 
-/**
- * Reads the identity out of one font file. Async because two of the four
- * containers have to be decompressed first.
- */
+
+
+
+
 export async function parseFontIdentity(bytes: ArrayBuffer, url: string): Promise<FontIdentity> {
   if (bytes.byteLength === 0) throw new FontFileError('That font file was empty.');
   if (bytes.byteLength > MAX_FONT_BYTES) {
@@ -436,9 +436,9 @@ export async function parseFontIdentity(bytes: ArrayBuffer, url: string): Promis
   }
   const entries = parseNameTable(nameTable);
 
-  // Typographic family and subfamily (16 and 17) are the real names of a
-  // family with more than four styles; 1 and 2 are the legacy four-style
-  // names, which split large families into "Inter Display SemiBold" groups.
+
+
+
   const family = pickName(entries, 16) ?? pickName(entries, 1);
   if (family === null) {
     throw new FontFileError('This font file names no family, so it cannot be identified.');

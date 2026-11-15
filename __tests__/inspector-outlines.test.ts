@@ -52,7 +52,7 @@ describe('outlineCss', () => {
       for (const rule of rules(outlineCss(mode))) {
         expect(rule).toContain('!important');
       }
-      // Every coloring rule declares both the line and the inward offset.
+
       for (const rule of rules(outlineCss(mode)).slice(0, -1)) {
         expect(rule).toContain('outline: 1px solid');
         expect(rule).toContain('outline-offset: -1px !important');
@@ -89,12 +89,12 @@ describe('outlineCss', () => {
     );
     expect(colors.size).toBe(DEPTH_LEVELS);
 
-    // Evenly spread: the eight hues are the eight 45 degree steps of the wheel.
+
     expect([...DEPTH_HUES].sort((a, b) => a - b)).toEqual([
       30, 75, 120, 165, 210, 255, 300, 345,
     ]);
-    // Adjacent levels jump across the wheel instead of walking it: the old ramp
-    // put blue, pink and purple side by side and they read as the same line.
+
+
     const steps: number[] = [];
     for (let level = 1; level < DEPTH_LEVELS; level += 1) {
       const delta = Math.abs((DEPTH_HUES[level] ?? 0) - (DEPTH_HUES[level - 1] ?? 0)) % 360;
@@ -102,7 +102,7 @@ describe('outlineCss', () => {
     }
     expect(steps).toEqual([180, 90, 180, 45, 180, 90, 180]);
 
-    // One lightness and one chroma for every level, so only the hue differs.
+
     expect(depthColor(0)).toBe('oklch(0.62 0.17 255)');
     expect(outlineCss('depth')).toContain('oklch(0.62 0.17 75)');
   });
@@ -163,7 +163,7 @@ describe('applyOutlines', () => {
     expect(applyOutlines('off')).toBe('off');
     expect(sheets()).toHaveLength(0);
     expect(currentOutlineMode()).toBe('off');
-    // Off on an already clean document is not an error.
+
     expect(applyOutlines('off')).toBe('off');
   });
 

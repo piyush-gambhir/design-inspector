@@ -11,10 +11,10 @@ import {
 
 const VIEWPORT = { width: 1000, height: 800 };
 
-/**
- * A sampler over axis-aligned rectangles, topmost last, so a test can describe
- * a page as boxes instead of as a DOM.
- */
+
+
+
+
 function samplerFor(
   boxes: { element: Element; x: number; y: number; width: number; height: number }[],
 ): EdgeSampler {
@@ -44,8 +44,8 @@ describe('nearestEdges', () => {
       { element: card, x: 100, y: 200, width: 300, height: 160 },
     ]);
 
-    // Pointer at the middle of the card, which spans 100..400 by 200..360.
-    // Every distance is the first 4px sample that left the card.
+
+
     const edges = nearestEdges(sample, { x: 250, y: 280 }, VIEWPORT);
     expect(edges.hasOrigin).toBe(true);
     expect(edges.top).toEqual({ distance: 84, found: true });
@@ -59,8 +59,8 @@ describe('nearestEdges', () => {
     const card = el('card');
     const sample = samplerFor([
       { element: page, x: 0, y: 0, width: 1200, height: 900 },
-      // The card's right edge at 253 is not a multiple of the step, so the
-      // first sample past it is what gets reported.
+
+
       { element: card, x: 100, y: 200, width: 153, height: 160 },
     ]);
     const edges = nearestEdges(sample, { x: 200, y: 280 }, VIEWPORT);
@@ -101,8 +101,8 @@ describe('nearestEdges', () => {
       { element: left, x: 0, y: 0, width: 400, height: 900 },
       { element: right, x: 400, y: 0, width: 800, height: 900 },
     ]);
-    // Sitting in `left`, the boundary at 400 is the right edge; going left
-    // there is no boundary before the viewport.
+
+
     const edges = nearestEdges(sample, { x: 300, y: 100 }, VIEWPORT);
     expect(edges.right).toEqual({ distance: 100, found: true });
     expect(edges.left).toEqual({ distance: 300, found: false });
@@ -124,9 +124,9 @@ describe('nearestEdges with the stack under the pointer (F10)', () => {
   it('takes a wrapper box edge that is closer than the hit-test change', () => {
     const page = el('page');
     const wrapper = el('wrapper');
-    // The wrapper paints the same colour as the page and holds nothing else,
-    // so the hit test only changes at the page's own boundary. Its box ends
-    // long before that, and its edge is the one a designer is asking about.
+
+
+
     const sample = samplerFor([{ element: page, x: 0, y: 0, width: 2000, height: 1600 }]);
     void wrapper;
 
@@ -137,7 +137,7 @@ describe('nearestEdges with the stack under the pointer (F10)', () => {
       { x: 0, y: 0, width: 2000, height: 1600 },
       { x: 400, y: 300, width: 200, height: 200 },
     ]);
-    // The inner box spans 400..600 by 300..500 around a pointer at 500,400.
+
     expect(withStack.right).toEqual({ distance: 100, found: true });
     expect(withStack.left).toEqual({ distance: 100, found: true });
     expect(withStack.top).toEqual({ distance: 100, found: true });
@@ -152,7 +152,7 @@ describe('nearestEdges with the stack under the pointer (F10)', () => {
       { element: card, x: 100, y: 200, width: 300, height: 160 },
     ]);
 
-    // The outer box's edges are far away, so the card's own walk still wins.
+
     const edges = nearestEdges(sample, { x: 250, y: 280 }, VIEWPORT, undefined, [
       { x: 0, y: 0, width: 1000, height: 800 },
     ]);
@@ -166,7 +166,7 @@ describe('nearestEdges with the stack under the pointer (F10)', () => {
     const edges = nearestEdges(sample, { x: 20, y: 400 }, VIEWPORT, undefined, [
       { x: -500, y: 0, width: 4000, height: 800 },
     ]);
-    // The rect's left edge is 520px away and only 20px of room exists.
+
     expect(edges.left).toEqual({ distance: 20, found: false });
   });
 
@@ -176,8 +176,8 @@ describe('nearestEdges with the stack under the pointer (F10)', () => {
     const edges = nearestEdges(sample, { x: 400, y: 300 }, VIEWPORT, undefined, [
       { x: 400, y: 300, width: 200, height: 200 },
     ]);
-    // Left and top edges are exactly at the pointer, so they are not "beyond"
-    // it and the walk's own answer stands.
+
+
     expect(edges.left.found).toBe(false);
     expect(edges.top.found).toBe(false);
     expect(edges.right).toEqual({ distance: 200, found: true });

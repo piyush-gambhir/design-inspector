@@ -3,8 +3,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS, type Settings } from '@/lib/contracts';
 import { INSPECTOR_KEY, bootInspector } from '@/lib/inspector/boot';
 
-// The content script reads Settings.preferSemanticParents for itself, so the
-// harness needs chrome.storage.local as well as chrome.runtime.
+
+
 
 type Listener = (message: unknown, sender: unknown, send: (value: unknown) => void) => unknown;
 type ChangeListener = (
@@ -13,7 +13,7 @@ type ChangeListener = (
 ) => void;
 
 interface Harness {
-  /** Write settings the way any extension surface would, listeners included. */
+
   write(settings: Settings): void;
 }
 
@@ -54,7 +54,7 @@ function installChrome(initial: Partial<Settings> = {}): Harness {
   };
 }
 
-/** Lets the boot-time getSettings promise resolve. */
+
 function settle(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
@@ -66,7 +66,7 @@ function reset(): void {
   document.querySelectorAll('design-inspector-host').forEach((node) => node.remove());
 }
 
-/** The badge button, once the overlay exists. */
+
 function badge(): HTMLButtonElement | null {
   const host = document.querySelector('design-inspector-host');
   return (host?.shadowRoot?.getElementById('badge-semantic') as HTMLButtonElement | null) ?? null;
@@ -135,8 +135,8 @@ describe('preferSemanticParents from settings', () => {
     expect(api.semanticParents()).toBe(true);
     expect(badge()?.getAttribute('aria-pressed')).toBe('true');
 
-    // The per-session override stands until the page reloads, so a settings
-    // write no longer moves it back.
+
+
     harness.write({ ...DEFAULT_SETTINGS, preferSemanticParents: false });
     expect(api.semanticParents()).toBe(true);
   });

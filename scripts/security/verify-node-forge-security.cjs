@@ -1,6 +1,6 @@
 'use strict';
 
-// Local regression/interop fixtures only. No network or device connection is made.
+
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const fs = require('node:fs');

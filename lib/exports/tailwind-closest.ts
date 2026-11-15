@@ -1,19 +1,19 @@
-// Closest-standard Tailwind suggestions (PRD EXP-02 mode 2).
-//
-// This mode answers "which stock utilities come nearest to what the page
-// actually renders", and it is built on top of the faithful mode rather than
-// beside it: every class the faithful exporter emits is either replaced by a
-// default-theme utility or kept as-is, and `unsupportedCss` is passed straight
-// through. Nothing can be silently dropped, because nothing new is enumerated
-// here.
-//
-// What counts as a deviation: any property whose emitted class is not an exact
-// standard utility for the observed value. That is two cases, and `delta` says
-// which one:
-// - a standard step was accepted, and `delta` is how far it moves the value
-//   (e.g. `-3.6px`);
-// - no standard step was close enough, the arbitrary value was kept, and
-//   `delta` names the nearest standard step and its distance.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import type { ColorValue, ElementSnapshot } from '@/lib/contracts';
 import type { StyleCategory } from './css';
 import { collapseWhitespace, num } from './format';
@@ -37,27 +37,27 @@ import {
 } from './tailwind-theme';
 
 export interface TailwindClosestOutput {
-  /** Space-separated standard utilities from the default theme. */
+
   classes: string;
-  /** Per property: what was observed, what the class produces, and the delta. */
+
   deviations: { property: string; observed: string; suggested: string; delta: string }[];
-  /** Properties with no standard utility close enough; emitted as CSS. */
+
   unsupportedCss: string;
-  /** e.g. 'Tailwind v4 default theme; classes within 12.5 percent of the observed value.' */
+
   assumption: string;
 }
 
-/** A standard step is accepted inside this fraction of the observed value. */
+
 const TOLERANCE = 0.125;
-/** Below this, a px value gets a flat 1px tolerance instead of a fraction. */
+
 const SMALL_PX = 8;
 const SMALL_PX_TOLERANCE = 1;
-/** Oklab distance under which a palette color is close enough to name. */
+
 const COLOR_TOLERANCE = 0.02;
-/** Shadow layers match when every offset is inside this many px. */
+
 const SHADOW_PX_TOLERANCE = 1;
 const SHADOW_ALPHA_TOLERANCE = 0.02;
-/** A radius at or above this is Tailwind's `rounded-full`. */
+
 const FULL_RADIUS_PX = 9999;
 
 export function toTailwindClosest(
@@ -93,11 +93,11 @@ export function toTailwindClosest(
   };
 }
 
-// ---------------------------------------------------------------------------
+
 
 interface Context {
   snapshot: ElementSnapshot;
-  /** Arbitrary-value token as the faithful exporter wrote it, to its color. */
+
   colors: Map<string, ColorValue>;
   fontSizePx: number | null;
 }
@@ -107,12 +107,12 @@ interface Mapped {
   deviation: TailwindClosestOutput['deviations'][number] | null;
 }
 
-/** Matches `prefix-[value]`; the prefix is everything before the last bracket. */
+
 const ARBITRARY = /^([a-z0-9-]+)-\[(.+)\]$/;
 
 function mapClass(original: string, context: Context): Mapped {
   const match = ARBITRARY.exec(original);
-  // A class without an arbitrary value already is a standard utility.
+
   if (!match) return { className: original, deviation: null };
 
   const prefix = match[1] as string;
@@ -143,8 +143,8 @@ function mapClass(original: string, context: Context): Mapped {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Prefix groups
+
+
 
 const SPACING_PREFIXES = new Set([
   'p', 'px', 'py', 'pt', 'pr', 'pb', 'pl',
@@ -200,8 +200,8 @@ function propertyFor(prefix: string): string {
   return PROPERTY_NAMES[prefix] ?? prefix;
 }
 
-// ---------------------------------------------------------------------------
-// Scales
+
+
 
 function mapSpacing(original: string, prefix: string, value: string): Mapped {
   const observed = lengthPx(value);
@@ -226,8 +226,8 @@ function mapFontSize(original: string, value: string): Mapped {
 function mapRadius(original: string, prefix: string, value: string): Mapped {
   const observed = lengthPx(value);
   if (observed === null) return keep(original, prefix, value);
-  // A radius this large is a pill, which is exactly what `rounded-full` means,
-  // so it is an equivalent class rather than an approximation.
+
+
   if (observed >= FULL_RADIUS_PX) return { className: `${prefix}-full`, deviation: null };
   const best = nearest(BORDER_RADII, observed);
   if (!best) return keep(original, prefix, value);
@@ -240,7 +240,7 @@ function mapBorderWidth(original: string, prefix: string, value: string): Mapped
   if (observed === null) return keep(original, prefix, value);
   const best = nearest(BORDER_WIDTHS, observed);
   if (!best) return keep(original, prefix, value);
-  // Width 1 is the bare `border` class, with no numeric suffix.
+
   const className = best.suffix === '' ? prefix : `${prefix}-${best.suffix}`;
   return decide(original, prefix, observed, best.value, className, 'px', className);
 }
@@ -263,8 +263,8 @@ function mapUnitless(
 function mapFont(original: string, value: string): Mapped {
   const weight = Number.parseFloat(value);
   if (!Number.isFinite(weight) || !/^\d+$/.test(value)) {
-    // The default theme only ships font-sans, font-serif and font-mono, and
-    // guessing which one a page's family belongs to would be an invention.
+
+
     return {
       className: original,
       deviation: {
@@ -281,11 +281,11 @@ function mapFont(original: string, value: string): Mapped {
   return decide(original, 'font-weight', weight, best.value, className, '', className);
 }
 
-/**
- * Line height is matched in px against both scales at once: the numeric
- * `leading-3` to `leading-10` steps and the named ratios resolved against this
- * element's font size. A tie prefers the named class, which reads better.
- */
+
+
+
+
+
 function mapLineHeight(original: string, value: string, context: Context): Mapped {
   const observed = lengthPx(value);
   if (observed === null) return keep(original, 'leading', value);
@@ -306,7 +306,7 @@ function mapLineHeight(original: string, value: string, context: Context): Mappe
   return decide(original, 'line-height', observed, best.produced, best.className, 'px', best.className);
 }
 
-/** Letter spacing is matched in px so the same tolerance rule applies. */
+
 function mapTracking(original: string, value: string, context: Context): Mapped {
   const observed = lengthPx(value);
   if (observed === null) return keep(original, 'tracking', value);
@@ -414,13 +414,13 @@ function mapShadow(original: string, context: Context): Mapped {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Shared decision helpers
 
-/**
- * Accept the nearest step when it lands inside the tolerance, otherwise keep
- * the faithful arbitrary class and say how far the nearest step was.
- */
+
+
+
+
+
+
 function decide(
   original: string,
   property: string,
@@ -502,8 +502,8 @@ function nearestCandidate(
   return best;
 }
 
-// ---------------------------------------------------------------------------
-// Colors
+
+
 
 interface OklchTriple {
   l: number;
@@ -511,11 +511,11 @@ interface OklchTriple {
   h: number;
 }
 
-/**
- * The colors this snapshot actually carries, keyed by the token the faithful
- * exporter writes for them. This is how a `text-[...]` class is told apart from
- * a `text-[16px]` one without re-parsing CSS colors here.
- */
+
+
+
+
+
 function colorIndex(snapshot: ElementSnapshot): Map<string, ColorValue> {
   const index = new Map<string, ColorValue>();
   const add = (color: ColorValue | null): void => {
@@ -532,7 +532,7 @@ function colorIndex(snapshot: ElementSnapshot): Map<string, ColorValue> {
   return index;
 }
 
-/** The same encoding `toTailwind` uses, so the tokens line up exactly. */
+
 function colorToken(color: ColorValue): string {
   if (color.hex && !color.lossy && color.alpha >= 1) return color.hex;
   return collapseWhitespace(color.raw).replace(/ /g, '_');
@@ -549,7 +549,7 @@ export function parseOklch(text: string | null): OklchTriple | null {
   return { l: match[2] === '%' ? lightness / 100 : lightness, c: chroma, h: hue };
 }
 
-/** Straight-line distance in oklab, the honest way to compare two oklch colors. */
+
 export function oklchDistance(a: OklchTriple, b: OklchTriple): number {
   const aRadians = (a.h * Math.PI) / 180;
   const bRadians = (b.h * Math.PI) / 180;
@@ -562,8 +562,8 @@ export function oklchDistance(a: OklchTriple, b: OklchTriple): number {
 export function nearestPaletteColor(
   color: ColorValue,
 ): { color: PaletteColor; distance: number } | null {
-  // Tailwind expresses a translucent color with an opacity modifier, which
-  // would be a second guess on top of the hue match, so it is not attempted.
+
+
   if (color.alpha < 1) return null;
   const observed = parseOklch(color.oklch);
   if (!observed) return null;
@@ -576,8 +576,8 @@ export function nearestPaletteColor(
   return best;
 }
 
-// ---------------------------------------------------------------------------
-// Shadows
+
+
 
 const SHADOW_COLOR = /rgba?\([^)]*\)|#[0-9a-f]{3,8}|oklch\([^)]*\)|hsla?\([^)]*\)/i;
 
@@ -621,7 +621,7 @@ function alphaOf(color: string): number {
   return 1;
 }
 
-/** The largest px difference between two shadow stacks, or null when they differ in shape. */
+
 function shadowDrift(observed: ShadowLayer[], theme: ShadowLayer[]): number | null {
   if (observed.length !== theme.length) return null;
   let drift = 0;
@@ -639,17 +639,17 @@ function shadowDrift(observed: ShadowLayer[], theme: ShadowLayer[]): number | nu
   return drift;
 }
 
-// ---------------------------------------------------------------------------
-// Formatting
 
-/** A single px length, or null when the token is not one. */
+
+
+
 function lengthPx(value: string): number | null {
   const match = /^(-?\d*\.?\d+)px$/.exec(value.trim());
   if (match) {
     const parsed = Number.parseFloat(match[1] as string);
     return Number.isFinite(parsed) ? parsed : null;
   }
-  // `top-[0px]` can also arrive as a bare `0`.
+
   const bare = /^(-?\d*\.?\d+)$/.exec(value.trim());
   if (bare && Number.parseFloat(bare[1] as string) === 0) return 0;
   return null;
@@ -664,7 +664,7 @@ function signed(value: number, unit: 'px' | ''): string {
   return `${value < 0 ? '-' : '+'}${body}`;
 }
 
-/** Arbitrary values use underscores for spaces; undo that for display. */
+
 function readable(value: string): string {
   return value.replace(/_/g, ' ');
 }

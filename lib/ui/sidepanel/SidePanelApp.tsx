@@ -1,6 +1,6 @@
-// Side panel shell: the status strip, the four tabs, and the per-tab page data
-// (PRD 6.1). Page-derived data is dropped whenever the tab navigates, so a
-// reading is never shown against the wrong page.
+
+
+
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { Info, Save } from 'lucide-react';
 import type { AssetReading, ElementSnapshot, PageSummary, StackReport } from '@/lib/contracts';
@@ -44,8 +44,8 @@ export function SidePanelApp() {
   const tabId = tab?.id ?? null;
   const inspector = useInspectorState(tabId);
   const { settings } = useSettings();
-  // While this panel is open the page badge steps aside: the tools row below is
-  // where they live, and two copies of one control is one too many (W1).
+
+
   useSidePanelPresence(tabId);
 
   const [active, setActive] = useState<PanelTab>('summary');
@@ -71,12 +71,12 @@ export function SidePanelApp() {
   const saved = useSavedReferences();
   const tabsRef = useRef<HTMLDivElement>(null);
 
-  // A navigation invalidates every page-derived reading (PRD SUM-01).
+
   const hadData = summary !== null || assets !== null || stack !== null || pinned !== null;
   const hadDataRef = useRef(hadData);
   hadDataRef.current = hadData;
 
-  // A new document invalidates every page-derived reading (PRD SUM-01).
+
   useEffect(() => {
     if (navigationToken === 0) return;
     setNavigated(hadDataRef.current);
@@ -91,8 +91,8 @@ export function SidePanelApp() {
     setStackError(null);
   }, [navigationToken]);
 
-  // A same-document route change keeps the readings and marks them stale, so
-  // an application route change never empties the panel (PRD INS-01).
+
+
   useEffect(() => {
     if (staleToken === 0) return;
     setStale(true);
@@ -142,7 +142,7 @@ export function SidePanelApp() {
     void sendToBackground({ type: 'summary.cancel', tabId });
   }, [tabId]);
 
-  // Enrichment contacts each asset's host, so it only happens on request.
+
   const listAssets = useCallback(
     (enrich = false) => {
       if (tabId === null) return;
@@ -188,9 +188,9 @@ export function SidePanelApp() {
     })();
   };
 
-  // Arrow keys move between tabs, Home and End jump to the ends. The APG
-  // pattern is a single tab stop for the whole list, which is why every
-  // inactive tab carries tabIndex -1 below (PRD 19.2).
+
+
+
   const onTabKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const index = TABS.findIndex(entry => entry.value === active);
     let target = -1;
@@ -211,24 +211,24 @@ export function SidePanelApp() {
   const unsupported = inspector.state?.unsupportedReason ?? null;
   const inspecting = mode === 'active' || mode === 'paused';
   const outlinesOn = (inspector.state?.outlines ?? 'off') !== 'off';
-  // The page tools, as the content script last reported them. Before the first
-  // state arrives the row shows the values a fresh page would start with.
+
+
   const tools = inspector.state?.tools ?? {
     rulers: false,
     semanticParents: settings.preferSemanticParents,
     layoutOverlay: true,
   };
-  // Each of these acts on the overlay, which only exists while the inspector is
-  // running, so the row is live exactly when the badge would be.
+
+
   const toolsDisabled = inspector.busy || tabId === null || !!unsupported || !inspecting;
-  // An uninspectable page is a fact about the tab, not an error: it is told
-  // once, quietly, under the controls it disables.
+
+
   const panelNotice = noticeText(tab?.url, unsupported);
 
   return (
     <div className="panel-root flex min-h-screen flex-col gap-4 p-3">
-      {/* One strip, two rows: what page this is and what the inspector is
-          doing, then the only two controls that act on the page itself. */}
+      {
+                                                                           }
       <header className="rounded-[10px] bg-surface p-3">
         <div className="flex items-center gap-2">
           <p className="min-w-0 flex-1 truncate text-[13px] font-semibold" title={tab?.title}>
@@ -244,9 +244,9 @@ export function SidePanelApp() {
             disabled={inspector.busy || tabId === null || !!unsupported}
             aria-pressed={inspecting}
           >
-            {/* Tonal in both states: the panel is already open, so activation
-                is not the one thing on screen worth shouting about. The dot is
-                what says it is running. */}
+            {
+
+                                           }
             <span
               aria-hidden
               className={cn(
@@ -256,12 +256,12 @@ export function SidePanelApp() {
             />
             {actionLabel(mode)}
           </Button>
-          {/* The switch keeps its full name at every pane width: the pair moves
-              to its own line when the strip runs out of room rather than
-              truncating the label to "Layout out...". The row is spaced apart
-              rather than pushed right, so when the pair does wrap it starts at
-              the same left edge as everything else instead of floating alone
-              against the right one. */}
+          {
+
+
+
+
+                                       }
           <div className="flex items-center gap-2">
             <Label htmlFor="panel-outlines" className="whitespace-nowrap font-normal">
               Layout outlines
@@ -278,10 +278,10 @@ export function SidePanelApp() {
             />
           </div>
         </div>
-        {/* The page tools, the same set the badge carries, so the badge can
-            step aside while this panel is open. Pick color is deliberately
-            missing: the native picker needs a click on the page itself, and the
-            info control beside the row says where it is. */}
+        {
+
+
+                                                            }
         <div
           role="group"
           aria-label="Page tools"
@@ -317,9 +317,9 @@ export function SidePanelApp() {
             >
               <Info aria-hidden className="size-3.5" />
             </button>
-            {/* Hover or focus of this one control, not of the row: a hint that
-                is always on screen is a line of copy the reader has to step
-                over every time they look here. */}
+            {
+
+                                                  }
             <span
               id="panel-pick-hint"
               className="pointer-events-none absolute right-0 top-full z-10 mt-1 whitespace-nowrap rounded-[6px] bg-surface-3 px-2 py-1 text-[12px] text-muted-foreground opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
@@ -327,9 +327,9 @@ export function SidePanelApp() {
               Pick color is on the page badge
             </span>
           </span>
-          {/* Pressed means the page is yours to click and scroll, which is what
-              'paused' is. The label stays put so it never reads as two names
-              for one control. */}
+          {
+
+                                 }
           <Pill
             selected={mode === 'paused'}
             disabled={toolsDisabled}
@@ -360,10 +360,10 @@ export function SidePanelApp() {
           </div>
         ) : null}
         {pinnedNotice ? <StatusLine>{pinnedNotice}</StatusLine> : null}
-        {/* The reading is stale, and the action that fixes it is the Refresh
-            in the Summary tab's own toolbar. A second button with the same
-            name in the strip above it is two controls for one job, and it puts
-            "Refresh" ahead of the tab strip in the tab order. */}
+        {
+
+
+                                                                 }
         {navigated || stale ? (
           <div className="mt-2">
             <StatusLine>Page changed. Scan again for a current reading.</StatusLine>

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// The same in-memory stand-in for idb that storage-references.test.ts uses:
-// fake-indexeddb is not a dependency, so the store logic is exercised against
-// this instead, upgrade path included.
+
+
+
 const fake = vi.hoisted(() => {
   interface FakeStore {
     keyPath?: string;
@@ -10,13 +10,13 @@ const fake = vi.hoisted(() => {
   }
 
   const state: {
-    /** Every database the fake has handed out, by name. */
+
     dbs: Map<string, FakeDb>;
     opens: number;
     names: string[];
-    /** Names passed to indexedDB.deleteDatabase. */
+
     deleted: string[];
-    /** What indexedDB.databases() reports, or null for no such API. */
+
     existing: string[] | null;
   } = { dbs: new Map(), opens: 0, names: [], deleted: [], existing: [] };
 
@@ -79,8 +79,8 @@ vi.mock('idb', () => ({
   ) => {
     fake.state.opens += 1;
     fake.state.names.push(name);
-    // Reopening the same name hands back the same records, as a real database
-    // would, which is what makes the migration observable.
+
+
     const db = fake.state.dbs.get(name) ?? new fake.FakeDb();
     fake.state.dbs.set(name, db);
     options?.upgrade?.(db);
@@ -88,7 +88,7 @@ vi.mock('idb', () => ({
   },
 }));
 
-/** The fake IDBFactory the migration asks about the old database through. */
+
 function installIndexedDB(): void {
   (globalThis as unknown as { indexedDB: unknown }).indexedDB = {
     databases:
@@ -196,7 +196,7 @@ describe('mockup records', () => {
     expect(DB_VERSION).toBe(2);
     const db = fake.state.dbs.get(DB_NAME);
     expect(db?.objectStoreNames.contains(MOCKUP_STORE)).toBe(true);
-    // The stores it shares the database with are still there and untouched.
+
     expect(db?.objectStoreNames.contains(REFERENCE_STORE)).toBe(true);
   });
 
@@ -249,7 +249,7 @@ describe('mockup records', () => {
 });
 
 describe('migration out of the old mockup database', () => {
-  /** Seed the legacy database the way version 1 left it. */
+
   function seedLegacy(record: { origin: string; blob: Blob; state: unknown; updatedAt: string }) {
     const legacy = new fake.FakeDb();
     legacy.createObjectStore(MOCKUP_STORE, { keyPath: 'origin' });
@@ -295,7 +295,7 @@ describe('migration out of the old mockup database', () => {
 
   it('keeps a record already written under the new roof', async () => {
     seedLegacy(legacyRecord);
-    // Something the user saved after the move: it is the newer of the two.
+
     const main = new fake.FakeDb();
     main.createObjectStore(MOCKUP_STORE, { keyPath: 'origin' });
     void main.put(MOCKUP_STORE, {

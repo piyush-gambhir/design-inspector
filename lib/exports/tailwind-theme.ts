@@ -1,24 +1,24 @@
-// The Tailwind v4 default theme, encoded as data (PRD EXP-02 mode 2).
-//
-// Only the scales the closest-standard exporter can match against live here, so
-// the matching code stays readable and every scale is testable on its own.
-// Values are the v4 defaults in CSS px at a 16px root, which is the same basis
-// the readings use.
+
+
+
+
+
+
 
 export interface ScaleStep {
-  /** The class suffix, e.g. `lg` in `text-lg` or `4` in `p-4`. */
+
   suffix: string;
-  /** The value the class produces, in the scale's own unit. */
+
   value: number;
 }
 
 export interface FontSizeStep extends ScaleStep {
-  /** Tailwind couples a line height to every size; the exporter always
-   *  overrides it with an explicit `leading-*`, so this is what it overrides. */
+
+
   lineHeightPx: number;
 }
 
-/** `text-xs` through `text-9xl`, in px, with their coupled line heights. */
+
 export const FONT_SIZES: FontSizeStep[] = [
   { suffix: 'xs', value: 12, lineHeightPx: 16 },
   { suffix: 'sm', value: 14, lineHeightPx: 20 },
@@ -35,7 +35,7 @@ export const FONT_SIZES: FontSizeStep[] = [
   { suffix: '9xl', value: 128, lineHeightPx: 128 },
 ];
 
-/** `font-thin` through `font-black`. */
+
 export const FONT_WEIGHTS: ScaleStep[] = [
   { suffix: 'thin', value: 100 },
   { suffix: 'extralight', value: 200 },
@@ -48,7 +48,7 @@ export const FONT_WEIGHTS: ScaleStep[] = [
   { suffix: 'black', value: 900 },
 ];
 
-/** Named `leading-*` values, as unitless ratios of the font size. */
+
 export const LINE_HEIGHT_RATIOS: ScaleStep[] = [
   { suffix: 'none', value: 1 },
   { suffix: 'tight', value: 1.25 },
@@ -58,13 +58,13 @@ export const LINE_HEIGHT_RATIOS: ScaleStep[] = [
   { suffix: 'loose', value: 2 },
 ];
 
-/** Numeric `leading-3` to `leading-10`, in px (the 0.25rem spacing multiples). */
+
 export const LINE_HEIGHT_LENGTHS: ScaleStep[] = Array.from({ length: 8 }, (_unused, index) => {
   const step = index + 3;
   return { suffix: String(step), value: step * 4 };
 });
 
-/** `tracking-*`, in em. */
+
 export const LETTER_SPACINGS: ScaleStep[] = [
   { suffix: 'tighter', value: -0.05 },
   { suffix: 'tight', value: -0.025 },
@@ -74,11 +74,11 @@ export const LETTER_SPACINGS: ScaleStep[] = [
   { suffix: 'widest', value: 0.1 },
 ];
 
-/**
- * The spacing scale, in px. v4 multiplies `--spacing` (0.25rem) by the number in
- * the class, so every step from 0 to 96 is a real utility, plus the four half
- * steps and `px` (a literal 1px).
- */
+
+
+
+
+
 export const SPACING: ScaleStep[] = (() => {
   const steps: ScaleStep[] = [{ suffix: '0', value: 0 }, { suffix: 'px', value: 1 }];
   for (const half of [0.5, 1.5, 2.5, 3.5]) {
@@ -90,7 +90,7 @@ export const SPACING: ScaleStep[] = (() => {
   return steps.sort((a, b) => a.value - b.value);
 })();
 
-/** `rounded-*`, in px. `full` is Tailwind's effectively infinite radius. */
+
 export const RADIUS_FULL_PX = 3.4028235e38;
 export const BORDER_RADII: ScaleStep[] = [
   { suffix: 'none', value: 0 },
@@ -104,7 +104,7 @@ export const BORDER_RADII: ScaleStep[] = [
   { suffix: '4xl', value: 32 },
 ];
 
-/** `border-*` widths, in px. The empty suffix is the bare `border` class. */
+
 export const BORDER_WIDTHS: ScaleStep[] = [
   { suffix: '0', value: 0 },
   { suffix: '', value: 1 },
@@ -113,25 +113,25 @@ export const BORDER_WIDTHS: ScaleStep[] = [
   { suffix: '8', value: 8 },
 ];
 
-/** `opacity-*`, as a 0..1 fraction. */
+
 export const OPACITIES: ScaleStep[] = Array.from({ length: 21 }, (_unused, index) => ({
   suffix: String(index * 5),
   value: index / 20,
 }));
 
-/** `z-*`, unitless. */
+
 export const Z_INDICES: ScaleStep[] = [0, 10, 20, 30, 40, 50].map((value) => ({
   suffix: String(value),
   value,
 }));
 
-/** One box-shadow layer, already parsed so no theme string has to be re-read. */
+
 export interface ShadowLayer {
   offsetX: number;
   offsetY: number;
   blur: number;
   spread: number;
-  /** Alpha of the shadow color. The v4 shadows are all pure black. */
+
   alpha: number;
   inset: boolean;
 }
@@ -145,7 +145,7 @@ function layer(offsetX: number, offsetY: number, blur: number, spread: number, a
   return { offsetX, offsetY, blur, spread, alpha, inset: false };
 }
 
-/** `shadow-sm` through `shadow-2xl`, v4 values. */
+
 export const SHADOWS: ShadowStep[] = [
   { suffix: 'sm', layers: [layer(0, 1, 3, 0, 0.1), layer(0, 1, 2, -1, 0.1)] },
   { suffix: 'md', layers: [layer(0, 4, 6, -1, 0.1), layer(0, 2, 4, -2, 0.1)] },
@@ -154,26 +154,26 @@ export const SHADOWS: ShadowStep[] = [
   { suffix: '2xl', layers: [layer(0, 25, 50, -12, 0.25)] },
 ];
 
-/** A palette entry in oklch, exactly as the v4 theme declares it. */
+
 export interface PaletteColor {
-  /** e.g. `blue-500`, `white`. */
+
   name: string;
-  /** 0..1 */
+
   l: number;
   c: number;
-  /** degrees */
+
   h: number;
 }
 
-/**
- * The v4 default palette. Declared in oklch because that is the theme's own
- * unit, so no conversion sits between the theme and the comparison. Matching is
- * threshold-gated and every match reports its distance, so a value that is a
- * thousandth off degrades into a slightly larger reported delta rather than a
- * wrong class.
- */
+
+
+
+
+
+
+
 const FAMILIES: Record<string, [number, number, number][]> = {
-  // 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950
+
   red: [
     [0.971, 0.013, 17.38], [0.936, 0.032, 17.717], [0.885, 0.062, 18.334], [0.808, 0.114, 19.571],
     [0.704, 0.191, 22.216], [0.637, 0.237, 25.331], [0.577, 0.245, 27.325], [0.505, 0.213, 27.518],

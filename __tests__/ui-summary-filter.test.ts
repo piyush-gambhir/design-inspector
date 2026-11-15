@@ -43,7 +43,7 @@ describe('filterSummary', () => {
   it('filters typography by weight and by size in px and rem', () => {
     expect(filterSummary(pageSummary, '600').typography.map(group => group.weight)).toEqual([600]);
     expect(filterSummary(pageSummary, '72px').typography.map(group => group.sizePx)).toEqual([72]);
-    // 16px against a 16px root is 1rem.
+
     expect(filterSummary(pageSummary, '1rem').typography.map(group => group.sizePx)).toEqual([16]);
   });
 

@@ -1,9 +1,9 @@
-// Request dispatch for the background worker.
-//
-// Every privileged action the popup, side panel, or content script can ask for
-// passes through here. Unknown messages are ignored rather than answered, and
-// no handler is allowed to throw: the caller always gets a BackgroundResponse
-// (PRD 17.3).
+
+
+
+
+
+
 import type { BackgroundRequest, BackgroundResponse } from '@/lib/messages';
 import { sendToTab } from '@/lib/messages';
 import { requestAssets } from './assets';
@@ -51,7 +51,7 @@ export function isBackgroundRequest(value: { type: string }): value is Backgroun
   return (BACKGROUND_REQUEST_TYPES as readonly string[]).includes(value.type);
 }
 
-/** Forwarded content events carry no tab id of their own. */
+
 export function isContentEventType(type: string): boolean {
   return type.startsWith('event.');
 }
@@ -83,9 +83,9 @@ export async function handleBackgroundRequest(
       );
 
     case 'sidepanel.presence':
-      // The presence set is the record; pushing the badge is a best effort on
-      // top of it. A tab with no content script is not a failed request, so
-      // this answers ok either way (W1).
+
+
+
       await setSidePanelPresence(request.tabId, request.open);
       return { ok: true };
 
@@ -114,16 +114,16 @@ export async function handleBackgroundRequest(
       return requestSummary(request.tabId);
 
     case 'font.identify':
-      // Opt-in: this is the only request that contacts a host the user did not
-      // already load, and only the file the page itself served (PRD 17.1).
+
+
       return identifyFont(request.url);
 
     case 'summary.cancel':
       return passthrough(await sendToTab(request.tabId, { type: 'content.cancelScan' }));
 
     case 'assets.request': {
-      // The content script cannot know its own tab id, so its panel sends -1
-      // and the worker fills it in from the sender.
+
+
       const tabId = request.tabId >= 0 ? request.tabId : senderTabId;
       if (tabId === null) return { ok: false, error: 'No tab to list assets for.' };
       return requestAssets(tabId, request.enrich === true);
@@ -150,8 +150,8 @@ export async function handleBackgroundRequest(
       );
 
     case 'mockup.set':
-      // Through the injection path, not a plain passthrough: a mockup is set
-      // on a page that has never had the inspector switched on.
+
+
       return { ok: true, state: await setTabMockup(request.tabId, request.mockup) };
 
     case 'element.clearHighlight':
@@ -163,9 +163,9 @@ export async function handleBackgroundRequest(
         title: request.title,
         note: request.note,
         captureScreenshot: request.captureScreenshot,
-        // The side panel passes tabId; the content script's Save button is
-        // identified by sender.tab. Fall back to the active tab only when a
-        // screenshot was requested and neither is available.
+
+
+
         tabId:
           request.tabId ?? senderTabId ?? (request.captureScreenshot ? await activeTabId() : null),
       });

@@ -20,10 +20,10 @@ beforeEach(() => {
   document.body.innerHTML = '';
 });
 
-/**
- * A stand-in for `getComputedStyle().display`, keyed by id. Anything not named
- * falls back to the tag's usual box, which is what the real rule reads.
- */
+
+
+
+
 function displays(map: Record<string, string>): DisplayOf {
   return (element) => {
     const id = element.id;
@@ -74,7 +74,7 @@ describe('isInlineWrapper', () => {
     for (const tag of INLINE_WRAPPERS) {
       if (tag === 'a') continue;
       const element = document.getElementById(tag) as Element;
-      // Even a wrapper the page has turned into a block is still a wrapper.
+
       expect(isInlineWrapper(element, displays({ [tag]: 'block' }))).toBe(true);
     }
   });
@@ -94,7 +94,7 @@ describe('isInlineWrapper', () => {
 
   it('never treats a promotable element as a transparent wrapper', () => {
     document.body.innerHTML = '<label id="field">Email</label><h2 id="head">Title</h2>';
-    // A label is an inline box, and its identity is exactly the answer.
+
     expect(isInlineWrapper(document.getElementById('field') as Element, plain)).toBe(false);
     expect(isInlineWrapper(document.getElementById('head') as Element, plain)).toBe(false);
     expect(SEMANTIC_PARENTS).toContain('label');
@@ -121,17 +121,17 @@ describe('semanticParentOf', () => {
   });
 
   it('promotes even when the wrapper does not paint the heading box', () => {
-    // The box rule this replaced refused exactly this: a heading is as wide as
-    // its container and its inline wrapper is only as wide as the glyphs.
+
+
     document.body.innerHTML = '<h2 id="head"><span id="text">Short</span></h2>';
     const span = document.getElementById('text') as Element;
-    // The wrapper is a block here, which the old same-box rule also refused.
+
     expect(semanticParentOf(span, displays({ text: 'block' }))?.id).toBe('head');
   });
 
   it('promotes to every listed parent and to nothing else', () => {
-    // Built by hand: the parser drops a `<td>` that is not inside a table, and
-    // a bare `<a>` would be read as a wrapper rather than as the parent.
+
+
     const build = (tag: string): Element => {
       document.body.innerHTML = '';
       const parent = document.createElement(tag);
@@ -244,7 +244,7 @@ describe('resolveSelection', () => {
       boxOf: tileBoxes(),
     });
     expect(resolved.target.id).toBe('title');
-    // The link is the heading's parent, so the breadcrumb keeps it already.
+
     expect(resolved.wrapper).toBeNull();
   });
 
@@ -260,12 +260,12 @@ describe('resolveSelection', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Heading inside a full-tile link (tester UX note 6)
+
+
 
 const VIEWPORT = { width: 1440, height: 900 };
 
-/** An apple.com style card: one link over the whole tile, heading inside it. */
+
 const APPLE_TILE = `
   <a id="tile" href="/mac">
     <h2 id="title">MacBook Pro</h2>
@@ -273,14 +273,14 @@ const APPLE_TILE = `
   </a>
 `;
 
-/**
- * Boxes for the tile fixture. jsdom reports zero sized rects, so every rule
- * that reads layout gets its geometry injected, exactly as the overlay's own
- * placement tests do.
- */
+
+
+
+
+
 function tileBoxes(overrides: Record<string, Box> = {}): BoxOf {
   const base: Record<string, Box> = {
-    // 1000 x 700 of a 1440 x 900 viewport: 54 percent, well past the ratio.
+
     tile: { x: 100, y: 100, width: 1000, height: 700 },
     title: { x: 140, y: 240, width: 400, height: 48 },
     copy: { x: 140, y: 320, width: 400, height: 40 },
@@ -320,7 +320,7 @@ describe('headingInsideTile', () => {
   it('leaves a small link alone however precisely it was clicked', () => {
     document.body.innerHTML = APPLE_TILE;
     const tile = document.getElementById('tile') as Element;
-    // 300 x 200 is 4.6 percent of the viewport: a link, not a tile.
+
     const boxes = tileBoxes({ tile: { x: 100, y: 100, width: 300, height: 200 } });
     expect(
       headingInsideTile(tile, { point: { x: 200, y: 260 }, viewport: VIEWPORT, boxOf: boxes }),
@@ -330,7 +330,7 @@ describe('headingInsideTile', () => {
   it('leaves a tile alone when the click landed outside every heading', () => {
     document.body.innerHTML = APPLE_TILE;
     const tile = document.getElementById('tile') as Element;
-    // Inside the tile, inside the paragraph, nowhere near the heading's box.
+
     expect(
       headingInsideTile(tile, {
         point: { x: 200, y: 340 },
@@ -349,7 +349,7 @@ describe('headingInsideTile', () => {
     `;
     const tile = document.getElementById('tile') as Element;
     const boxes = tileBoxes({
-      // Overlapping boxes, as an absolutely positioned eyebrow produces.
+
       title: { x: 140, y: 240, width: 400, height: 80 },
       second: { x: 140, y: 250, width: 400, height: 60 },
     });
@@ -411,7 +411,7 @@ describe('headingInsideTile', () => {
     document.body.innerHTML = APPLE_TILE;
     const tile = document.getElementById('tile') as Element;
     const area = VIEWPORT.width * VIEWPORT.height;
-    // Exactly at the ratio is not past it.
+
     const exact = tileBoxes({
       tile: { x: 0, y: 0, width: VIEWPORT.width, height: (area * TILE_AREA_RATIO) / VIEWPORT.width },
     });

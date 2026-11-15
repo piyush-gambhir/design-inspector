@@ -1,13 +1,13 @@
-// Tools tab: the mockup overlay (competitive Tier 2 item 1).
-//
-// The side panel owns the file and the persistence; the content script owns the
-// pixels. The two are kept in step in one direction each: a control here writes
-// to IndexedDB and sends `mockup.set` with the image as a data URL, and a drag
-// on the page comes back as `event.state` carrying the new offset, which this
-// tab writes through `updateMockupState` without touching the stored bytes.
-//
-// The mockup is remembered per origin, so a reload, a route change, or coming
-// back tomorrow finds the comp exactly where it was left.
+
+
+
+
+
+
+
+
+
+
 import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react';
 import { formatBytesLabel } from '@/lib/ui/shared/format';
 import { ImageUp, Trash2 } from 'lucide-react';
@@ -42,10 +42,10 @@ const BLEND_MODES: SegmentOption<'normal' | 'difference'>[] = [
 
 export const MOCKUP_ACCEPT = MOCKUP_MIME_TYPES.join(',');
 
-/** Said about a mockup this tab did not put on the page (tester finding F8). */
+
 export const FOREIGN_MOCKUP_NOTE = 'Set from outside this panel; not saved.';
 
-/** The stored state read back as text, for a mockup with no stored blob. */
+
 function stateSummary(state: StoredMockupState): { label: string; value: string }[] {
   return [
     { label: 'Opacity', value: state.opacity.toFixed(2) },
@@ -57,7 +57,7 @@ function stateSummary(state: StoredMockupState): { label: string; value: string 
   ];
 }
 
-/** Arrow-key nudge on the offset fields: 1px, or 10px with Shift. */
+
 export function nudgeAmount(key: string, shiftKey: boolean): number {
   const step = shiftKey ? 10 : 1;
   if (key === 'ArrowUp' || key === 'ArrowRight') return step;
@@ -65,7 +65,7 @@ export function nudgeAmount(key: string, shiftKey: boolean): number {
   return 0;
 }
 
-/** A dropped or chosen file we are willing to overlay. */
+
 export function fileRejection(file: File): string | null {
   const type = (file.type || '').toLowerCase();
   if (type && !MOCKUP_MIME_TYPES.includes(type)) {
@@ -76,9 +76,9 @@ export function fileRejection(file: File): string | null {
 
 export interface ToolsTabProps {
   tabId: number | null;
-  /** The active tab's URL, which is where the origin key comes from. */
+
   tabUrl: string;
-  /** The mockup settings the content script currently reports, if any. */
+
   pageMockup: StoredMockupState | null | undefined;
 }
 
@@ -90,7 +90,7 @@ export function ToolsTab({ tabId, tabUrl, pageMockup }: ToolsTabProps) {
   const [notice, setNotice] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  /** The data URL for the current image, so a settings change can re-send it. */
+
   const dataUrlRef = useRef<string>('');
 
   const send = useCallback(
@@ -103,9 +103,9 @@ export function ToolsTab({ tabId, tabUrl, pageMockup }: ToolsTabProps) {
     [tabId],
   );
 
-  // On tab activation, and whenever the origin changes, load what was stored
-  // for this site and put it back on the page: a reload drops the content
-  // script's copy, and the stored one is the one that survives.
+
+
+
   useEffect(() => {
     let cancelled = false;
     setNotice(null);
@@ -143,8 +143,8 @@ export function ToolsTab({ tabId, tabUrl, pageMockup }: ToolsTabProps) {
     };
   }, [origin, send]);
 
-  // A drag on the page reports the new offset. It is written straight through,
-  // because the image did not change and the panel is not the author of it.
+
+
   useEffect(() => {
     if (!origin || !pageMockup || !state) return;
     if (pageMockup.x === state.x && pageMockup.y === state.y) return;
@@ -195,10 +195,10 @@ export function ToolsTab({ tabId, tabUrl, pageMockup }: ToolsTabProps) {
     [origin, send, state],
   );
 
-  /**
-   * A mockup the page has and this tab does not. There is no blob to delete,
-   * so removal is only the message that clears it from the page.
-   */
+
+
+
+
   const foreign = !state && pageMockup ? pageMockup : null;
 
   const removeForeign = useCallback(async () => {
@@ -250,8 +250,8 @@ export function ToolsTab({ tabId, tabUrl, pageMockup }: ToolsTabProps) {
           if (!state) return;
           const delta = nudgeAmount(event.key, event.shiftKey);
           if (delta === 0) return;
-          // The browser's own number stepping is 1 with no Shift behaviour, so
-          // the keys are handled here instead of on top of it.
+
+
           event.preventDefault();
           applyState({ ...state, [axis]: state[axis] + delta });
         }}
@@ -306,13 +306,13 @@ export function ToolsTab({ tabId, tabUrl, pageMockup }: ToolsTabProps) {
         {error ? <StatusLine tone="error">{error}</StatusLine> : null}
         {notice && !error ? <StatusLine tone="success">{notice}</StatusLine> : null}
 
-        {/*
-          A mockup can reach the page without going through this tab: another
-          window's panel, a reload that left the content script holding one, a
-          direct mockup.set. With no stored blob there is nothing to edit here,
-          so the page's own state is reported and the one thing this tab can
-          still honestly do is take it off again (tester finding F8).
-        */}
+        {
+
+
+
+
+
+          }
         {!state && foreign ? (
           <div className="mt-3 grid gap-2" data-role="foreign-mockup">
             <StatusLine>{FOREIGN_MOCKUP_NOTE}</StatusLine>

@@ -48,7 +48,7 @@ function callbacks() {
   };
 }
 
-/** jsdom reports zero sized rects, so geometry is stubbed where it matters. */
+
 function withStubbedRects(run: () => void, rects: (element: Element) => DOMRect): void {
   const original = Element.prototype.getBoundingClientRect;
   Element.prototype.getBoundingClientRect = function stub(this: Element) {
@@ -61,10 +61,10 @@ function withStubbedRects(run: () => void, rects: (element: Element) => DOMRect)
   }
 }
 
-/**
- * Runs `body` with a faked `window.innerWidth` and a real resize event, so the
- * viewport-following rules are exercised the way the browser drives them.
- */
+
+
+
+
 function withViewportWidth(width: number, body: () => void): void {
   const original = window.innerWidth;
   Object.defineProperty(window, 'innerWidth', { value: width, configurable: true });
@@ -126,8 +126,8 @@ describe('overlay host', () => {
     expect(css).toContain('all: initial');
     expect(css).toContain('font: 12px/1.4 ui-sans-serif, system-ui, sans-serif');
     expect(css).toContain('color-scheme: light dark');
-    // The accent is one token, and it is the one that carries white text on
-    // the filled button, so it is tuned for 4.5:1 there (workstream V4).
+
+
     expect(css).toContain('--di-accent: oklch(0.55 0.19 255)');
     expect(css).toContain('--di-accent-foreground');
     expect(css).toContain('prefers-color-scheme: dark');
@@ -187,7 +187,7 @@ describe('overlay host', () => {
     document.body.innerHTML = parts.join('');
     const elements = Array.from(document.querySelectorAll('p'));
 
-    // jsdom reports zero sized rects, so geometry is stubbed for this check.
+
     const original = Element.prototype.getBoundingClientRect;
     Element.prototype.getBoundingClientRect = () =>
       ({ x: 0, y: 0, width: 10, height: 10, top: 0, left: 0, right: 10, bottom: 10, toJSON: () => ({}) }) as DOMRect;
@@ -218,12 +218,12 @@ describe('pinned panel', () => {
     expect(panel.hidden).toBe(false);
     expect(panel.querySelector('img')).toBeNull();
     expect(panel.querySelectorAll('*').length).toBeGreaterThan(0);
-    // The label samples the text and truncates it; what it shows is text.
+
     expect(panel.textContent).toContain('<img src=x');
-    // Nothing page-derived is ever parsed as markup. The head's title tooltip
-    // carries the same label as an attribute value, which is a string and not
-    // markup, so the check is that no element came out of the payload rather
-    // than that the serialized HTML never contains the characters.
+
+
+
+
     const title = panel.querySelector('.panel-title') as HTMLElement;
     expect(title.title).toBe(title.textContent);
     expect(title.childElementCount).toBe(0);
@@ -238,7 +238,7 @@ describe('pinned panel', () => {
     const text = (overlay.root.getElementById('panel')?.textContent ?? '').replace(/\s+/g, ' ');
     expect(text).toContain('32px');
     expect(text).toContain('2rem');
-    // One Copy control per section head, with the three exporters in its menu.
+
     expect(text).toContain('Copy');
     expect(text).toContain('Tailwind');
   });
@@ -281,8 +281,8 @@ describe('pinned panel', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Tier 1 features: layout overlay, measurement, eyedropper
+
+
 
 function fakeStyle(values: Record<string, string>): CSSStyleDeclaration {
   return {
@@ -291,7 +291,7 @@ function fakeStyle(values: Record<string, string>): CSSStyleDeclaration {
   } as unknown as CSSStyleDeclaration;
 }
 
-/** Replaces the computed style of one element while `run` executes. */
+
 function withStubbedStyle(target: Element, values: Record<string, string>, run: () => void): void {
   const original = window.getComputedStyle;
   window.getComputedStyle = ((element: Element, pseudo?: string | null) =>
@@ -495,8 +495,8 @@ describe('measurement', () => {
       overlay.setMeasure(other, { locked: true });
       expect(overlay.measureLocked()).toBe(true);
 
-      // A hover frame that lands after the lock says nothing about locking, so
-      // it must leave the lock alone rather than silently dropping it.
+
+
       overlay.setMeasure(other);
       expect(overlay.measureLocked()).toBe(true);
       expect((overlay.root.querySelector('.measure-block') as HTMLElement).textContent).toContain(
@@ -606,7 +606,7 @@ describe('eyedropper controls', () => {
     expect(text).toContain('#3874cb');
     expect(text).toContain('oklch(');
     expect(text).toContain('Observed (picked pixel)');
-    // The overlay host is back after the pick.
+
     expect(overlay.host.style.display).toBe('');
   });
 
@@ -634,7 +634,7 @@ describe('eyedropper controls', () => {
 
     const text = (overlay.root.getElementById('panel')?.textContent ?? '').replace(/\s+/g, ' ');
     expect(text).toContain('(against picked pixel, user-supplied)');
-    // The reading itself is untouched: it is still unavailable.
+
     expect(snapshot.typography?.contrast.status).toBe('unavailable');
     expect(snapshot.typography?.contrast.ratio).toBeNull();
   });
@@ -645,18 +645,18 @@ describe('chooseCardCorner', () => {
   const viewport = { width: 1200, height: 900 };
 
   it('picks the corner that covers the least of a full width band', () => {
-    // A hero band across the top: the bottom corners are clear of it.
+
     expect(chooseCardCorner({ x: 0, y: 0, width: 1200, height: 260 }, card, viewport)).toBe(
       'bottom-right',
     );
-    // The same band at the bottom sends the panel up.
+
     expect(chooseCardCorner({ x: 0, y: 640, width: 1200, height: 260 }, card, viewport)).toBe(
       'top-right',
     );
   });
 
   it('prefers the right when two corners overlap the rect equally', () => {
-    // A centred band overlaps all four corners by the same area.
+
     expect(chooseCardCorner({ x: 0, y: 0, width: 1200, height: 900 }, card, viewport)).toBe(
       'top-right',
     );
@@ -673,10 +673,10 @@ describe('chooseWidePlacement (UX note 7)', () => {
   const viewport = { width: 1200, height: 900 };
 
   it('puts the panel below a wide heading band near the top', () => {
-    // A hero heading: 1200 wide, 120 tall, at the top of the viewport.
+
     const placed = chooseWidePlacement({ x: 0, y: 40, width: 1200, height: 120 }, card, viewport);
     expect(placed).not.toBeNull();
-    // Below the band, not beside it and not over it.
+
     expect(placed?.y).toBe(170);
     expect(placed?.x).toBe(8);
   });
@@ -745,7 +745,7 @@ describe('a pinned element that stops rendering', () => {
     const panel = overlay.root.getElementById('panel') as HTMLElement;
     const text = (panel.textContent ?? '').replace(/\s+/g, ' ');
     expect(text).toContain('Element is not rendered right now');
-    // The last readings are still there to read.
+
     expect(text).toContain('32px');
     expect(panel.dataset.hiddenElement).toBe('true');
     expect((overlay.root.getElementById('band-content') as HTMLElement).style.display).toBe('none');
@@ -847,7 +847,7 @@ describe('panel affordances', () => {
       collapse.click();
       expect(badge.dataset.collapsed).toBe('true');
 
-      // A resize at any width leaves the user's own choice where it was.
+
       withViewportWidth(BADGE_COLLAPSE_WIDTH - 90, () => {
         expect(badge.dataset.collapsed).toBe('true');
       });
@@ -869,7 +869,7 @@ describe('panel affordances', () => {
         collapse.click();
         expect(badge.dataset.collapsed).toBe('false');
 
-        // Still narrow, and still the width it was already too small for.
+
         withViewportWidth(BADGE_COLLAPSE_WIDTH - 120, () => {
           expect(badge.dataset.collapsed).toBe('false');
         });
@@ -923,12 +923,12 @@ describe('panel affordances', () => {
     Object.defineProperty(move, 'clientY', { value: 180 });
     head.dispatchEvent(move);
 
-    // The panel follows the pointer by the distance it moved.
+
     expect(panel.style.left).toBe('60px');
     expect(panel.style.top).toBe('80px');
 
     head.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
-    // A re-read repositions the panel, and the dragged place is kept.
+
     overlay.setPinned(buildSnapshot(element, { deep: false }), element);
     expect(panel.style.left).toBe('60px');
     expect(panel.style.top).toBe('80px');
@@ -936,7 +936,7 @@ describe('panel affordances', () => {
 });
 
 describe('point-to-edge guides (competitive Tier 2 item 3)', () => {
-  /** jsdom has no hit testing, so the sampler is driven from a rect map. */
+
   function stackFor(boxes: { element: Element; rect: DOMRect }[]): void {
     document.elementsFromPoint = ((x: number, y: number) => {
       const hits = boxes
@@ -1030,7 +1030,7 @@ describe('point-to-edge guides (competitive Tier 2 item 3)', () => {
 });
 
 describe('rulers and guides', () => {
-  /** Clicks a ruler to drop a guide at a viewport coordinate. */
+
   function dropGuideAt(axis: 'x' | 'y', position: number): void {
     const ruler = overlay.root.getElementById(axis === 'x' ? 'ruler-top' : 'ruler-left');
     const click = new MouseEvent('click', { bubbles: true, cancelable: true });
@@ -1039,10 +1039,10 @@ describe('rulers and guides', () => {
     (ruler as HTMLElement).dispatchEvent(click);
   }
 
-  /**
-   * One press on the guide currently in the layer, as the capture-based drag
-   * would deliver it. The node is re-queried because ending a drag repaints.
-   */
+
+
+
+
   function pressGuide(): void {
     const layer = overlay.root.getElementById('guide-layer') as HTMLElement;
     const guide = layer.querySelector('.page-guide') as HTMLElement | null;
@@ -1093,7 +1093,7 @@ describe('rulers and guides', () => {
     expect(guide.style.left).toBe('240px');
     expect(guide.getAttribute('aria-label')).toContain('240px');
     expect(guide.getAttribute('aria-label')).toContain('double-click or press Delete to remove');
-    // Delete has to have somewhere to be pressed.
+
     expect(guide.tabIndex).toBe(0);
 
     guide.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }));
@@ -1106,8 +1106,8 @@ describe('rulers and guides', () => {
     const guides = overlay.root.getElementById('guide-layer') as HTMLElement;
     dropGuideAt('x', 240);
 
-    // The layer captures the pointer for dragging, so the browser never
-    // delivers a dblclick and the two presses have to be counted here.
+
+
     pressGuide();
     expect(guides.querySelectorAll('.page-guide')).toHaveLength(1);
     pressGuide();
@@ -1217,7 +1217,7 @@ describe('closest-standard Tailwind (PRD EXP-02 mode 2)', () => {
     expect(labels).toContain('CSS');
     expect(labels).toContain('Tailwind');
     expect(labels).toContain('Closest standard');
-    // The head itself carries one control, so it stays on one line.
+
     const heads = Array.from(overlay.root.querySelectorAll('.section-head'));
     expect(heads.every((head) => head.querySelectorAll('button').length <= 1)).toBe(true);
   });
@@ -1283,7 +1283,7 @@ describe('breadcrumb length (V3)', () => {
     more.click();
     expect(crumbs.querySelector('.crumb-more')).toBeNull();
     expect(crumbs.querySelectorAll('button.crumb').length).toBeGreaterThan(collapsed);
-    // The pinned element keeps its own chip at the end either way.
+
     expect(crumbs.querySelector('.crumb-current')?.textContent).toContain('p#leaf');
   });
 });
@@ -1373,7 +1373,7 @@ describe('escape stack hint (Z2)', () => {
     overlay.setMode('active');
     overlay.setPinned(buildSnapshot(one, { deep: false }), one);
 
-    // An unlocked hover measurement is not something Escape has to release.
+
     overlay.setMeasure(two);
     expect(hint()).toBe('Esc: unpin');
 
@@ -1440,7 +1440,7 @@ describe('escape stack hint (Z2)', () => {
     expect(panel.textContent).toContain('Tip: ArrowUp selects the parent');
     expect(panel.textContent).not.toContain(ESCAPE_ORDER_TIP);
 
-    // A live re-read of the same element keeps the tip it was given.
+
     overlay.setPinned(buildSnapshot(one, { deep: false }), one);
     expect(panel.textContent).toContain('Tip: ArrowUp selects the parent');
 
@@ -1462,13 +1462,13 @@ describe('escape stack hint (Z2)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Font identity in the pinned panel (workstream FONT, PRD TYP-01)
 
-/**
- * A pinned reading of a heading whose CSS calls the family by a nickname and
- * whose file sits on a CDN: the superpower.com case the panel was failing at.
- */
+
+
+
+
+
+
 function pinAliasedFont(overrides: Partial<TypographyReading> = {}): {
   snapshot: ElementSnapshot;
   element: Element;
@@ -1533,7 +1533,7 @@ describe('pinned panel: font identity', () => {
     expect(text).not.toContain('nb-int-pro-b7f3a91c2d.woff2');
     expect(findButton('Identify font file')).not.toBeUndefined();
     expect(findButton('Download')).not.toBeUndefined();
-    // The address is behind the button, never printed in the row.
+
     expect(findButton('Copy URL')).not.toBeUndefined();
   });
 
@@ -1568,18 +1568,18 @@ describe('pinned panel: font identity', () => {
 
     const text = panelText();
     expect(text).toContain('NB International Pro');
-    // The site's own nickname is kept, labelled as what it is.
+
     expect(text).toContain('Declared as');
     expect(text).toContain('Medium · 500');
     expect(text).toContain('by Stefan Gandl for Neubau Berlin');
     expect(text).toContain('Version 1.004');
     expect(text).toContain('wght 100 to 900');
     expect(text).toContain('48 KB');
-    // The offer is gone once it has been taken.
+
     expect(findButton('Identify font file')).toBeUndefined();
 
-    // The reading now carries the identity, so an export taken after this
-    // press names the typeface rather than the alias.
+
+
     expect(snapshot.typography?.identity?.family).toBe('NB International Pro');
   });
 

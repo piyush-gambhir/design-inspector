@@ -1,5 +1,5 @@
-// Typed page-summary fixtures plus helpers for building scan records and
-// stack evidence in tests.
+
+
 import type {
   ColorGroup,
   ElementScanRecord,
@@ -61,7 +61,7 @@ function colorGroup(overrides: Partial<ColorGroup> & Pick<ColorGroup, 'role' | '
   };
 }
 
-/** Every color role, with the clusters the aggregator would build from them. */
+
 const paletteColors: ColorGroup[] = [
   colorGroup({ role: 'text', key: '#0a0a0a', count: 42, inferredRole: 'neutral' }),
   colorGroup({ role: 'text', key: '#4f46e5', count: 3, inferredRole: 'accent' }),
@@ -72,7 +72,7 @@ const paletteColors: ColorGroup[] = [
   colorGroup({ role: 'gradient-stop', key: '#f4f4f5', count: 4 }),
 ];
 
-/** Two typography groups, every color role, spacing including 0 and -8, one shadow. */
+
 export const pageSummary: PageSummary = {
   id: 'summary-1',
   schemaVersion: SCHEMA_VERSION,
@@ -173,7 +173,7 @@ export function summaryReference(overrides: Partial<SavedReference> = {}): Saved
   } as SavedReference;
 }
 
-/** A scan record with sane empty defaults, so tests set only what they assert. */
+
 export function scanRecord(overrides: Partial<ElementScanRecord> = {}): ElementScanRecord {
   return {
     locator: 'body',

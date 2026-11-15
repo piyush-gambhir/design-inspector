@@ -1,9 +1,9 @@
-// Builds an ElementSnapshot from a live Element (PRD sections 8 to 11).
-//
-// Two depths exist on purpose. Hover needs geometry and basic typography
-// inside a frame budget (PRD 19.1), so it asks for a shallow reading. Pinning
-// asks for a deep reading, which adds contrast composition, @font-face
-// lookups, authored source expressions, and asset serialization.
+
+
+
+
+
+
 
 import { readVideoAssets } from './assets';
 import type {
@@ -54,18 +54,18 @@ const EXPRESSION_PATTERN = /(?:clamp|var|calc|min|max)\(/;
 const MAX_RULES_SCANNED = 4000;
 
 export interface SnapshotOptions {
-  /** Deep readings add contrast, font faces, source expressions, and assets. */
+
   deep?: boolean;
-  /** Reuse a font-face reading instead of walking stylesheets again. */
+
   fonts?: DocumentFontsResult;
   source?: SourceContext;
-  /**
-   * Build the ancestor chain. It costs a `getBoundingClientRect` per ancestor
-   * and a descriptor for each, which is the most expensive part of a snapshot
-   * on a deeply nested page. Only the pinned panel's breadcrumb reads it, and
-   * the hover card does not, so the hover path switches it off (PERF 3).
-   * Defaults to true, so every existing caller is unchanged.
-   */
+
+
+
+
+
+
+
   ancestors?: boolean;
 }
 
@@ -84,29 +84,29 @@ export function rootFontSizeOf(doc: Document = document): number {
   }
 }
 
-/** How far a computed root may sit from a whole pixel before it reads as fluid. */
+
 const INTEGER_TOLERANCE_PX = 0.01;
 
-/**
- * Rules walked looking for a root font-size, which is its own budget rather
- * than the per-element one.
- *
- * A real page puts its root rule wherever its build ordered it: on
- * superpower.com the `html { font-size: calc(...) }` that makes the whole page
- * fluid is rule 17,626 of 17,820, so a 4,000 rule budget read the page as
- * having a fixed root and every px reading in the panel silently claimed to be
- * stable. The walk is a selector test per rule and it runs once per document,
- * not once per reading, so it can afford to finish.
- */
+
+
+
+
+
+
+
+
+
+
+
 const MAX_ROOT_RULES_SCANNED = 60000;
 
-/**
- * The authored values are a property of the document's stylesheets, not of the
- * viewport, so they are read once and kept until the sheet list changes. The
- * source context is rebuilt on every resize, and rewalking a 17,000 rule page
- * on each of those would be a frame budget spent on an answer that cannot have
- * changed.
- */
+
+
+
+
+
+
+
 let authoredRootCache: {
   doc: Document;
   sheets: number;
@@ -114,15 +114,15 @@ let authoredRootCache: {
   readAt: number;
 } | null = null;
 
-/** How long a cached walk is trusted. A page can swap a stylesheet for one with
- *  the same sheet count, so the cache also ages out. */
+
+
 const AUTHORED_ROOT_TTL_MS = 2000;
 
 export function resetRootFontSizeCache(): void {
   authoredRootCache = null;
 }
 
-/** True for a selector that styles the root element itself. */
+
 function selectsRoot(selectorText: string): boolean {
   return splitTopLevel(selectorText, ',').some((part) => {
     const trimmed = part.trim().toLowerCase();
@@ -135,19 +135,19 @@ function selectsRoot(selectorText: string): boolean {
   });
 }
 
-/**
- * Every authored root font-size the document declares, in source order: the
- * inline style first, then each `html` or `:root` rule in the same-origin
- * stylesheets. A cross-origin sheet throws on `cssRules` and is skipped, so an
- * unreadable page returns an empty list rather than a guess (PRD LAY-01's rule
- * applied to the root: authored values are reported, never reconstructed).
- *
- * All of them are collected rather than only the winner, because a real page
- * declares the root several times: superpower.com ships
- * `html { font-size: calc(0.747899rem + 0.210084vw) }` and a plain
- * `html { font-size: 1rem }` in a later sheet, and it is the first that
- * explains why its px readings move.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
 export function readAuthoredRootFontSizes(doc: Document = document): string[] {
   const out: string[] = [];
   const element = doc.documentElement as HTMLElement | null;
@@ -203,32 +203,32 @@ export function readAuthoredRootFontSizes(doc: Document = document): string[] {
   return out;
 }
 
-/**
- * The authored value worth showing: the declaration that explains the movement
- * when there is one, otherwise the last one the cascade would have seen.
- */
+
+
+
+
 export function chooseAuthoredRootFontSize(values: string[]): string | null {
   const fluid = values.find((value) => isViewportDependentLength(value));
   if (fluid) return fluid;
   return values.length > 0 ? (values[values.length - 1] as string) : null;
 }
 
-/** The authored root font-size, or null when no rule could be read. */
+
 export function readAuthoredRootFontSize(doc: Document = document): string | null {
   return chooseAuthoredRootFontSize(readAuthoredRootFontSizes(doc));
 }
 
-/**
- * True when the root font size moves with the viewport, so every px reading on
- * the page is a reading at this width and only the rem value is stable.
- *
- * Any viewport-dependent root declaration settles it, even when another rule
- * wins at this particular width: the claim is that px readings change with the
- * window, and a rule that only applies at some widths still makes that true.
- * Failing that, a computed root that is not a whole pixel is the tell: 14.99px
- * is not a value anyone types, so something viewport-dependent produced it,
- * whether or not the stylesheet that says so could be read.
- */
+
+
+
+
+
+
+
+
+
+
+
 export function isFluidRootFontSize(
   authored: string | string[] | null,
   computed: number,
@@ -306,7 +306,7 @@ export function isSvgElement(element: Element): boolean {
   return element.namespaceURI === SVG_NS;
 }
 
-/** Computed weight as a number. Some engines serialize keywords. */
+
 export function computedWeight(style: CSSStyleDeclaration): number {
   const raw = (style.fontWeight ?? '').trim().toLowerCase();
   if (raw === 'normal') return 400;
@@ -315,10 +315,10 @@ export function computedWeight(style: CSSStyleDeclaration): number {
   return Number.isFinite(value) ? value : 400;
 }
 
-/**
- * True when the element renders text of its own. Ancestors of text are
- * excluded so a section is not reported as a text element (PRD SUM-02).
- */
+
+
+
+
 export function rendersOwnText(element: Element): boolean {
   if (hasOwnText(element)) return true;
   const tag = element.tagName.toLowerCase();
@@ -338,7 +338,7 @@ export function rendersOwnText(element: Element): boolean {
   return false;
 }
 
-/** How many text nodes the element inspector walks before giving up. */
+
 const MAX_TEXT_NODES_WALKED = 200;
 
 const NON_RENDERING_TEXT_PARENTS = new Set([
@@ -356,7 +356,7 @@ function rendersTextNode(parent: Element): boolean {
   try {
     style = getComputedStyle(parent);
   } catch {
-    // Unreadable styles are not evidence of invisibility.
+
     return true;
   }
   if (style.display === 'none') return false;
@@ -364,21 +364,21 @@ function rendersTextNode(parent: Element): boolean {
   return true;
 }
 
-/**
- * The first visible, non-whitespace text node the element renders, its own or
- * a descendant's. Wikipedia's `h1#firstHeading` keeps its text in a span, and
- * the user who selected the h1 still wants a typography reading (PRD INS-04).
- *
- * This is deliberately not the SUM-02 inventory rule: the summary scan still
- * counts only elements with text of their own.
- */
+
+
+
+
+
+
+
+
 export function firstRenderedTextNode(element: Element): Text | null {
   const doc = element.ownerDocument;
   if (!doc || typeof doc.createTreeWalker !== 'function') return null;
 
   let walker: TreeWalker;
   try {
-    walker = doc.createTreeWalker(element, 4 /* NodeFilter.SHOW_TEXT */);
+    walker = doc.createTreeWalker(element, 4                           );
   } catch {
     return null;
   }
@@ -420,8 +420,8 @@ export function isTransformed(element: Element): boolean {
   return false;
 }
 
-// ---------------------------------------------------------------------------
-// Typography
+
+
 
 export function readTypography(
   element: Element,
@@ -447,11 +447,11 @@ export function readTypography(
   const variation = (style.fontVariationSettings ?? '').trim();
   const fontStyle = (style.fontStyle || 'normal').trim();
 
-  // The rendering check is the only evidence that settles which family painted
-  // the characters (PRD TYP-02), and it costs a canvas measurement, so it runs
-  // on a pinned reading and never on hover (PRD 19.1). A family that rendered
-  // and also has a loaded face (or is a system family) is the one case where
-  // `verified` is honest; everything else keeps the confidence it arrived with.
+
+
+
+
+
   const doc = element.ownerDocument;
   const check =
     options.deep && doc && identification.familyReading !== 'Unknown'
@@ -495,8 +495,8 @@ export function readTypography(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Surfaces
+
+
 
 function readOpacity(style: CSSStyleDeclaration): number {
   const value = Number.parseFloat(style.opacity ?? '');
@@ -529,8 +529,8 @@ export function readSurfaces(element: Element, style: CSSStyleDeclaration): Surf
   };
 }
 
-// ---------------------------------------------------------------------------
-// Layout
+
+
 
 function readFlex(style: CSSStyleDeclaration): FlexReading {
   return {
@@ -560,11 +560,11 @@ function readGrid(style: CSSStyleDeclaration, isItem: boolean, itemStyle: CSSSty
   };
 }
 
-/**
- * Authored expressions from same-origin stylesheets. Only reported when the
- * declaration is actually readable, never reconstructed from computed px
- * (PRD LAY-01).
- */
+
+
+
+
+
 export function findSourceExpressions(element: Element): Record<string, string> {
   const out: Record<string, string> = {};
   const doc = element.ownerDocument;
@@ -584,8 +584,8 @@ export function findSourceExpressions(element: Element): Record<string, string> 
       if (examined > MAX_RULES_SCANNED) return;
       examined += 1;
 
-      // CSSStyleRule also exposes cssRules now that CSS nesting exists, so the
-      // declarations are read first and nested rules are visited after.
+
+
       const styleRule = rule as CSSStyleRule;
       if (styleRule.selectorText && styleRule.style) {
         let matches = false;
@@ -671,8 +671,8 @@ export function readLayout(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Assets
+
+
 
 export function parseSrcset(srcset: string | null, baseUrl: string): AssetCandidate[] {
   if (!srcset) return [];
@@ -764,7 +764,7 @@ export function readAssets(
     const img = element.querySelector('img');
     if (img) out.push(imageAsset(img as HTMLImageElement, 'picture', baseUrl));
   } else if (tag === 'video') {
-    // Direct files only; streamed sources come back with url null (PRD AST-01).
+
     out.push(...readVideoAssets(element));
   } else if (tag === 'svg' && isSvgElement(element)) {
     const rect = element.getBoundingClientRect();
@@ -782,8 +782,8 @@ export function readAssets(
       intrinsicWidth: box && box.length === 4 && Number.isFinite(box[2]) ? (box[2] as number) : null,
       intrinsicHeight: box && box.length === 4 && Number.isFinite(box[3]) ? (box[3] as number) : null,
       fileSize: null,
-      // No fetching happens in the content script, so size and type stay
-      // unknown; `kind` already says this is SVG.
+
+
       mimeType: null,
       svgMarkup: exported.markup,
       alt: element.getAttribute('aria-label'),
@@ -814,14 +814,14 @@ export function readAssets(
   return out;
 }
 
-// ---------------------------------------------------------------------------
-// Snapshot
 
-/**
- * The ancestors worth showing: wrappers whose box matches their only child are
- * dropped from the breadcrumb, while ArrowUp still walks every DOM level
- * (PRD INS-04).
- */
+
+
+
+
+
+
+
 export function ancestorChain(element: Element): AncestorEntry[] {
   const measure = (target: Element): Rect => toRect(target.getBoundingClientRect());
   return collectAncestors(element, measure).filter((entry) => !entry.redundant);
@@ -854,9 +854,9 @@ export function buildSnapshot(element: Element, options: SnapshotOptions = {}): 
       'A transform is applied, so the visual bounds are axis aligned bounds, not the layout box.',
     );
   }
-  // The element inspector reads what the user selected, so a container whose
-  // text sits in a child still gets typography. The computed style read is the
-  // element's own, and a differently styled text child is disclosed below.
+
+
+
   const textNode = firstRenderedTextNode(element);
   const typography =
     rendersOwnText(element) || textNode

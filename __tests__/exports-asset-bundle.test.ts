@@ -46,7 +46,7 @@ function errorResponse(status: number, statusText = ''): Response {
   } as unknown as Response;
 }
 
-/** Reads the archive through its central directory, as an unzip tool would. */
+
 async function readZip(blob: Blob): Promise<Map<string, Uint8Array>> {
   const bytes = new Uint8Array(await blob.arrayBuffer());
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -90,8 +90,8 @@ describe('assetFilenames', () => {
   });
 
   it('adds a numeric suffix when sanitizing produces the same name twice', () => {
-    // Both of these sanitize to `a-b.png` and would otherwise collide once the
-    // index is stripped by a tool that flattens the archive.
+
+
     const names = assetFilenames([
       asset({ url: 'https://cdn.example.com/1/a%20b.png' }),
       asset({ url: 'https://cdn.example.com/1/a%20b.png' }),
@@ -130,7 +130,7 @@ describe('buildAssetBundle', () => {
     expect(result.filename).toBe('design-inspector-assets-2026-09-18.zip');
     expect(result.writtenCount).toBe(2);
     expect(result.stoppedAtCap).toBe(false);
-    // The inline SVG never goes to the network.
+
     expect(fetchAsset).toHaveBeenCalledTimes(1);
     expect(fetchAsset.mock.calls[0]?.[1]).toMatchObject({ credentials: 'omit' });
 
@@ -212,7 +212,7 @@ describe('buildAssetBundle', () => {
       'Stopped at the 900 byte batch limit.',
       'Stopped at the 900 byte batch limit.',
     ]);
-    // The asset that overflows is the last one fetched; nothing after it is.
+
     expect(fetchAsset).toHaveBeenCalledTimes(3);
     expect([...(await readZip(result.blob)).keys()]).toEqual([
       '1-hero.png',

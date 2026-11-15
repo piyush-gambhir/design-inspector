@@ -1,8 +1,8 @@
-// Element screenshots (PRD SAV-02).
-//
-// Only ever taken as part of an explicit save. The overlay is hidden first so
-// the capture shows the page, not the inspector. Nothing scrolls or stitches:
-// an element taller than the viewport yields a labelled visible crop.
+
+
+
+
+
 import type { Rect } from '@/lib/contracts';
 import { sendToTab } from '@/lib/messages';
 
@@ -11,14 +11,14 @@ export interface CropResult {
   y: number;
   width: number;
   height: number;
-  /** True when the requested rect reached outside the captured image. */
+
   isCrop: boolean;
 }
 
-/**
- * Device-pixel crop box for a CSS-pixel viewport rect, clamped to the captured
- * image. Chrome captures at the device pixel ratio, so the rect scales first.
- */
+
+
+
+
 export function computeCrop(
   rect: Rect,
   devicePixelRatio: number,
@@ -62,7 +62,7 @@ async function blobToDataUrl(blob: Blob): Promise<string> {
   return `data:image/png;base64,${btoa(binary)}`;
 }
 
-/** Decode a PNG data URL, crop it, and re-encode as a PNG data URL. */
+
 export async function cropDataUrl(
   dataUrl: string,
   rect: Rect,
@@ -100,10 +100,10 @@ export type CaptureResult =
   | { ok: true; screenshotDataUrl: string; isCrop: boolean }
   | { ok: false; error: string };
 
-/**
- * Capture the tab and crop to `rect`. A failure here never blocks a save: the
- * caller keeps the measurements and reports the reason.
- */
+
+
+
+
 export async function captureElementScreenshot(
   tabId: number,
   rect: Rect,
@@ -130,7 +130,7 @@ export async function captureElementScreenshot(
   }
 }
 
-/** Turn a PNG data URL back into a Blob for IndexedDB. */
+
 export async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
   return fetch(dataUrl).then(response => response.blob());
 }

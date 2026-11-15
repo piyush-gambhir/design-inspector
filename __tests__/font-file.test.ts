@@ -1,14 +1,14 @@
 // @vitest-environment node
-//
-// Reading a font's own name and fvar tables out of the four containers the
-// web serves (PRD TYP-01). Every fixture here is built in the test, so nothing
-// depends on a binary checked into the repo.
-//
-// Node rather than jsdom: `brotli/compress` is an asm.js build that inspects
-// `window` and takes a browser path that its bundle does not ship. Only the
-// test needs the encoder; the parser itself only ever decodes. Everything the
-// parser touches (Blob, Response, CompressionStream, DecompressionStream) is a
-// Node 22 global.
+
+
+
+
+
+
+
+
+
+
 import { describe, expect, it } from 'vitest';
 import { compress as brotliCompress } from 'brotli/compress';
 
@@ -20,8 +20,8 @@ import {
   pickName,
 } from '../lib/readings/font-file';
 
-// ---------------------------------------------------------------------------
-// Fixture builders
+
+
 
 interface NameRecordInput {
   platformID: number;
@@ -47,7 +47,7 @@ function macRoman(value: string): Uint8Array {
   return out;
 }
 
-/** A real `name` table: header, one record per string, then the string store. */
+
 function buildNameTable(records: NameRecordInput[]): Uint8Array {
   const encoded = records.map((record) =>
     record.platformID === 3 || record.platformID === 0
@@ -59,7 +59,7 @@ function buildNameTable(records: NameRecordInput[]): Uint8Array {
   const table = new Uint8Array(storageOffset + storeSize);
   const view = new DataView(table.buffer);
 
-  view.setUint16(0, 0); // version
+  view.setUint16(0, 0);
   view.setUint16(2, records.length);
   view.setUint16(4, storageOffset);
 
@@ -93,14 +93,14 @@ function buildFvarTable(axes: AxisInput[]): Uint8Array {
   const axisSize = 20;
   const table = new Uint8Array(axesArrayOffset + axes.length * axisSize);
   const view = new DataView(table.buffer);
-  view.setUint16(0, 1); // majorVersion
-  view.setUint16(2, 0); // minorVersion
+  view.setUint16(0, 1);
+  view.setUint16(2, 0);
   view.setUint16(4, axesArrayOffset);
-  view.setUint16(6, 2); // reserved
+  view.setUint16(6, 2);
   view.setUint16(8, axes.length);
   view.setUint16(10, axisSize);
-  view.setUint16(12, 0); // instanceCount
-  view.setUint16(14, 0); // instanceSize
+  view.setUint16(12, 0);
+  view.setUint16(14, 0);
 
   axes.forEach((axis, index) => {
     const base = axesArrayOffset + index * axisSize;
@@ -110,7 +110,7 @@ function buildFvarTable(axes: AxisInput[]): Uint8Array {
     view.setInt32(base + 4, Math.round(axis.min * 65536));
     view.setInt32(base + 8, Math.round(axis.default * 65536));
     view.setInt32(base + 12, Math.round(axis.max * 65536));
-    view.setUint16(base + 16, 0); // flags
+    view.setUint16(base + 16, 0);
     view.setUint16(base + 18, axis.nameID);
   });
   return table;
@@ -120,11 +120,11 @@ function align4(value: number): number {
   return (value + 3) & ~3;
 }
 
-/**
- * `base` is where this font will sit in the finished file. A TrueType
- * collection stores table offsets from the start of the whole file, not from
- * the start of the font, so a collection member has to know its own position.
- */
+
+
+
+
+
 function buildSfnt(
   tables: { tag: string; data: Uint8Array }[],
   version = 0x00010000,
@@ -149,7 +149,7 @@ function buildSfnt(
   placed.forEach((table, index) => {
     const entry = 12 + index * 16;
     for (let byte = 0; byte < 4; byte += 1) view.setUint8(entry + byte, table.tag.charCodeAt(byte));
-    view.setUint32(entry + 4, 0); // checksum
+    view.setUint32(entry + 4, 0);
     view.setUint32(entry + 8, table.offset + base);
     view.setUint32(entry + 12, table.data.byteLength);
     out.set(table.data, table.offset);
@@ -164,12 +164,12 @@ async function deflate(bytes: Uint8Array): Promise<Uint8Array> {
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
-/** A WOFF wrapper: 44-byte header, 20 bytes per table, each table zlib deflated. */
+
 async function buildWoff(tables: { tag: string; data: Uint8Array }[]): Promise<Uint8Array> {
   const compressed = await Promise.all(
     tables.map(async (table) => {
       const deflated = await deflate(table.data);
-      // A table only counts as compressed when that made it smaller.
+
       const useCompressed = deflated.byteLength < table.data.byteLength;
       return { ...table, stored: useCompressed ? deflated : table.data };
     }),
@@ -185,12 +185,12 @@ async function buildWoff(tables: { tag: string; data: Uint8Array }[]): Promise<U
 
   const out = new Uint8Array(offset);
   const view = new DataView(out.buffer);
-  view.setUint32(0, 0x774f4646); // 'wOFF'
-  view.setUint32(4, 0x00010000); // flavor
-  view.setUint32(8, offset); // length
+  view.setUint32(0, 0x774f4646);
+  view.setUint32(4, 0x00010000);
+  view.setUint32(8, offset);
   view.setUint16(12, tables.length);
   view.setUint16(14, 0);
-  view.setUint32(16, 0); // totalSfntSize, unused here
+  view.setUint32(16, 0);
   view.setUint16(20, 1);
   view.setUint16(22, 0);
 
@@ -200,7 +200,7 @@ async function buildWoff(tables: { tag: string; data: Uint8Array }[]): Promise<U
     view.setUint32(base + 4, table.offset);
     view.setUint32(base + 8, table.stored.byteLength);
     view.setUint32(base + 12, table.data.byteLength);
-    view.setUint32(base + 16, 0); // checksum
+    view.setUint32(base + 16, 0);
     out.set(table.stored, table.offset);
   });
   return out;
@@ -210,16 +210,16 @@ const WOFF2_TAG_INDEX: Record<string, number> = { name: 5, fvar: 47, glyf: 10, l
 
 interface Woff2Table {
   tag: string;
-  /** The bytes as they appear in the decompressed stream. */
+
   data: Uint8Array;
-  /**
-   * True to mark the table transformed, which is how a real WOFF2 stores glyf
-   * and loca. A transformed entry carries both the original length and the
-   * transformed one, and a parser that reads the wrong one loses the position
-   * of every table after it.
-   */
+
+
+
+
+
+
   transformed?: boolean;
-  /** The untransformed size, meaningful only for a transformed table. */
+
   origLength?: number;
 }
 
@@ -233,14 +233,14 @@ function base128(value: number): number[] {
   return groups.map((group, index) => (index === groups.length - 1 ? group : group | 0x80));
 }
 
-/** A WOFF2 wrapper: one Brotli stream holding every table in directory order. */
+
 async function buildWoff2(tables: Woff2Table[]): Promise<Uint8Array> {
   const directory: number[] = [];
   for (const table of tables) {
     const index = WOFF2_TAG_INDEX[table.tag];
     if (index === undefined) throw new Error(`No known tag index for ${table.tag}`);
     const isGlyfOrLoca = table.tag === 'glyf' || table.tag === 'loca';
-    // The null transform is version 3 for glyf and loca, version 0 otherwise.
+
     const nullTransform = isGlyfOrLoca ? 3 : 0;
     const version = table.transformed ? (isGlyfOrLoca ? 0 : 1) : nullTransform;
     directory.push(index | (version << 6));
@@ -261,20 +261,20 @@ async function buildWoff2(tables: Woff2Table[]): Promise<Uint8Array> {
 
   const out = new Uint8Array(48 + directory.length + compressed.byteLength);
   const view = new DataView(out.buffer);
-  view.setUint32(0, 0x774f4632); // 'wOF2'
-  view.setUint32(4, 0x00010000); // flavor
+  view.setUint32(0, 0x774f4632);
+  view.setUint32(4, 0x00010000);
   view.setUint32(8, out.byteLength);
   view.setUint16(12, tables.length);
   view.setUint16(14, 0);
-  view.setUint32(16, decoded.byteLength); // totalSfntSize
+  view.setUint32(16, decoded.byteLength);
   view.setUint32(20, compressed.byteLength);
   out.set(directory, 48);
   out.set(compressed, 48 + directory.length);
   return out;
 }
 
-// ---------------------------------------------------------------------------
-// The fixture font
+
+
 
 const NAMES: NameRecordInput[] = [
   { platformID: 3, encodingID: 1, languageID: 0x0409, nameID: 1, value: 'NB International' },
@@ -315,7 +315,7 @@ describe('parseFontIdentity: sfnt', () => {
     expect(identity.postscriptName).toBe('NBInternationalPro-Regular');
     expect(identity.designer).toBe('Stefan Gandl');
     expect(identity.manufacturer).toBe('Neubau Berlin');
-    // "Version 1.004" is a prefix nobody needs twice.
+
     expect(identity.version).toBe('1.004');
     expect(identity.license).toContain('licensed for web use');
     expect(identity.licenseUrl).toBe('https://example.invalid/eula');
@@ -358,11 +358,11 @@ describe('parseFontIdentity: sfnt', () => {
     const inner = buildSfnt([{ tag: 'name', data: nameTable }], 0x00010000, 16);
     const collection = new Uint8Array(16 + inner.byteLength);
     const view = new DataView(collection.buffer);
-    view.setUint32(0, 0x74746366); // 'ttcf'
+    view.setUint32(0, 0x74746366);
     view.setUint16(4, 1);
     view.setUint16(6, 0);
-    view.setUint32(8, 1); // numFonts
-    view.setUint32(12, 16); // offset of the first font
+    view.setUint32(8, 1);
+    view.setUint32(12, 16);
     collection.set(inner, 16);
     const identity = await parseFontIdentity(collection.buffer as ArrayBuffer, URL);
     expect(identity.container).toBe('ttc');
@@ -379,10 +379,10 @@ describe('parseFontIdentity: sfnt', () => {
   });
 
   it('decodes MacRoman bytes above ASCII at the right positions', async () => {
-    // The MacRoman table is 128 entries and a single missing character shifts
-    // everything after it, so the bytes with known awkward positions are named
-    // here: the non-breaking space at 0xCA, the two dashes at 0xD0 and 0xD1,
-    // and the Apple logo at 0xF0 that every short version of the table drops.
+
+
+
+
     const highBytes = new Uint8Array([0x80, 0xa5, 0xca, 0xd0, 0xd1, 0xf0, 0xff]);
     const storageOffset = 6 + 12;
     const table = new Uint8Array(storageOffset + highBytes.byteLength);
@@ -390,10 +390,10 @@ describe('parseFontIdentity: sfnt', () => {
     view.setUint16(0, 0);
     view.setUint16(2, 1);
     view.setUint16(4, storageOffset);
-    view.setUint16(6, 1); // platform 1, Mac
-    view.setUint16(8, 0); // encoding 0, Roman
-    view.setUint16(10, 0); // language 0, English
-    view.setUint16(12, 1); // nameID 1
+    view.setUint16(6, 1);
+    view.setUint16(8, 0);
+    view.setUint16(10, 0);
+    view.setUint16(12, 1);
     view.setUint16(14, highBytes.byteLength);
     view.setUint16(16, 0);
     table.set(highBytes, storageOffset);
@@ -434,12 +434,12 @@ describe('parseFontIdentity: woff2', () => {
   });
 
   it('skips over tables it does not need, including a transformed glyf', async () => {
-    // glyf sits between the two tables that matter, so getting its length
-    // wrong would move `name` and the parse would fail outright.
+
+
     const glyf = new Uint8Array(64).fill(7);
     const bytes = await buildWoff2([
-      // Transformed, so the directory carries both lengths and only the
-      // transformed one counts towards the position of `name`.
+
+
       { tag: 'glyf', data: glyf, transformed: true, origLength: 4096 },
       { tag: 'name', data: nameTable },
       { tag: 'fvar', data: fvarTable },
@@ -453,7 +453,7 @@ describe('parseFontIdentity: woff2', () => {
 describe('parseFontIdentity: refusals', () => {
   it('rejects an unknown magic number as not a font file', async () => {
     const bytes = new Uint8Array(32);
-    bytes.set([0x89, 0x50, 0x4e, 0x47]); // a PNG
+    bytes.set([0x89, 0x50, 0x4e, 0x47]);
     await expect(parseFontIdentity(bytes.buffer as ArrayBuffer, URL)).rejects.toThrow(
       /Not a font file/,
     );

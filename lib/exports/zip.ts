@@ -1,24 +1,24 @@
-// Dependency-free ZIP writer (PRD AST-05, EXP-03).
-//
-// Ported from Recast's lib/zip.js (MIT, same author) and cut down to what this
-// extension needs: browser only (Uint8Array and Blob, no Node APIs), STORE for
-// every entry so no CompressionStream is required, and no ZIP64 because the
-// documented caps below keep every archive inside the ZIP32 limits.
-//
-// Two promises this file keeps:
-// - Entries land in insertion order, so the same input always produces the same
-//   bytes for a given timestamp.
-// - A path that could escape the extraction directory is rejected rather than
-//   sanitized, because silently renaming a file would make the manifest lie.
+
+
+
+
+
+
+
+
+
+
+
+
 
 const MIB = 1024 * 1024;
 
-/** PRD AST-05 documented memory limit for one archive. */
+
 export const ZIP_MAX_ARCHIVE_BYTES = 512 * MIB;
-/** PRD AST-05 documented per-file limit. */
+
 export const ZIP_MAX_ENTRY_BYTES = 128 * MIB;
 
-/** Thrown for a rejected path, a duplicate, or a size cap. */
+
 export class ZipError extends Error {
   constructor(message: string) {
     super(message);
@@ -36,7 +36,7 @@ const CRC_TABLE = (() => {
   return table;
 })();
 
-/** CRC-32 (IEEE 802.3), the checksum every ZIP entry header carries. */
+
 export function crc32(data: Uint8Array): number {
   let c = 0xffffffff;
   for (let i = 0; i < data.length; i += 1) {
@@ -45,11 +45,11 @@ export function crc32(data: Uint8Array): number {
   return (c ^ 0xffffffff) >>> 0;
 }
 
-/** MS-DOS date and time fields, the only timestamp a ZIP32 header carries. */
+
 export function dosDateTime(date: Date): { time: number; date: number } {
   const year = date.getFullYear();
-  // Before 1980 there is nothing representable, so clamp instead of wrapping
-  // into a nonsense date.
+
+
   const dosYear = Math.max(0, Math.min(127, year - 1980));
   return {
     time:
@@ -59,7 +59,7 @@ export function dosDateTime(date: Date): { time: number; date: number } {
 }
 
 interface Entry {
-  /** UTF-8 encoded path. */
+
   name: Uint8Array;
   payload: Uint8Array;
   crc: number;
@@ -72,22 +72,22 @@ interface Entry {
 const LOCAL_HEADER_BYTES = 30;
 const CENTRAL_HEADER_BYTES = 46;
 const END_RECORD_BYTES = 22;
-/** STORE. No compression, so the payload is written verbatim. */
+
 const METHOD_STORE = 0;
-/** General purpose bit 11: the path and comment are UTF-8. */
+
 const FLAG_UTF8 = 0x0800;
-/** 2.0, the lowest version that understands everything written here. */
+
 const VERSION = 20;
 
 export interface ZipWriterOptions {
-  /** Lower than ZIP_MAX_ARCHIVE_BYTES only. Tests use this; callers rarely do. */
+
   maxArchiveBytes?: number;
-  /** Lower than ZIP_MAX_ENTRY_BYTES only. */
+
   maxEntryBytes?: number;
 }
 
 export interface ZipAddOptions {
-  /** Timestamp written into the entry headers. Defaults to now. */
+
   mtime?: Date;
 }
 
@@ -98,9 +98,9 @@ export class ZipWriter {
   private readonly maxArchiveBytes: number;
   private readonly maxEntryBytes: number;
   private finished = false;
-  /** Running total of local headers plus payloads. */
+
   private payloadBytes = 0;
-  /** Running total of central directory headers. */
+
   private centralBytes = 0;
 
   constructor(options: ZipWriterOptions = {}) {
@@ -108,7 +108,7 @@ export class ZipWriter {
     this.maxEntryBytes = cap(options.maxEntryBytes, ZIP_MAX_ENTRY_BYTES);
   }
 
-  /** Bytes the finished archive would occupy right now. */
+
   get byteLength(): number {
     return this.payloadBytes + this.centralBytes + END_RECORD_BYTES;
   }
@@ -164,7 +164,7 @@ export class ZipWriter {
     this.centralBytes = nextCentralBytes;
   }
 
-  /** The finished archive. Calling this twice throws: the writer is spent. */
+
   finish(): Blob {
     if (this.finished) throw new ZipError('This archive is already finished.');
     this.finished = true;
@@ -182,7 +182,7 @@ export class ZipWriter {
   }
 }
 
-// ---------------------------------------------------------------------------
+
 
 function localHeader(entry: Entry): Uint8Array {
   const buffer = new Uint8Array(LOCAL_HEADER_BYTES + entry.name.byteLength);
@@ -258,10 +258,10 @@ function assertPath(path: string): void {
   }
 }
 
-/**
- * A view into a larger buffer would put the neighbouring bytes into the
- * archive, so anything that is not a whole, exact buffer is copied.
- */
+
+
+
+
 function copyOf(data: Uint8Array): Uint8Array {
   if (data.byteOffset === 0 && data.byteLength === data.buffer.byteLength) return data;
   return data.slice();

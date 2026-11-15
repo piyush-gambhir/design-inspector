@@ -1,19 +1,19 @@
-// Tailwind export, faithful mode only (PRD EXP-02 mode 1).
-//
-// This never claims to recover the site's original classes or theme. Every
-// class carries the observed value as an arbitrary value, and anything Tailwind
-// cannot express is handed back as plain CSS instead of being dropped.
+
+
+
+
+
 import type { ColorValue, ElementSnapshot, Sides } from '@/lib/contracts';
 import type { StyleCategory } from './css';
 import { gapOf } from './css';
 import { collapseWhitespace, fontStack, isZeroLength, num } from './format';
 
 export interface TailwindOutput {
-  /** Space-separated classes using arbitrary values (faithful mode). */
+
   classes: string;
-  /** Properties that could not be expressed as classes, as CSS declarations. */
+
   unsupportedCss: string;
-  /** e.g. 'Tailwind v4 arbitrary values; not the site's original classes.' */
+
   assumption: string;
 }
 
@@ -39,7 +39,7 @@ export function toTailwind(snapshot: ElementSnapshot, category: StyleCategory): 
   };
 }
 
-// ---------------------------------------------------------------------------
+
 
 function typographyClasses(
   snapshot: ElementSnapshot,
@@ -52,14 +52,14 @@ function typographyClasses(
   const first = typography.familyStack[0] ?? typography.familyReading;
   classes.push(`font-[${arb(first)}]`);
   if (typography.familyStack.length > 1) {
-    // A class cannot carry a fallback stack cleanly, so the full stack stays
-    // as CSS next to the class.
+
+
     unsupported.push(`font-family: ${fontStack(typography.familyStack)};`);
   }
 
   classes.push(`text-[${num(typography.sizePx)}px]`);
-  // Tailwind couples a default line-height to every text size, so the observed
-  // line height is always emitted next to it.
+
+
   classes.push(
     typography.lineHeightRaw === 'normal' || typography.lineHeightPx === null
       ? 'leading-normal'
@@ -116,8 +116,8 @@ function surfaceClasses(
     classes.push(`bg-[${colorArb(surfaces.backgroundColor)}]`);
   }
   if (surfaces.backgroundLayers.length > 0) {
-    // Gradients and multi-layer backgrounds are not expressible faithfully as
-    // arbitrary classes, so they stay as CSS.
+
+
     unsupported.push(
       `background-image: ${surfaces.backgroundLayers.map((layer) => collapseWhitespace(layer)).join(', ')};`,
     );
@@ -182,8 +182,8 @@ function addBorderClasses(
     return;
   }
 
-  // Mixed borders would need one class per side and per property, which stops
-  // being readable, so the exact sides are reported as CSS.
+
+
   for (const side of visible) {
     unsupported.push(`border-${side}: ${num(borderWidth[side])}px ${borderStyle[side]} ${borderColor[side].raw};`);
   }
@@ -262,7 +262,7 @@ function layoutClasses(
 
 const POSITIONS = new Set(['absolute', 'relative', 'fixed', 'sticky']);
 
-/** Padding and margin with `px-`/`py-` collapsing. Negatives keep their sign. */
+
 function spacingClasses(prefix: 'p' | 'm', sides: Sides<number>): string[] {
   const { top, right, bottom, left } = sides;
   if (top === 0 && right === 0 && bottom === 0 && left === 0) return [];
@@ -313,15 +313,15 @@ function isRealConstraint(value: string, isMin: boolean): boolean {
   return true;
 }
 
-/** Arbitrary-value text: whitespace collapsed, then spaces replaced by underscores. */
+
 function arb(value: string): string {
   return collapseWhitespace(value).replace(/ /g, '_');
 }
 
-/**
- * Hex is the shortest faithful form, but only when it carries the whole value:
- * a translucent or lossy color keeps its raw serialization instead.
- */
+
+
+
+
 function colorArb(color: ColorValue): string {
   if (color.hex && !color.lossy && color.alpha >= 1) return color.hex;
   return arb(color.raw);

@@ -1,7 +1,7 @@
 name: Publish to Chrome Web Store
 
-# Push a version tag (for example v0.2.0) after `pnpm release` and its commit,
-# or run by hand with dry-run to check store access without uploading.
+
+
 on:
   push:
     tags: ['v*']
@@ -14,7 +14,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write # GitHub OIDC token, exchanged for the Google service account below
+  id-token: write
 
 jobs:
   publish:
@@ -43,8 +43,8 @@ jobs:
       - run: pnpm check
       - run: pnpm zip
 
-      # Keyless auth: Workload Identity Federation trades this run's OIDC token for a
-      # short-lived token of the service account linked in the Web Store dashboard.
+
+
       - name: Authenticate to Google Cloud
         id: gcp
         uses: google-github-actions/auth@v3
@@ -54,7 +54,7 @@ jobs:
           token_format: access_token
           access_token_scopes: https://www.googleapis.com/auth/chromewebstore
 
-      # Pin the v2-capable publishing CLI so the store API version stays explicit.
+
       - name: Submit to Chrome Web Store
         env:
           CHROME_API_VERSION: v2

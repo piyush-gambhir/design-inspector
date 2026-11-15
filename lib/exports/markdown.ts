@@ -1,9 +1,9 @@
-// Human-readable Markdown export (PRD EXP-03, EXP-04, and the example in
-// PRD section 15).
-//
-// Two rules hold everywhere in this file: user notes stay visibly separate from
-// measured data, and no em dash is ever written. An em dash inside a user note
-// becomes a colon plus a space.
+
+
+
+
+
+
 import type {
   ColorValue,
   ContrastReading,
@@ -30,8 +30,8 @@ const ROLE_ORDER = ['text', 'background', 'border', 'fill', 'stroke', 'gradient-
 export function referenceToMarkdown(reference: SavedReference): string {
   const blocks: string[] = [`# Reference: ${scrubEmDashes(reference.title)}`];
 
-  // `kind` is the discriminant, so it narrows `snapshot` on its own: nothing
-  // here has to re-derive the shape or cast it.
+
+
   let scope: string;
   if (reference.kind === 'element') {
     const snapshot = reference.snapshot;
@@ -71,17 +71,17 @@ export function summaryToMarkdown(summary: PageSummary): string {
   return `${blocks.join('\n\n')}\n`;
 }
 
-// ---------------------------------------------------------------------------
-// Element references
+
+
 
 function elementHeaderBullets(snapshot: ElementSnapshot): string[] {
   const bullets = sourceBullets(snapshot.source);
   bullets.push(`- Element: ${scrubEmDashes(snapshot.element.label)}`);
   const typography = snapshot.typography;
   if (typography) {
-    // The typeface's own name when the file was read, the CSS alias otherwise
-    // (PRD TYP-01): a reference that says "Nb international pro webfont" six
-    // months later is no use to anybody.
+
+
+
     const identified = identityDescription(
       typography.familyReading,
       typography.identity,
@@ -232,7 +232,7 @@ function layoutBullets(snapshot: ElementSnapshot): string[] {
   );
   bullets.push(`- Padding: ${sidesShorthand(layout.padding)}`);
   bullets.push(`- Margin: ${sidesShorthand(layout.margin)}`);
-  // A zero minimum is the browser default, so it is not worth a line.
+
   if (usable(layout.minWidth) && !isZeroLength(layout.minWidth)) {
     bullets.push(`- Min width: ${layout.minWidth}`);
   }
@@ -291,8 +291,8 @@ function assetBullets(snapshot: ElementSnapshot): string[] {
   });
 }
 
-// ---------------------------------------------------------------------------
-// Page summaries
+
+
 
 function summaryHeaderBullets(summary: PageSummary): string[] {
   const bullets = sourceBullets(summary.source);
@@ -310,8 +310,8 @@ function summaryBodyBlocks(summary: PageSummary): string[] {
     typeScaleTable(summary),
     '## Typography combinations',
     typographyTable(summary),
-    // A summary recorded before clusters existed has none, and inventing them
-    // here would be a second opinion rather than the one the scan formed.
+
+
     ...(clusters.length > 0 ? ['## Palette clusters', paletteClusterTable(clusters)] : []),
     '## Palette',
     paletteTable(summary),
@@ -357,11 +357,11 @@ function typographyTable(summary: PageSummary): string {
   ].join('\n');
 }
 
-/**
- * Near-identical palette entries merged into one swatch each (SUM-03). The flat
- * table below still carries every measured row: this one only says which of
- * them read as the same colour, in the order the clusters were ranked.
- */
+
+
+
+
+
 function paletteClusterTable(clusters: PaletteCluster[]): string {
   const rows = clusters.map((cluster) => {
     const color = cluster.representative.color;
@@ -462,8 +462,8 @@ function summaryScopeBlock(summary: PageSummary): string {
   return lines.join('\n');
 }
 
-// ---------------------------------------------------------------------------
-// Shared pieces
+
+
 
 function sourceBullets(source: SourceContext): string[] {
   return [
@@ -474,15 +474,15 @@ function sourceBullets(source: SourceContext): string[] {
   ];
 }
 
-/**
- * The root font size, and whether it moves. A fluid root is stated once here,
- * because it is the reason every px size in the document is written as a
- * reading at one viewport width (workstream V1).
- */
+
+
+
+
+
 function rootFontSizeText(source: SourceContext): string {
   if (!source.rootFontSizeFluid) return px(source.rootFontSize);
   const authored = (source.rootFontSizeAuthored ?? '').trim();
-  // Only a value that moves is named as the cause.
+
   const from = isViewportDependentLength(authored) ? `, from ${authored}` : '';
   return (
     `${px(source.rootFontSize)} (fluid${from}). It scales with the viewport, ` +
@@ -490,7 +490,7 @@ function rootFontSizeText(source: SourceContext): string {
   );
 }
 
-/** "1.125rem (16.12px at 1440 wide)" on a fluid root, "16.12px" otherwise. */
+
 function sizeText(sizePx: number, sizeRem: number, source: SourceContext): string {
   if (!source.rootFontSizeFluid || !Number.isFinite(sizeRem) || sizeRem <= 0) {
     return px(sizePx);

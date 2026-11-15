@@ -11,24 +11,24 @@ import {
 } from './helpers/extension';
 import { artifactPath } from './helpers/artifacts';
 
-// The side panel reads the window's active tab, which a Playwright-driven
-// extension page cannot be. The panel page therefore opens with chrome.tabs
-// .query patched to answer with the fixture's tab: everything downstream of
-// that answer, from the scan request to the saved reference, is the real thing.
+
+
+
+
 let server: Server;
 let baseUrl: string;
 let session: ExtensionSession;
 
 async function openPanel(fixtureTabId: number): Promise<Page> {
   const page = await session.context.newPage();
-  // Roughly the width Chrome gives the side panel, so the screenshots and the
-  // layout assertions are about the surface people actually see.
+
+
   await page.setViewportSize({ width: 420, height: 960 });
   await page.addInitScript((tabId: number) => {
     const apply = (api: typeof chrome): void => {
       const real = api.tabs.query.bind(api.tabs);
-      // Only the active-tab lookup is answered for the fixture; every other
-      // query still goes to Chrome.
+
+
       api.tabs.query = ((info: chrome.tabs.QueryInfo) => {
         if (info?.active && info?.currentWindow) {
           return api.tabs.get(tabId).then((tab) => [tab]);
@@ -42,7 +42,7 @@ async function openPanel(fixtureTabId: number): Promise<Page> {
   return page;
 }
 
-/** Scan the fixture from the panel and wait for the summary to arrive. */
+
 async function scan(panel: Page): Promise<void> {
   const button = panel.getByRole('button', { name: /Scan this page|Refresh$/ }).first();
   await button.click();
@@ -66,8 +66,8 @@ test.beforeAll(async () => {
   if (!address || typeof address === 'string') throw new Error('No server address');
   baseUrl = `http://127.0.0.1:${address.port}`;
   session = await launchWithExtension();
-  // A control page keeps the extension's message channel warm, as in the
-  // inspector spec, and gives the worker somewhere to answer from.
+
+
   await openControlPage(session);
 });
 
@@ -94,7 +94,7 @@ test.describe('side panel summary', () => {
     await expect(chips.getByRole('button', { name: 'Text' })).toBeVisible();
     await expect(chips.getByRole('button', { name: 'Background' })).toBeVisible();
 
-    // The clustered grid states how many swatches it folded the scan into.
+
     const palette = panel.locator('section', { has: panel.getByRole('heading', { name: 'Palette' }) });
     await expect(palette.getByText(/swatch(es)? from \d+ measured value/)).toBeVisible();
     const allRows = await palette.getByRole('button', { expanded: false }).count();
@@ -108,12 +108,12 @@ test.describe('side panel summary', () => {
       'aria-pressed',
       'true',
     );
-    // The fixture's only border colour is the accent on .cell.
+
     await expect(palette.getByText('#3874cb', { exact: false }).first()).toBeVisible();
     const borderRows = await palette.getByRole('button', { expanded: false }).count();
     expect(borderRows).toBeLessThan(allRows);
 
-    // Every measured occurrence is still one disclosure away.
+
     await expect(palette.getByText(/Show all \d+ occurrence/)).toBeVisible();
 
     await page.close();
@@ -131,8 +131,8 @@ test.describe('side panel summary', () => {
     const typography = panel.locator('section', {
       has: panel.getByRole('heading', { name: 'Typography combinations' }),
     });
-    // Opening the step puts the mouse on the step's own summary, which is the
-    // case that an unnamed group-hover would wrongly reveal.
+
+
     await typography.locator('summary').first().click();
     const show = typography.getByRole('button', { name: 'Show on page' }).first();
     const opacity = () =>

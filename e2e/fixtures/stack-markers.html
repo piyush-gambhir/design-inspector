@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content="Hugo 0.128.0" />
     <title>Design Inspector fixture: stack markers</title>
-    <!--
-      Static fixture for stack detection. Every signal here is a marker or an
-      attribute the detector reads from the DOM: nothing is fetched, no script
-      runs, and no third-party request is made. The frames carry the URLs the
-      embed signatures look for but are lazy, so they are never loaded.
 
-      Ids and attributes are part of the test contract. Keep them stable.
-    -->
+
+
+
+
+
+
+
     <style>
       body {
         margin: 0;
@@ -36,22 +36,22 @@
   <body>
     <h1>Stack markers</h1>
 
-    <!-- Frameworks: Gatsby by mount point, Alpine and htmx by attribute. -->
+
     <div id="___gatsby">
       <div x-data="{ open: false }">Alpine island</div>
       <button hx-get="/fragment" hx-target="#slot">htmx trigger</button>
       <div id="slot"></div>
     </div>
 
-    <!-- Stimulus: two weak attributes, which together read as likely. -->
+
     <div data-controller="reveal" data-action="click->reveal#toggle">Stimulus island</div>
 
-    <!-- Motion: two carousels that need no script to be recognised. -->
+
     <div class="swiper">Swiper track</div>
     <div class="splide">Splide track</div>
     <div data-barba="container">Barba container</div>
 
-    <!-- Embeds: lazy, so the fixture stays offline. -->
+
     <iframe
       title="YouTube embed"
       loading="lazy"

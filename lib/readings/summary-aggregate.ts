@@ -1,12 +1,12 @@
-// Pure aggregation of per-element scan records into a PageSummary (PRD section 12).
-// The content script imports only `aggregateSummary` from here.
-//
-// Everything in this file is deterministic: the same input always produces the
-// same output, with key-string tie-breaks after every ranked sort. The only
-// non-deterministic call is `crypto.randomUUID` for the summary id.
-//
-// Helpers are duplicated locally rather than imported from lib/exports so the
-// readings layer stays free of any dependency on the export adapters.
+
+
+
+
+
+
+
+
+
 import type {
   ColorGroup,
   ColorRole,
@@ -38,20 +38,20 @@ export interface AggregateInput {
   scope: ScanScope;
 }
 
-/**
- * Maximum example elements retained per group (PRD SUM-06 keeps these
- * navigable). Above the panel's highlight cap of 20, so "Showing the first 20
- * of N" is something a real group can actually say (tester finding F7).
- */
+
+
+
+
+
 const MAX_EXAMPLES = 24;
 
-/** Longest typography sample kept for display. */
+
 const MAX_SAMPLE = 60;
 
-/** At most this many palette groups are ever labelled as an inferred accent. */
+
 const MAX_ACCENTS = 3;
 
-/** Chroma thresholds that separate a colorful value from a neutral one. */
+
 const OKLCH_CHROMA_THRESHOLD = 0.08;
 const HEX_SATURATION_THRESHOLD = 0.35;
 
@@ -66,7 +66,7 @@ const ROLE_ORDER: ColorRole[] = [
 
 const COLOR_FUNCTIONS = new Set(['rgb', 'rgba', 'hsl', 'hsla', 'oklch']);
 
-/** Gradient functions whose stops become `gradient-stop` palette entries. */
+
 const GRADIENT_PREFIX = /^(?:repeating-)?(?:linear|radial|conic)-gradient\(/i;
 
 export function aggregateSummary(input: AggregateInput): PageSummary {
@@ -76,7 +76,7 @@ export function aggregateSummary(input: AggregateInput): PageSummary {
   return step.value;
 }
 
-/** Scan callers advance one aggregation phase per task to keep the page responsive. */
+
 export function* aggregateSummarySteps(input: AggregateInput): Generator<void, PageSummary> {
   const { records } = input;
   const colors = buildColors(records);
@@ -112,14 +112,14 @@ export function* aggregateSummarySteps(input: AggregateInput): Generator<void, P
   };
 }
 
-// ---------------------------------------------------------------------------
-// Typography (PRD SUM-02)
+
+
 
 function buildTypography(records: ElementScanRecord[]): TypographyGroup[] {
   const groups = new Map<string, TypographyGroup>();
 
-  // Only elements with their own text are counted, so an ancestor is never
-  // counted again just because a descendant contains text (PRD SUM-02).
+
+
   for (const record of records) {
     if (!record.hasOwnText || !record.typography) continue;
     const typo = record.typography;
@@ -175,8 +175,8 @@ function buildSizeScale(records: ElementScanRecord[]): SizeScaleEntry[] {
     .sort((a, b) => b.sizePx - a.sizePx);
 }
 
-// ---------------------------------------------------------------------------
-// Palette (PRD SUM-03)
+
+
 
 function buildColors(records: ElementScanRecord[]): ColorGroup[] {
   const groups = new Map<string, ColorGroup>();
@@ -218,20 +218,20 @@ function buildColors(records: ElementScanRecord[]): ColorGroup[] {
   );
 }
 
-/** One entry the accent rule can judge: a color, how often it was seen, a key. */
+
 interface AccentCandidate {
   key: string;
   color: ColorValue;
   count: number;
 }
 
-/**
- * The SUM-03 inferred-role rule, shared by the flat palette and by the
- * clustered one so both label the same colors the same way. At most three
- * candidates become an accent: clearly non-neutral chroma and a count below the
- * median of the candidate set. Candidates at or below the chroma threshold are
- * neutral. Unknown chroma stays null rather than guessing.
- */
+
+
+
+
+
+
+
 function inferRoles(candidates: AccentCandidate[]): Map<string, 'accent' | 'neutral'> {
   const roles = new Map<string, 'accent' | 'neutral'>();
   if (candidates.length === 0) return roles;
@@ -259,14 +259,14 @@ function inferRoles(candidates: AccentCandidate[]): Map<string, 'accent' | 'neut
   return roles;
 }
 
-/**
- * Marks at most three text or background colors as an inferred accent.
- * Everything else stays null, including roles that are never accent candidates
- * (PRD SUM-03).
- */
+
+
+
+
+
 function inferAccents(groups: ColorGroup[]): void {
   const candidates = groups.filter((g) => g.role === 'text' || g.role === 'background');
-  // Two roles can share a key, so the judged unit is the group, not the key.
+
   const roles = inferRoles(
     candidates.map((group, index) => ({
       key: `${index}|${group.key}`,
@@ -279,7 +279,7 @@ function inferAccents(groups: ColorGroup[]): void {
   });
 }
 
-/** True when clearly colorful, false when neutral, null when chroma is unknown. */
+
 function isNonNeutral(color: ColorValue): boolean | null {
   if (color.oklch) {
     const chroma = oklchChroma(color.oklch);
@@ -301,7 +301,7 @@ function oklchChroma(value: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-/** HSL saturation in 0..1 derived from a hex color. */
+
 function hexSaturation(hex: string): number | null {
   const rgb = hexToRgb(hex);
   if (!rgb) return null;
@@ -314,22 +314,22 @@ function hexSaturation(hex: string): number | null {
   return denominator === 0 ? 0 : (max - min) / denominator;
 }
 
-// ---------------------------------------------------------------------------
-// Palette clusters (PRD SUM-03, competitive Tier 2 item 5)
-//
-// A long page reports hundreds of palette rows because every role and every
-// near-identical shade counts separately. Clustering collapses the shades that
-// read as one swatch, without discarding a single measured value: every member
-// stays reachable inside its cluster.
-//
-// This is a derived view, not a new reading, and `PageSummary` is frozen, so it
-// is computed on demand from `summary.colors` rather than stored.
 
-/** Two colors merge when they differ by no more than these in oklch. */
+
+
+
+
+
+
+
+
+
+
+
 export const CLUSTER_LIGHTNESS = 0.04;
 export const CLUSTER_CHROMA = 0.03;
 export const CLUSTER_HUE_DEGREES = 8;
-/** Below this chroma a color is grey enough that its hue means nothing. */
+
 export const CLUSTER_GREY_CHROMA = 0.02;
 
 export interface OklchCoords {
@@ -338,18 +338,18 @@ export interface OklchCoords {
   h: number;
 }
 
-/**
- * The cluster shape is the contract's, so a summary can carry it. Re-exported
- * here because every consumer of `clusterPalette` reads it from this module.
- */
+
+
+
+
 export type { PaletteCluster };
 
-/**
- * L, C and H for a color, from its own oklch serialization when it has one and
- * otherwise by converting its hex or raw value. Null when nothing parses, which
- * keeps unparseable values in clusters of their own instead of merging them by
- * accident.
- */
+
+
+
+
+
+
 export function oklchCoords(color: ColorValue): OklchCoords | null {
   const direct = parseOklch(color.oklch);
   if (direct) return direct;
@@ -360,7 +360,7 @@ export function oklchCoords(color: ColorValue): OklchCoords | null {
   return parseOklch(parseColor(color.raw).oklch);
 }
 
-/** True when two colors are within the cluster thresholds. */
+
 export function colorsAreNear(a: ColorValue, b: ColorValue): boolean {
   const first = oklchCoords(a);
   const second = oklchCoords(b);
@@ -371,7 +371,7 @@ export function colorsAreNear(a: ColorValue, b: ColorValue): boolean {
 function coordsAreNear(a: OklchCoords, b: OklchCoords): boolean {
   if (Math.abs(a.l - b.l) > CLUSTER_LIGHTNESS) return false;
   if (Math.abs(a.c - b.c) > CLUSTER_CHROMA) return false;
-  // Hue is meaningless for a grey, so two greys close in L and C are one swatch.
+
   if (a.c < CLUSTER_GREY_CHROMA || b.c < CLUSTER_GREY_CHROMA) return true;
   return hueDistance(a.h, b.h) <= CLUSTER_HUE_DEGREES;
 }
@@ -401,7 +401,7 @@ function parseOklch(value: string | null): OklchCoords | null {
   return { l, c, h: Number.isFinite(parsedHue) ? parsedHue : 0 };
 }
 
-/** `60%` against `full`, or a plain number. Null when neither parses. */
+
 function percentOrNumber(part: string, full: number): number | null {
   const value = Number.parseFloat(part);
   if (!Number.isFinite(value)) return null;
@@ -415,13 +415,13 @@ interface MutableCluster {
   totalCount: number;
 }
 
-/**
- * Groups near-identical palette entries into one swatch each, highest total
- * count first. Entries with the same comparison key always merge, so the same
- * color seen as text and as a border is one cluster carrying both roles.
- */
+
+
+
+
+
 export function clusterPalette(colors: ColorGroup[]): PaletteCluster[] {
-  // Highest count first, so the first member of a cluster is its representative.
+
   const ordered = [...colors].sort((a, b) => b.count - a.count || cmp(a.key, b.key));
   const clusters: MutableCluster[] = [];
 
@@ -455,8 +455,8 @@ export function clusterPalette(colors: ColorGroup[]): PaletteCluster[] {
     };
   });
 
-  // The same rule as the flat palette: only text and background colors are
-  // accent candidates, and the count judged is the cluster's total.
+
+
   const roles = inferRoles(
     built
       .filter((cluster) => cluster.roles.includes('text') || cluster.roles.includes('background'))
@@ -473,7 +473,7 @@ export function clusterPalette(colors: ColorGroup[]): PaletteCluster[] {
   return built.sort((a, b) => b.totalCount - a.totalCount || cmp(a.key, b.key));
 }
 
-/** Occurrences of one role inside a cluster, for the expanded member list. */
+
 export function clusterRoleCounts(cluster: PaletteCluster): { role: ColorRole; count: number }[] {
   return ROLE_ORDER.map((role) => ({
     role,
@@ -483,21 +483,21 @@ export function clusterRoleCounts(cluster: PaletteCluster): { role: ColorRole; c
   })).filter((entry) => entry.count > 0);
 }
 
-// ---------------------------------------------------------------------------
-// Typography grouped by size-scale step (PRD SUM-06)
+
+
 
 export interface TypographyScaleStep {
   sizePx: number;
-  /** Occurrences across every combination at this size. */
+
   count: number;
   combinations: TypographyGroup[];
 }
 
-/**
- * Folds typography combinations under their size, so a page with forty-eight
- * combinations reads as the dozen or so steps its type scale actually has. The
- * combinations themselves are untouched and keep their incoming order.
- */
+
+
+
+
+
 export function groupTypographyByScale(groups: TypographyGroup[]): TypographyScaleStep[] {
   const steps = new Map<number, TypographyScaleStep>();
   for (const group of groups) {
@@ -513,8 +513,8 @@ export function groupTypographyByScale(groups: TypographyGroup[]): TypographySca
   return [...steps.values()].sort((a, b) => b.sizePx - a.sizePx);
 }
 
-// ---------------------------------------------------------------------------
-// Spacing (PRD SUM-04)
+
+
 
 function buildSpacing(records: ElementScanRecord[]): SpacingSummary {
   const padding = new Map<number, ValueCount>();
@@ -533,7 +533,7 @@ function buildSpacing(records: ElementScanRecord[]): SpacingSummary {
   };
 
   for (const record of records) {
-    // Each side counts separately (PRD SUM-04).
+
     add(padding, record.padding.top, record);
     add(padding, record.padding.right, record);
     add(padding, record.padding.bottom, record);
@@ -555,7 +555,7 @@ function buildSpacing(records: ElementScanRecord[]): SpacingSummary {
   };
 }
 
-/** Positive values first by count, then zero, then negatives (PRD SUM-04). */
+
 function sortSpacing(values: Map<number, ValueCount>): ValueCount[] {
   const bucket = (value: number): number => (value > 0 ? 0 : value === 0 ? 1 : 2);
   return [...values.values()].sort(
@@ -566,8 +566,8 @@ function sortSpacing(values: Map<number, ValueCount>): ValueCount[] {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Fonts (PRD SUM-05)
+
+
 
 function buildFonts(declared: FontRecord[], records: ElementScanRecord[]): FontRecord[] {
   const seen = new Map<string, { display: string; weights: Set<number> }>();
@@ -609,8 +609,8 @@ function normalizeFamily(family: string): string {
   return family.trim().replace(/^["']|["']$/g, '').toLowerCase();
 }
 
-// ---------------------------------------------------------------------------
-// Radii and shadows (PRD SUM-05)
+
+
 
 function buildRadii(records: ElementScanRecord[]): RadiusGroup[] {
   const groups = new Map<string, RadiusGroup>();
@@ -628,7 +628,7 @@ function buildRadii(records: ElementScanRecord[]): RadiusGroup[] {
   return [...groups.values()].sort((a, b) => b.count - a.count || cmp(a.value, b.value));
 }
 
-/** `8px` when all four corners are equal, otherwise `tl tr br bl`. Null when all zero. */
+
 function serializeCorners(radius: Corners<string>): string | null {
   const corners = [radius.topLeft, radius.topRight, radius.bottomRight, radius.bottomLeft].map(
     (corner) => collapseWhitespace(corner),
@@ -656,8 +656,8 @@ function buildShadows(records: ElementScanRecord[]): ShadowGroup[] {
   return [...groups.values()].sort((a, b) => b.count - a.count || cmp(a.value, b.value));
 }
 
-// ---------------------------------------------------------------------------
-// Limitations (PRD SUM-01, SUM-06)
+
+
 
 function buildLimitations(scope: ScanScope): string[] {
   const limitations: string[] = [];
@@ -680,14 +680,14 @@ function buildLimitations(scope: ScanScope): string[] {
   return limitations;
 }
 
-// ---------------------------------------------------------------------------
-// Color parsing helpers
 
-/**
- * Normalized comparison key: the hex value when one is available, lowercase,
- * with 8 digits only when alpha is below 1. Otherwise the raw serialization,
- * lowercased with whitespace collapsed.
- */
+
+
+
+
+
+
+
 function colorKey(color: ColorValue): string {
   if (color.hex) {
     const normalized = normalizeHex(color.hex, color.alpha);
@@ -714,7 +714,7 @@ function normalizeHex(hex: string, alpha: number): string | null {
   return `#${rgb}${alphaDigits}`;
 }
 
-/** Extracts the color tokens that appear at the top level of a gradient. */
+
 function extractGradientColors(layer: string): ColorValue[] {
   const open = layer.indexOf('(');
   if (open < 0) return [];
@@ -722,11 +722,11 @@ function extractGradientColors(layer: string): ColorValue[] {
   return scanTopLevelColors(layer.slice(open + 1, close));
 }
 
-/**
- * Walks the argument list of a gradient and returns the color tokens found at
- * depth zero. Nested functions are skipped whole, so a color inside another
- * function (for example `color-mix`) is not harvested as a stop.
- */
+
+
+
+
+
 function scanTopLevelColors(source: string): ColorValue[] {
   const colors: ColorValue[] = [];
   let index = 0;
@@ -797,8 +797,8 @@ function functionToken(name: string, token: string): ColorValue | null {
     };
   }
 
-  // hsl and oklch keep their raw serialization: converting them here would be
-  // a second, unrequested color pipeline.
+
+
   return { raw: token, hex: null, rgb: null, oklch: null, alpha, lossy: false };
 }
 
@@ -807,7 +807,7 @@ interface ParsedArgs {
   alpha: number | null;
 }
 
-/** Splits a color function's arguments, separating an explicit alpha after `/`. */
+
 function parseArgs(token: string): ParsedArgs {
   const open = token.indexOf('(');
   const inner = open < 0 ? token : token.slice(open + 1, matchParen(token, open));
@@ -863,7 +863,7 @@ function hexToRgb(hex: string): { r: number; g: number; b: number; a: number } |
   return { r, g, b, a };
 }
 
-/** Index of the parenthesis that closes the one at `open`. */
+
 function matchParen(source: string, open: number): number {
   let depth = 0;
   for (let index = open; index < source.length; index += 1) {
@@ -877,14 +877,14 @@ function matchParen(source: string, open: number): number {
   return source.length;
 }
 
-// ---------------------------------------------------------------------------
-// Small local utilities
 
-/**
- * Adds an example element, keeping the list short and free of repeats. One
- * element can raise a count several times (four padding sides, two identical
- * shadows), but it is only worth listing once as a place to look.
- */
+
+
+
+
+
+
+
 function pushExample(examples: ExampleRef[], record: ElementScanRecord): void {
   if (examples.length >= MAX_EXAMPLES) return;
   if (examples.some((example) => example.locator === record.locator)) return;
